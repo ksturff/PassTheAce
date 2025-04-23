@@ -1,0 +1,22 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pass the Ace</title>
+  <style>
+    body { margin: 0; background: #222; color: #fff; font-family: sans-serif; overflow: hidden; }
+    canvas { display: block; margin: 0 auto; background: #333; }
+    #ui { position: absolute; width: 100%; text-align: center; top: 10px; }
+    button { margin: 5px; padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="nextTurn()" style="display:none;" id="nextBtn">Next Turn</button>
+  </div>
+  <canvas id="gameCanvas" width="1024" height="576"></canvas>
+  <script src="game.js"></script>
+</body>
+</html>
