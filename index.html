@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Player Circles & Smaller Cards</title>
+  <title>Pass the Ace - Updated Design</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -40,7 +40,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 60, CARD_H = 90, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 40, CARD_H = 60, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = 0, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false;
 
@@ -85,18 +85,18 @@ function drawTable(showCards = false) {
     const x = CENTER_X + Math.cos(angle) * RX;
     const y = CENTER_Y + Math.sin(angle) * RY;
 
-    // Draw avatar circle
+    // Draw avatar circle (slightly above card)
     ctx.beginPath();
-    ctx.arc(x, y, 25, 0, 2 * Math.PI);
+    ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
     ctx.fillStyle = "#222";
     ctx.fill();
 
-    // Draw card
+    // Draw card below the circle
     let showCard = showCards || (p.id === 1 && peekPlayerCard);
     const card = showCard ? cardImages[`${p.card.rank}${p.card.suit}`] : cardImages["Back"];
-    if (card && card.complete) ctx.drawImage(card, x - CARD_W/2, y - CARD_H/2, CARD_W, CARD_H);
+    if (card && card.complete) ctx.drawImage(card, x - CARD_W/2, y - CARD_H/2 + 10, CARD_W, CARD_H);
 
-    // Draw label
+    // Draw player label
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.fillText(`P${p.id} (${p.chips})`, x, y + CARD_H / 2 + 15);
