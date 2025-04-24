@@ -186,4 +186,24 @@ function endRound() {
     );
     lowest.chips--;
     if (lowest.chips <= 0) {
-      players = players.filter(p => p.id !==
+      players = players.filter(p => p.id !== lowest.id);
+    }
+    if (players.length === 1) {
+      alert(`Player ${players[0].id} wins!`);
+      document.getElementById("actionBtns").style.display = "none";
+      return;
+    }
+    deck = createDeck();
+    players.forEach(p => p.card = deck.pop());
+    dealerCard = deck.pop();
+    determineDealer();
+    currentPlayer = (dealerIndex + 1) % players.length;
+    drawTable(false);
+    processTurn();
+  }, 1500);
+}
+
+preloadAssets();
+</script>
+</body>
+</html>
