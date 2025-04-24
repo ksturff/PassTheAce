@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Final Dealer Fix</title>
+  <title>Pass the Ace - Player Circles & Smaller Cards</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -40,7 +40,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 80, CARD_H = 120, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 60, CARD_H = 90, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = 0, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false;
 
@@ -85,13 +85,22 @@ function drawTable(showCards = false) {
     const x = CENTER_X + Math.cos(angle) * RX;
     const y = CENTER_Y + Math.sin(angle) * RY;
 
+    // Draw avatar circle
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, 2 * Math.PI);
+    ctx.fillStyle = "#222";
+    ctx.fill();
+
+    // Draw card
     let showCard = showCards || (p.id === 1 && peekPlayerCard);
     const card = showCard ? cardImages[`${p.card.rank}${p.card.suit}`] : cardImages["Back"];
     if (card && card.complete) ctx.drawImage(card, x - CARD_W/2, y - CARD_H/2, CARD_W, CARD_H);
+
+    // Draw label
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(`P${p.id} (${p.chips})`, x, y + CARD_H / 2 + 20);
-    if (i === currentPlayer) ctx.fillText("⬆", x, y + CARD_H / 2 + 35);
+    ctx.fillText(`P${p.id} (${p.chips})`, x, y + CARD_H / 2 + 15);
+    if (i === currentPlayer) ctx.fillText("⬆", x, y + CARD_H / 2 + 30);
   });
 }
 
@@ -177,24 +186,4 @@ function endRound() {
     );
     lowest.chips--;
     if (lowest.chips <= 0) {
-      players = players.filter(p => p.id !== lowest.id);
-    }
-    if (players.length === 1) {
-      alert(`Player ${players[0].id} wins!`);
-      document.getElementById("actionBtns").style.display = "none";
-      return;
-    }
-    deck = createDeck();
-    players.forEach(p => p.card = deck.pop());
-    dealerCard = deck.pop();
-    determineDealer();
-    currentPlayer = (dealerIndex + 1) % players.length;
-    drawTable(false);
-    processTurn();
-  }, 1500);
-}
-
-preloadAssets();
-</script>
-</body>
-</html>
+      players = players.filter(p => p.id !==
