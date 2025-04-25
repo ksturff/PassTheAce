@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - King Flip Reveal</title>
+  <title>Pass the Ace - Dynamic Start</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -46,6 +46,7 @@ backgroundImage.src = './assets/background.png';
 const CARD_W = 40, CARD_H = 60, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
+let startingPlayerIndex = null;
 
 function getCardValue(card) {
   if (typeof card.rank === 'number') return card.rank;
@@ -169,19 +170,20 @@ function startGame() {
 
 function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
-  players.forEach(p => p.card = null); // clear cards first
+  players.forEach(p => p.card = null);
   dealerCard = deck.pop();
 
-  // Only assign dealer once
+  // First round logic
   if (dealerIndex === null) {
     players.forEach(p => p.card = deck.pop());
     let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
     let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
     dealerIndex = players.indexOf(topCandidates[0]);
-    players.forEach(p => p.card = null); // clear again for animation
+    startingPlayerIndex = (dealerIndex + 1) % players.length;
+    players.forEach(p => p.card = null);
   }
 
-  currentPlayer = (dealerIndex + 1) % players.length;
+  currentPlayer = startingPlayerIndex;
   drawTable(false);
   revealCardsSequentially();
 }
@@ -192,7 +194,7 @@ function revealCardsSequentially(index = 0) {
     return;
   }
 
-  const revealIndex = (dealerIndex + 1 + index) % players.length;
+  const revealIndex = (startingPlayerIndex + index) % players.length;
   players[revealIndex].card = deck.pop();
   drawTable(false);
 
@@ -257,8 +259,18 @@ function endRound() {
         floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
       }
     });
+
+    // Recalculate new starting point: left of first losing player
+    const losers = players.filter(p => getCardValue(p.card) === minValue);
+    if (losers.length > 0) {
+      const firstLoser = losers[0];
+      const loserIndex = players.indexOf(firstLoser);
+      startingPlayerIndex = (loserIndex + 1) % players.length;
+    }
+
     players = players.filter(p => p.chips > 0);
     drawTable(false);
+
     if (players.length === 1) {
       alert(`Player ${players[0].id} wins!`);
       document.getElementById("actionBtns").style.display = "none";
