@@ -34,7 +34,9 @@
     <button onclick="passCard()">Pass</button>
   </div>
 </div>
-<canvas id="gameCanvas" width="1024" height="576"></canvas>
+
+<!-- Canvas height increased -->
+<canvas id="gameCanvas" width="1024" height="600"></canvas>
 
 <script>
 // ========== SETUP ==========
@@ -43,7 +45,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 300;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
 let startingPlayerIndex = null;
@@ -103,7 +105,7 @@ function drawTable(showCards = false) {
   }
 
   const radiusX = 400;
-  const radiusY = 250;
+  const radiusY = 220; // Reduced from 250 to avoid clipping bottom
 
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
@@ -160,6 +162,8 @@ function drawTable(showCards = false) {
 
 // ========== GAMEPLAY ==========
 function startGame() {
+  document.querySelector('button').style.display = 'none'; // Hide Start Game button
+
   deck = createDeck();
   players = Array.from({ length: 10 }, (_, i) => ({
     id: i + 1,
