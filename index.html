@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Chips Repositioned</title>
+  <title>Pass the Ace - Chips Below Name</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -138,18 +138,18 @@ function drawTable(showCards = false) {
       }
     }
 
-    // Chips (moved to top-right)
-    for (let c = 0; c < p.chips; c++) {
-      ctx.beginPath();
-      ctx.arc(x + 25, y - 40 + (c * 12), 5, 0, 2 * Math.PI);
-      ctx.fillStyle = "#fc3";
-      ctx.fill();
-    }
-
     // Label
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
+
+    // Chips (below label)
+    for (let c = 0; c < p.chips; c++) {
+      ctx.beginPath();
+      ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "#fc3";
+      ctx.fill();
+    }
   });
 
   drawFloatingTexts();
