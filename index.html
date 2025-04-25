@@ -43,7 +43,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 40, CARD_H = 60, RX = 370, RY = 230, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
 let startingPlayerIndex = null;
@@ -102,10 +102,13 @@ function drawTable(showCards = false) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
+  const radiusX = 400;
+  const radiusY = 250;
+
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
-    const x = CENTER_X + Math.cos(angle) * RX;
-    const y = CENTER_Y + Math.sin(angle) * RY;
+    const x = CENTER_X + Math.cos(angle) * radiusX;
+    const y = CENTER_Y + Math.sin(angle) * radiusY;
     p.x = x;
     p.y = y;
 
