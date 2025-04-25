@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Turn Order Reveal</title>
+  <title>Pass the Ace - King Flip Reveal</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -124,7 +124,11 @@ function drawTable(showCards = false) {
 
     // Card
     if (p.card) {
-      let showCard = showCards || (p.id === 1 && peekPlayerCard);
+      let showCard =
+        showCards ||
+        (p.id === 1 && peekPlayerCard) ||
+        p.card.rank === "K";
+
       const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
       const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
       const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
