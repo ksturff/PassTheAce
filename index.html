@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Sequential Reveal</title>
+  <title>Pass the Ace - Turn Order Reveal</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -187,8 +187,11 @@ function revealCardsSequentially(index = 0) {
     processTurn();
     return;
   }
-  players[index].card = deck.pop();
+
+  const revealIndex = (dealerIndex + 1 + index) % players.length;
+  players[revealIndex].card = deck.pop();
   drawTable(false);
+
   setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
