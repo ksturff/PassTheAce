@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pass the Ace - Enhanced</title>
+  <style>
+    body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
+    canvas { display: block; margin: auto; background-color: #0d0d0d; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      text-align: center;
+      z-index: 10;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #333;
+      color: white;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background-color: #555; }
+  </style>
+</head>
+<body>
+<div id="ui">
+  <button onclick="startGame()">Start Game</button>
+  <div id="actionBtns" style="display:none;">
+    <button onclick="keepCard()">Keep</button>
+    <button onclick="passCard()">Pass</button>
+  </div>
+</div>
+<canvas id="gameCanvas" width="1024" height="576"></canvas>
+<script>
+
+function preloadAssets() {
+  window.cardImages = {};
+  const suits = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+  const ranks = [2,3,4,5,6,7,8,9,10,'J','Q','K','A'];
+
+  for (let s in suits) {
+    for (let r of ranks) {
+      const suit = suits[s];
+      const rank = typeof r === 'number' ? r : r.toLowerCase();
+      const img = new Image();
+      img.src = `./assets/${rank}_of_${suit}.png`;
+      cardImages[`${r}${s}`] = img;
+    }
+  }
+
+  const back = new Image();
+  back.src = './assets/red_joker.png';
+  cardImages["Back"] = back;
+}
+
+</script>
+</body>
+</html>
