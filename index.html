@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - PokerStars Layout</title>
+  <title>Pass the Ace - Seat-Aware Layout</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -37,16 +37,15 @@
 <canvas id="gameCanvas" width="1024" height="576"></canvas>
 
 <script>
-// ========== SETUP ==========
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const backgroundImage = new Image();
-backgroundImage.src = './assets/background.png';
 
 const CARD_W = 60, CARD_H = 90, RX = 340, RY = 180, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
-let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
-let startingPlayerIndex = null;
+let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [], startingPlayerIndex = null;
+
+const backgroundImage = new Image();
+backgroundImage.src = './assets/background.png';
 
 function getCardValue(card) {
   if (typeof card.rank === 'number') return card.rank;
@@ -67,22 +66,18 @@ function preloadAssets() {
   window.cardImages = {};
   const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
   const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-
   for (let s of suits) {
     for (let r of ranks) {
       const img = new Image();
-      const filename = `${r}_of_${s}.png`;
-      img.src = `./assets/${filename}`;
+      img.src = `./assets/${r}_of_${s}.png`;
       cardImages[`${r}_${s}`] = img;
     }
   }
-
   const back = new Image();
   back.src = './assets/Back.png';
-  cardImages["Back"] = back;
+  cardImages['Back'] = back;
 }
 
-// ========== DRAWING ==========
 function drawFloatingTexts() {
   floatingTexts.forEach((text, i) => {
     ctx.font = "16px sans-serif";
@@ -96,11 +91,8 @@ function drawFloatingTexts() {
 
 function drawTable(showCards = false) {
   ctx.imageSmoothingEnabled = false;
-  if (backgroundImage.complete) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
+  if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  else ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
@@ -109,36 +101,34 @@ function drawTable(showCards = false) {
     p.x = x;
     p.y = y;
 
+    const offsetX = Math.cos(angle), offsetY = Math.sin(angle);
+
     // Avatar
     ctx.beginPath();
-    ctx.arc(x, y - 25, 30, 0, 2 * Math.PI);
+    ctx.arc(x, y, 30, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#660" : "#222";
     ctx.fill();
 
     // Card
     if (p.card) {
-      let showCard = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
-      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-      const suit = suitMap[p.card.suit];
-      const cardKey = `${rank}_${suit}`;
-      const card = showCard ? cardImages[cardKey] : cardImages["Back"];
-
-      if (card && card.complete) {
-        ctx.drawImage(card, x - CARD_W / 2, y + 10, CARD_W, CARD_H);
-      }
+      let show = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
+      const rMap = { J:'jack', Q:'queen', K:'king', A:'ace' }, sMap = { S:'spades', H:'hearts', D:'diamonds', C:'clubs' };
+      const rk = typeof p.card.rank === 'number' ? p.card.rank : rMap[p.card.rank];
+      const st = sMap[p.card.suit];
+      const cardKey = `${rk}_${st}`;
+      const card = show ? cardImages[cardKey] : cardImages['Back'];
+      if (card?.complete) ctx.drawImage(card, x - CARD_W/2 + offsetX*45, y + offsetY*45, CARD_W, CARD_H);
     }
 
-    // Label (beneath card)
+    // Name
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(`P${p.id}`, x, y + CARD_H + 30);
+    ctx.fillText(`P${p.id}`, x + offsetX*45, y + offsetY*45 + CARD_H + 20);
 
-    // Chips (below label)
+    // Chips
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
-      ctx.arc(x - 14 + (c * 14), y + CARD_H + 45, 6, 0, 2 * Math.PI);
+      ctx.arc(x + offsetX*45 - 14 + (c * 14), y + offsetY*45 + CARD_H + 35, 6, 0, 2 * Math.PI);
       ctx.fillStyle = "#fc3";
       ctx.fill();
     }
@@ -147,16 +137,9 @@ function drawTable(showCards = false) {
   drawFloatingTexts();
 }
 
-// ========== GAMEPLAY ==========
 function startGame() {
   deck = createDeck();
-  players = Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    chips: 3,
-    card: null,
-    x: 0,
-    y: 0
-  }));
+  players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null, x: 0, y: 0 }));
   dealCards();
 }
 
@@ -167,9 +150,8 @@ function dealCards() {
 
   if (dealerIndex === null) {
     players.forEach(p => p.card = deck.pop());
-    let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
-    let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
-    dealerIndex = players.indexOf(topCandidates[0]);
+    let max = Math.max(...players.map(p => getCardValue(p.card)));
+    dealerIndex = players.findIndex(p => getCardValue(p.card) === max);
     startingPlayerIndex = (dealerIndex + 1) % players.length;
     players.forEach(p => p.card = null);
   }
@@ -179,17 +161,12 @@ function dealCards() {
   revealCardsSequentially();
 }
 
-function revealCardsSequentially(index = 0) {
-  if (index >= players.length) {
-    processTurn();
-    return;
-  }
-
-  const revealIndex = (startingPlayerIndex + index) % players.length;
-  players[revealIndex].card = deck.pop();
+function revealCardsSequentially(i = 0) {
+  if (i >= players.length) return processTurn();
+  const idx = (startingPlayerIndex + i) % players.length;
+  players[idx].card = deck.pop();
   drawTable(false);
-
-  setTimeout(() => revealCardsSequentially(index + 1), 400);
+  setTimeout(() => revealCardsSequentially(i + 1), 400);
 }
 
 function keepCard() {
@@ -200,11 +177,8 @@ function keepCard() {
 
 function passCard() {
   let next = (currentPlayer + 1) % players.length;
-  if (players[next].card.rank === "K") {
-    alert("Blocked! Player has a King.");
-  } else {
-    [players[currentPlayer].card, players[next].card] = [players[next].card, players[currentPlayer].card];
-  }
+  if (players[next].card.rank === "K") alert("Blocked! Player has a King.");
+  else [players[currentPlayer].card, players[next].card] = [players[next].card, players[currentPlayer].card];
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   nextTurn();
@@ -212,61 +186,45 @@ function passCard() {
 
 function aiTurn() {
   let next = (currentPlayer + 1) % players.length;
-  let currentCard = getCardValue(players[currentPlayer].card);
-  let shouldPass = currentCard < 8;
-  if (shouldPass && players[next].card.rank !== "K") {
+  let val = getCardValue(players[currentPlayer].card);
+  if (val < 8 && players[next].card.rank !== "K") {
     [players[currentPlayer].card, players[next].card] = [players[next].card, players[currentPlayer].card];
   }
   nextTurn();
 }
 
 function processTurn() {
-  isHumanTurn = (players[currentPlayer].id === 1);
+  isHumanTurn = players[currentPlayer].id === 1;
   peekPlayerCard = isHumanTurn;
   drawTable(false);
-  if (isHumanTurn) {
-    document.getElementById("actionBtns").style.display = "block";
-  } else {
-    setTimeout(aiTurn, 1000);
-  }
+  if (isHumanTurn) document.getElementById("actionBtns").style.display = "block";
+  else setTimeout(aiTurn, 1000);
 }
 
 function nextTurn() {
   currentPlayer = (currentPlayer + 1) % players.length;
-  if (currentPlayer === dealerIndex) {
-    endRound();
-  } else {
-    processTurn();
-  }
+  if (currentPlayer === dealerIndex) endRound();
+  else processTurn();
 }
 
 function endRound() {
   drawTable(true);
   setTimeout(() => {
-    const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+    const min = Math.min(...players.map(p => getCardValue(p.card)));
     players.forEach(p => {
-      if (getCardValue(p.card) === minValue) {
+      if (getCardValue(p.card) === min) {
         p.chips--;
         floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
       }
     });
-
-    const losers = players.filter(p => getCardValue(p.card) === minValue);
-    if (losers.length > 0) {
+    const losers = players.filter(p => getCardValue(p.card) === min);
+    if (losers.length) {
       const firstLoser = losers[0];
-      const loserIndex = players.indexOf(firstLoser);
-      startingPlayerIndex = (loserIndex + 1) % players.length;
+      startingPlayerIndex = (players.indexOf(firstLoser) + 1) % players.length;
     }
-
     players = players.filter(p => p.chips > 0);
     drawTable(false);
-
-    if (players.length === 1) {
-      alert(`Player ${players[0].id} wins!`);
-      document.getElementById("actionBtns").style.display = "none";
-      return;
-    }
-
+    if (players.length === 1) return alert(`Player ${players[0].id} wins!`);
     setTimeout(() => {
       deck = createDeck();
       players.forEach(p => p.card = null);
