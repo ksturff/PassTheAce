@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Spaced Layout</title>
+  <title>Pass the Ace - Bigger Layout</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -43,7 +43,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 40, CARD_H = 60, RX = 370, RY = 230, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 60, CARD_H = 90, RX = 370, RY = 230, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
 let startingPlayerIndex = null;
@@ -109,9 +109,9 @@ function drawTable(showCards = false) {
     p.x = x;
     p.y = y;
 
-    // Avatar
+    // Avatar (larger)
     ctx.beginPath();
-    ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
+    ctx.arc(x, y - 50, 30, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#660" : "#222";
     ctx.fill();
 
@@ -138,15 +138,15 @@ function drawTable(showCards = false) {
       }
     }
 
-    // Label
+    // Label (slightly lower)
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
+    ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 35);
 
-    // Chips (below label)
+    // Chips (below label, larger & spaced more)
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
-      ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
+      ctx.arc(x - 14 + (c * 14), y + CARD_H / 2 + 60, 6, 0, 2 * Math.PI);
       ctx.fillStyle = "#fc3";
       ctx.fill();
     }
@@ -260,7 +260,6 @@ function endRound() {
       }
     });
 
-    // Recalculate new starting point: left of first losing player
     const losers = players.filter(p => getCardValue(p.card) === minValue);
     if (losers.length > 0) {
       const firstLoser = losers[0];
