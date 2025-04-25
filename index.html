@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Dealer Only Once</title>
+  <title>Pass the Ace - Sequential Reveal</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -123,19 +123,21 @@ function drawTable(showCards = false) {
     }
 
     // Card
-    let showCard = showCards || (p.id === 1 && peekPlayerCard);
-    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-    const suit = suitMap[p.card.suit];
-    const cardKey = `${rank}_${suit}`;
-    const card = showCard ? cardImages[cardKey] : cardImages["Back"];
+    if (p.card) {
+      let showCard = showCards || (p.id === 1 && peekPlayerCard);
+      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+      const suit = suitMap[p.card.suit];
+      const cardKey = `${rank}_${suit}`;
+      const card = showCard ? cardImages[cardKey] : cardImages["Back"];
 
-    if (card && card.complete) {
-      if (p.id === 1 && peekPlayerCard) {
-        ctx.drawImage(card, x - CARD_W * 0.75, y - CARD_H * 0.75 + 10, CARD_W * 1.5, CARD_H * 1.5);
-      } else {
-        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2 + 10, CARD_W, CARD_H);
+      if (card && card.complete) {
+        if (p.id === 1 && peekPlayerCard) {
+          ctx.drawImage(card, x - CARD_W * 0.75, y - CARD_H * 0.75 + 10, CARD_W * 1.5, CARD_H * 1.5);
+        } else {
+          ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2 + 10, CARD_W, CARD_H);
+        }
       }
     }
 
@@ -163,19 +165,31 @@ function startGame() {
 
 function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
-  players.forEach(p => p.card = deck.pop());
+  players.forEach(p => p.card = null); // clear cards first
   dealerCard = deck.pop();
 
-  // Only determine dealer once, before first round
+  // Only assign dealer once
   if (dealerIndex === null) {
+    players.forEach(p => p.card = deck.pop());
     let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
     let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
     dealerIndex = players.indexOf(topCandidates[0]);
+    players.forEach(p => p.card = null); // clear again for animation
   }
 
   currentPlayer = (dealerIndex + 1) % players.length;
   drawTable(false);
-  processTurn();
+  revealCardsSequentially();
+}
+
+function revealCardsSequentially(index = 0) {
+  if (index >= players.length) {
+    processTurn();
+    return;
+  }
+  players[index].card = deck.pop();
+  drawTable(false);
+  setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
 function keepCard() {
@@ -243,7 +257,13 @@ function endRound() {
       document.getElementById("actionBtns").style.display = "none";
       return;
     }
-    dealCards();
+
+    setTimeout(() => {
+      deck = createDeck();
+      players.forEach(p => p.card = null);
+      drawTable(false);
+      setTimeout(dealCards, 1000);
+    }, 1000);
   }, 1500);
 }
 
