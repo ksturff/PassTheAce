@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Chips Below Name</title>
+  <title>Pass the Ace - Spaced Layout</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -43,7 +43,7 @@ const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 
-const CARD_W = 40, CARD_H = 60, RX = 300, RY = 180, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 40, CARD_H = 60, RX = 370, RY = 230, CENTER_X = 512, CENTER_Y = 288;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [];
 let startingPlayerIndex = null;
