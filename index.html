@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pass the Ace - Seat-Aware Layout</title>
+  <title>Pass the Ace - Even Layout Fix</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
     canvas { display: block; margin: auto; background-color: #0d0d0d; }
@@ -34,13 +34,13 @@
     <button onclick="passCard()">Pass</button>
   </div>
 </div>
-<canvas id="gameCanvas" width="1024" height="576"></canvas>
+<canvas id="gameCanvas" width="1280" height="720"></canvas>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const CARD_W = 60, CARD_H = 90, RX = 340, RY = 180, CENTER_X = 512, CENTER_Y = 288;
+const CARD_W = 60, CARD_H = 90, RX = 400, RY = 240, CENTER_X = 640, CENTER_Y = 360;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [], startingPlayerIndex = null;
 
@@ -103,13 +103,11 @@ function drawTable(showCards = false) {
 
     const offsetX = Math.cos(angle), offsetY = Math.sin(angle);
 
-    // Avatar
     ctx.beginPath();
     ctx.arc(x, y, 30, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#660" : "#222";
     ctx.fill();
 
-    // Card
     if (p.card) {
       let show = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
       const rMap = { J:'jack', Q:'queen', K:'king', A:'ace' }, sMap = { S:'spades', H:'hearts', D:'diamonds', C:'clubs' };
@@ -117,18 +115,16 @@ function drawTable(showCards = false) {
       const st = sMap[p.card.suit];
       const cardKey = `${rk}_${st}`;
       const card = show ? cardImages[cardKey] : cardImages['Back'];
-      if (card?.complete) ctx.drawImage(card, x - CARD_W/2 + offsetX*45, y + offsetY*45, CARD_W, CARD_H);
+      if (card?.complete) ctx.drawImage(card, x - CARD_W/2, y + 35, CARD_W, CARD_H);
     }
 
-    // Name
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(`P${p.id}`, x + offsetX*45, y + offsetY*45 + CARD_H + 20);
+    ctx.fillText(`P${p.id}`, x, y + CARD_H + 55);
 
-    // Chips
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
-      ctx.arc(x + offsetX*45 - 14 + (c * 14), y + offsetY*45 + CARD_H + 35, 6, 0, 2 * Math.PI);
+      ctx.arc(x - 14 + (c * 14), y + CARD_H + 70, 6, 0, 2 * Math.PI);
       ctx.fillStyle = "#fc3";
       ctx.fill();
     }
@@ -147,7 +143,6 @@ function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
   players.forEach(p => p.card = null);
   dealerCard = deck.pop();
-
   if (dealerIndex === null) {
     players.forEach(p => p.card = deck.pop());
     let max = Math.max(...players.map(p => getCardValue(p.card)));
@@ -155,7 +150,6 @@ function dealCards() {
     startingPlayerIndex = (dealerIndex + 1) % players.length;
     players.forEach(p => p.card = null);
   }
-
   currentPlayer = startingPlayerIndex;
   drawTable(false);
   revealCardsSequentially();
