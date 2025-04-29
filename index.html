@@ -295,19 +295,24 @@ function endRound() {
         floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
       }
     });
+
     const losers = players.filter(p => getCardValue(p.card) === minValue);
     if (losers.length > 0) {
       const firstLoser = losers[0];
       const loserIndex = players.indexOf(firstLoser);
       startingPlayerIndex = (loserIndex + 1) % players.length;
     }
+
     players = players.filter(p => p.chips > 0);
+    currentPlayer = currentPlayer % players.length; // ✅ FIX: prevent out-of-bounds
+
     if (players.length === 1) {
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
       return;
     }
+
     setTimeout(() => {
       deck = createDeck();
       players.forEach(p => p.card = null);
