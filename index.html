@@ -203,13 +203,6 @@ function startGame() {
   gameRunning = true;
 }
 
-function restartGame() {
-  document.getElementById("endOverlay").style.display = "none";
-  document.getElementById("startBtn").style.display = "block";
-  dealerIndex = null;
-  startGame();
-}
-
 function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
   players.forEach(p => p.card = null);
@@ -256,23 +249,6 @@ function passCard() {
     [current.card, next.card] = [next.card, current.card];
   }
 
-  document.getElementById("actionBtns").style.display = "none";
-  peekPlayerCard = false;
-  nextTurn();
-});
-  } else if (next.card.rank === "K") {
-    floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
-  } else {
-    [current.card, next.card] = [next.card, current.card];
-  }
-
-  document.getElementById("actionBtns").style.display = "none";
-  peekPlayerCard = false;
-  nextTurn();
-});
-  } else {
-    [players[currentPlayer].card, players[next].card] = [players[next].card, players[currentPlayer].card];
-  }
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   nextTurn();
