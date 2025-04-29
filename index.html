@@ -277,9 +277,14 @@ function processTurn() {
 }
 
 function nextTurn() {
-  if ((currentPlayer + 1) % players.length === dealerIndex) {
+  currentPlayer = (currentPlayer + 1) % players.length;
+
+  if (currentPlayer === dealerIndex) {
     setTimeout(() => endRound(), 1000);
   } else {
+    processTurn();
+  }
+} else {
     currentPlayer = (currentPlayer + 1) % players.length;
     processTurn();
   }
