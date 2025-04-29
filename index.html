@@ -243,4 +243,104 @@ window.passCard = function() {
   if (current.card.rank === "K") {
     floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
   } else if (next.card.rank === "K") {
-    floatingTexts.push({ text: "Blocked! Player has a
+    floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
+  } else {
+    [current.card, next.card] = [next.card, current.card];
+  }
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+  nextTurn();
+};
+
+function aiTurn() {
+  let current = players[currentPlayer];
+  let nextIndex = (currentPlayer + 1) % players.length;
+  let next = players[nextIndex];
+
+  if (!next || !next.card) {
+    nextTurn();
+    return;
+  }
+
+  let currentCard = getCardValue(current.card);
+  let shouldPass = currentCard < 8 && next.card.rank !== "K";
+
+  if (shouldPass) {
+    [current.card, next.card] = [next.card, current.card];
+  }
+
+  nextTurn();
+}
+
+function processTurn() {
+  if (!players[currentPlayer] || !players[currentPlayer].card) {
+    nextTurn();
+    return;
+  }
+  updateTurnIndicator();
+  isHumanTurn = (players[currentPlayer].id === 1);
+  peekPlayerCard = isHumanTurn;
+  drawTable(false);
+  if (isHumanTurn) {
+    document.getElementById("actionBtns").style.display = "block";
+  } else {
+    setTimeout(aiTurn, 1000);
+  }
+}
+
+function nextTurn() {
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => {
+      endRound();
+    }, 1000);
+  } else {
+    processTurn();
+  }
+}
+
+function endRound() {
+  drawTable(true);
+  setTimeout(() => {
+    const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+    players.forEach(p => {
+      if (getCardValue(p.card) === minValue) {
+        p.chips--;
+        floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
+      }
+    });
+
+    const losers = players.filter(p => getCardValue(p.card) === minValue);
+    if (losers.length > 0) {
+      const firstLoser = losers[0];
+      const loserIndex = players.indexOf(firstLoser);
+      startingPlayerIndex = (loserIndex + 1) % players.length;
+    }
+
+    players = players.filter(p => p.chips > 0);
+    currentPlayer = currentPlayer % players.length;
+
+    if (players.length === 1) {
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
+      document.getElementById("endOverlay").style.display = "flex";
+      document.getElementById("actionBtns").style.display = "none";
+      return;
+    }
+
+    setTimeout(() => {
+      deck = createDeck();
+      players.forEach(p => p.card = null);
+      drawTable(false);
+      setTimeout(dealCards, 1000);
+    }, 1000);
+  }, 1500);
+}
+
+preloadAssets();
+(function gameLoop() {
+  drawTable(false);
+  if (gameRunning) requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
