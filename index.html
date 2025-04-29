@@ -280,8 +280,13 @@ function nextTurn() {
   currentPlayer = (currentPlayer + 1) % players.length;
 
   if (currentPlayer === dealerIndex) {
-    setTimeout(() => endRound(), 1000);
+    setTimeout(() => {
+      endRound();
+    }, 1000);
   } else {
+    processTurn();
+  }
+} else {
     processTurn();
   }
 } else {
