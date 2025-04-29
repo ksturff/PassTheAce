@@ -188,6 +188,13 @@ function updateTurnIndicator() {
   document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
 }
 
+function restartGame() {
+  document.getElementById("endOverlay").style.display = "none";
+  document.getElementById("startBtn").style.display = "block";
+  dealerIndex = null;
+  startGame();
+}
+
 function startGame() {
   document.getElementById("startBtn").style.display = 'none';
   deck = createDeck();
@@ -243,6 +250,16 @@ function passCard() {
 
   if (current.card.rank === "K") {
     floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
+  } else if (next.card.rank === "K") {
+    floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
+  } else {
+    [current.card, next.card] = [next.card, current.card];
+  }
+
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+  nextTurn();
+});
   } else if (next.card.rank === "K") {
     floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
   } else {
