@@ -273,10 +273,9 @@ function processTurn() {
 
 function nextTurn() {
   currentPlayer = (currentPlayer + 1) % players.length;
+  processTurn();
   if (currentPlayer === dealerIndex) {
-    endRound();
-  } else {
-    processTurn();
+    setTimeout(endRound, 1500);
   }
 }
 
