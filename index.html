@@ -238,9 +238,21 @@ function keepCard() {
 }
 
 function passCard() {
-  let next = (currentPlayer + 1) % players.length;
-  if (players[next].card.rank === "K") {
-    floatingTexts.push({ text: "Blocked!", x: players[next].x, y: players[next].y - 60, opacity: 1 });
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+
+  if (current.card.rank === "K") {
+    floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
+  } else if (next.card.rank === "K") {
+    floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
+  } else {
+    [current.card, next.card] = [next.card, current.card];
+  }
+
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+  nextTurn();
+});
   } else {
     [players[currentPlayer].card, players[next].card] = [players[next].card, players[currentPlayer].card];
   }
