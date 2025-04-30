@@ -332,7 +332,13 @@ function processTurn() {
     document.getElementById("actionBtns").style.display = "block";
   } else {
     document.getElementById("actionBtns").style.display = "none";
-    setTimeout(() => aiTurn(), 1000);
+
+    // ✅ FIX: prevent AI from acting on Player 1’s turn
+    setTimeout(() => {
+      if (players[currentPlayer].id !== 1) {
+        aiTurn();
+      }
+    }, 1000);
   }
 }
 
