@@ -99,6 +99,7 @@ let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [], startingPla
 let gameRunning = false;
 
 function getCardValue(card) {
+  if (!card) return 99; // treat missing cards as highest
   if (typeof card.rank === 'number') return card.rank;
   return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
 }
@@ -245,6 +246,7 @@ window.keepCard = function() {
 window.passCard = function() {
   let current = players[currentPlayer];
   let next = players[(currentPlayer + 1) % players.length];
+  if (!current.card || !next.card) return;
 
   if (current.card.rank === "K") {
     floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
@@ -268,16 +270,13 @@ window.passCard = function() {
 function aiTurn() {
   let current = players[currentPlayer];
   let next = players[(currentPlayer + 1) % players.length];
-
-  if (!next || !next.card) {
+  if (!current.card || !next.card) {
     currentPlayer = (currentPlayer + 1) % players.length;
     processTurn();
     return;
   }
 
-  let currentCard = getCardValue(current.card);
-  let shouldPass = currentCard < 8 && next.card.rank !== "K";
-
+  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
   if (shouldPass) {
     [current.card, next.card] = [next.card, current.card];
   }
@@ -328,8 +327,8 @@ function endRound() {
     }
 
     players = players.filter(p => p.chips > 0);
-    currentPlayer = currentPlayer % players.length;
 
+    // Validate and reassign currentPlayer
     if (players.length === 1) {
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
@@ -337,12 +336,11 @@ function endRound() {
       return;
     }
 
-    setTimeout(() => {
-      deck = createDeck();
-      players.forEach(p => p.card = null);
-      drawTable(false);
-      setTimeout(dealCards, 1000);
-    }, 1000);
+    currentPlayer = startingPlayerIndex % players.length;
+    deck = createDeck();
+    players.forEach(p => p.card = null);
+    drawTable(false);
+    setTimeout(dealCards, 1000);
   }, 1500);
 }
 
