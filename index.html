@@ -99,7 +99,7 @@ let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [], startingPla
 let gameRunning = false;
 
 function getCardValue(card) {
-  if (!card) return 99; // treat missing cards as highest
+  if (!card) return 99;
   if (typeof card.rank === 'number') return card.rank;
   return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
 }
@@ -131,7 +131,7 @@ function preloadAssets() {
 }
 
 function drawFloatingTexts() {
-  floatingTexts.forEach((text, i) => {
+  floatingTexts.forEach((text) => {
     ctx.font = "16px Orbitron";
     ctx.fillStyle = `rgba(255, 0, 0, ${text.opacity})`;
     ctx.fillText(text.text, text.x, text.y);
@@ -189,14 +189,14 @@ function updateTurnIndicator() {
   document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
 }
 
-window.restartGame = function() {
+window.restartGame = function () {
   document.getElementById("endOverlay").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
   dealerIndex = null;
   startGame();
 };
 
-window.startGame = function() {
+window.startGame = function () {
   document.getElementById("startBtn").style.display = 'none';
   deck = createDeck();
   players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null, x: 0, y: 0 }));
@@ -206,16 +206,12 @@ window.startGame = function() {
 
 function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
+  players.forEach(p => p.card = deck.pop());
+  let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
+  let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
+  dealerIndex = players.indexOf(topCandidates[0]);
+  startingPlayerIndex = (dealerIndex + 1) % players.length;
   players.forEach(p => p.card = null);
-  dealerCard = deck.pop();
-  if (dealerIndex === null) {
-    players.forEach(p => p.card = deck.pop());
-    let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
-    let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
-    dealerIndex = players.indexOf(topCandidates[0]);
-    startingPlayerIndex = (dealerIndex + 1) % players.length;
-    players.forEach(p => p.card = null);
-  }
   currentPlayer = startingPlayerIndex;
   drawTable(false);
   revealCardsSequentially();
@@ -232,7 +228,7 @@ function revealCardsSequentially(index = 0) {
   setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
-window.keepCard = function() {
+window.keepCard = function () {
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -243,7 +239,7 @@ window.keepCard = function() {
   }
 };
 
-window.passCard = function() {
+window.passCard = function () {
   let current = players[currentPlayer];
   let next = players[(currentPlayer + 1) % players.length];
   if (!current.card || !next.card) return;
@@ -290,21 +286,32 @@ function aiTurn() {
 }
 
 function processTurn() {
-  if (!players[currentPlayer] || !players[currentPlayer].card) {
+  // Validate currentPlayer index
+  if (currentPlayer >= players.length) currentPlayer = 0;
+
+  const current = players[currentPlayer];
+  if (!current || !current.card) {
     currentPlayer = (currentPlayer + 1) % players.length;
     processTurn();
     return;
   }
 
-  updateTurnIndicator();
-  isHumanTurn = (players[currentPlayer].id === 1);
+  isHumanTurn = (current.id === 1);
   peekPlayerCard = isHumanTurn;
+  updateTurnIndicator();
   drawTable(false);
+
+  console.log(`Turn: Player ${current.id} | HumanTurn: ${isHumanTurn}`);
 
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
   } else {
-    setTimeout(aiTurn, 1000);
+    document.getElementById("actionBtns").style.display = "none";
+    setTimeout(() => {
+      if (!isHumanTurn) {
+        aiTurn();
+      }
+    }, 1000);
   }
 }
 
@@ -327,8 +334,6 @@ function endRound() {
     }
 
     players = players.filter(p => p.chips > 0);
-
-    // Validate and reassign currentPlayer
     if (players.length === 1) {
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
