@@ -121,8 +121,8 @@ function preloadAssets() {
   for (let s of suits) {
     for (let r of ranks) {
       const img = new Image();
-      img.src = ./assets/${r}_of_${s}.png;
-      cardImages[${r}_${s}] = img;
+      img.src = `./assets/${r}_of_${s}.png`;
+      cardImages[`${r}_${s}`] = img;
     }
   }
   const back = new Image();
@@ -133,7 +133,7 @@ function preloadAssets() {
 function drawFloatingTexts() {
   floatingTexts.forEach((text) => {
     ctx.font = "16px Orbitron";
-    ctx.fillStyle = rgba(255, 0, 0, ${text.opacity});
+    ctx.fillStyle = `rgba(255, 0, 0, ${text.opacity})`;
     ctx.fillText(text.text, text.x, text.y);
     text.y -= 1.5;
     text.opacity -= 0.02;
@@ -165,7 +165,7 @@ function drawTable(showCards = false) {
       const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
       const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
       const suit = suitMap[p.card.suit];
-      const cardKey = ${rank}_${suit};
+      const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
       if (card && card.complete) {
         const scale = (p.id === 1 && peekPlayerCard) ? 1.5 : 1;
@@ -174,7 +174,7 @@ function drawTable(showCards = false) {
     }
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(P${p.id}, x, y + CARD_H / 2 + 30);
+    ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
       ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
@@ -186,7 +186,7 @@ function drawTable(showCards = false) {
 }
 
 function updateTurnIndicator() {
-  document.getElementById("turnIndicator").innerText = Player ${players[currentPlayer].id}'s Turn;
+  document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
 }
 
 window.restartGame = function () {
@@ -211,7 +211,7 @@ function dealCards() {
   let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
   dealerIndex = players.indexOf(topCandidates[0]);
   startingPlayerIndex = (dealerIndex + 1) % players.length;
-  playersforEach(p => p.card = null);
+  players.forEach(p => p.card = null);
   currentPlayer = startingPlayerIndex;
   drawTable(false);
   revealCardsSequentially();
@@ -286,9 +286,7 @@ function aiTurn() {
 }
 
 function processTurn() {
-  // Validate currentPlayer index
   if (currentPlayer >= players.length) currentPlayer = 0;
-
   const current = players[currentPlayer];
   if (!current || !current.card) {
     currentPlayer = (currentPlayer + 1) % players.length;
@@ -301,7 +299,7 @@ function processTurn() {
   updateTurnIndicator();
   drawTable(false);
 
-  console.log(Turn: Player ${current.id} | HumanTurn: ${isHumanTurn});
+  console.log(`Turn: Player ${current.id} | HumanTurn: ${isHumanTurn}`);
 
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
@@ -335,7 +333,7 @@ function endRound() {
 
     players = players.filter(p => p.chips > 0);
     if (players.length === 1) {
-      document.getElementById("winMessage").innerText = 🏆 Player ${players[0].id} Wins!;
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
       return;
