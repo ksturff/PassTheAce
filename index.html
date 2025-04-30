@@ -104,6 +104,17 @@ function getCardValue(card) {
   return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
 }
 
+function showDebug(text, playerId = null) {
+  const p = players.find(p => p.id === playerId) || players[currentPlayer];
+  floatingTexts.push({
+    text: text,
+    x: p?.x || CENTER_X,
+    y: (p?.y || CENTER_Y) - 70,
+    opacity: 1
+  });
+  console.log(`DEBUG: ${text}`);
+}
+
 function createDeck() {
   let d = [];
   for (let s of ['S','H','D','C']) {
@@ -224,11 +235,13 @@ function revealCardsSequentially(index = 0) {
   }
   const revealIndex = (startingPlayerIndex + index) % players.length;
   players[revealIndex].card = deck.pop();
+  showDebug(`Dealt card to Player ${players[revealIndex].id}`, players[revealIndex].id);
   drawTable(false);
   setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
 window.keepCard = function () {
+  showDebug("Kept card", players[currentPlayer].id);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -246,13 +259,16 @@ window.passCard = function () {
 
   if (current.card.rank === "K") {
     floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
+    showDebug("Blocked: Tried to pass a King", current.id);
     return;
   } else if (next.card.rank === "K") {
     floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
+    showDebug("Blocked: Next player has a King", next.id);
     return;
   }
 
   [current.card, next.card] = [next.card, current.card];
+  showDebug("Passed card", current.id);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -275,6 +291,9 @@ function aiTurn() {
   let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
   if (shouldPass) {
     [current.card, next.card] = [next.card, current.card];
+    showDebug("AI Passed card", current.id);
+  } else {
+    showDebug("AI Kept card", current.id);
   }
 
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -299,7 +318,7 @@ function processTurn() {
   updateTurnIndicator();
   drawTable(false);
 
-  console.log(`Turn: Player ${current.id} | HumanTurn: ${isHumanTurn}`);
+  showDebug(`Turn: Player ${current.id} (${isHumanTurn ? "Human" : "AI"})`, current.id);
 
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
@@ -321,6 +340,7 @@ function endRound() {
       if (getCardValue(p.card) === minValue) {
         p.chips--;
         floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
+        showDebug(`Player ${p.id} loses a chip`, p.id);
       }
     });
 
@@ -331,8 +351,12 @@ function endRound() {
       startingPlayerIndex = (loserIndex + 1) % players.length;
     }
 
+    const eliminated = players.filter(p => p.chips <= 0);
+    eliminated.forEach(p => showDebug(`Player ${p.id} eliminated`, p.id));
+
     players = players.filter(p => p.chips > 0);
     if (players.length === 1) {
+      showDebug(`Player ${players[0].id} Wins!`);
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
