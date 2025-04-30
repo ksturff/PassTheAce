@@ -234,31 +234,44 @@ function revealCardsSequentially(index = 0) {
 window.keepCard = function() {
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
-  nextTurn();
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
 };
 
 window.passCard = function() {
   let current = players[currentPlayer];
   let next = players[(currentPlayer + 1) % players.length];
+
   if (current.card.rank === "K") {
     floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
+    return;
   } else if (next.card.rank === "K") {
     floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
-  } else {
-    [current.card, next.card] = [next.card, current.card];
+    return;
   }
+
+  [current.card, next.card] = [next.card, current.card];
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
-  nextTurn();
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
 };
 
 function aiTurn() {
   let current = players[currentPlayer];
-  let nextIndex = (currentPlayer + 1) % players.length;
-  let next = players[nextIndex];
+  let next = players[(currentPlayer + 1) % players.length];
 
   if (!next || !next.card) {
-    nextTurn();
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
     return;
   }
 
@@ -269,33 +282,30 @@ function aiTurn() {
     [current.card, next.card] = [next.card, current.card];
   }
 
-  nextTurn();
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
 }
 
 function processTurn() {
   if (!players[currentPlayer] || !players[currentPlayer].card) {
-    nextTurn();
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
     return;
   }
+
   updateTurnIndicator();
   isHumanTurn = (players[currentPlayer].id === 1);
   peekPlayerCard = isHumanTurn;
   drawTable(false);
+
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
   } else {
     setTimeout(aiTurn, 1000);
-  }
-}
-
-function nextTurn() {
-  currentPlayer = (currentPlayer + 1) % players.length;
-  if (currentPlayer === dealerIndex) {
-    setTimeout(() => {
-      endRound();
-    }, 1000);
-  } else {
-    processTurn();
   }
 }
 
