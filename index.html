@@ -211,7 +211,7 @@ function dealCards() {
   let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
   dealerIndex = players.indexOf(topCandidates[0]);
   startingPlayerIndex = (dealerIndex + 1) % players.length;
-  players.forEach(p => p.card = null);
+  playersforEach(p => p.card = null);
   currentPlayer = startingPlayerIndex;
   drawTable(false);
   revealCardsSequentially();
