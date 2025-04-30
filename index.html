@@ -71,6 +71,27 @@
       background: #28a745;
       box-shadow: 0 0 15px #28a745;
     }
+    #debugPanel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: #0ff;
+      font-size: 14px;
+      padding: 10px;
+      overflow-y: auto;
+      z-index: 99;
+      font-family: monospace;
+      border-left: 2px solid #0ff;
+    }
+    #debugPanel h2 {
+      font-size: 16px;
+      margin-top: 0;
+      color: #0ff;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -86,6 +107,10 @@
     <div id="winMessage">Player X Wins!</div>
     <button onclick="restartGame()">Play Again</button>
   </div>
+  <div id="debugPanel">
+    <h2>Debug Log</h2>
+    <div id="debugLog"></div>
+  </div>
   <canvas id="gameCanvas" width="1024" height="600"></canvas>
 
 <script>
@@ -95,8 +120,17 @@ const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
 const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 300;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
-let isHumanTurn = false, peekPlayerCard = false, floatingTexts = [], startingPlayerIndex = null;
+let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
 let gameRunning = false;
+
+function logDebug(message) {
+  const log = document.getElementById("debugLog");
+  const entry = document.createElement("div");
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+  console.log("DEBUG:", message);
+}
 
 function getCardValue(card) {
   if (!card) return 99;
@@ -121,24 +155,13 @@ function preloadAssets() {
   for (let s of suits) {
     for (let r of ranks) {
       const img = new Image();
-      img.src = ./assets/${r}_of_${s}.png;
-      cardImages[${r}_${s}] = img;
+      img.src = `./assets/${r}_of_${s}.png`;
+      cardImages[`${r}_${s}`] = img;
     }
   }
   const back = new Image();
   back.src = './assets/Back.png';
   cardImages["Back"] = back;
-}
-
-function drawFloatingTexts() {
-  floatingTexts.forEach((text) => {
-    ctx.font = "16px Orbitron";
-    ctx.fillStyle = rgba(255, 0, 0, ${text.opacity});
-    ctx.fillText(text.text, text.x, text.y);
-    text.y -= 1.5;
-    text.opacity -= 0.02;
-  });
-  floatingTexts = floatingTexts.filter(t => t.opacity > 0);
 }
 
 function drawTable(showCards = false) {
@@ -165,16 +188,15 @@ function drawTable(showCards = false) {
       const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
       const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
       const suit = suitMap[p.card.suit];
-      const cardKey = ${rank}_${suit};
+      const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
       if (card && card.complete) {
-        const scale = (p.id === 1 && peekPlayerCard) ? 1.5 : 1;
-        ctx.drawImage(card, x - CARD_W * scale / 2, y - CARD_H * scale / 2 + 10, CARD_W * scale, CARD_H * scale);
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2 + 10, CARD_W, CARD_H);
       }
     }
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText(P${p.id}, x, y + CARD_H / 2 + 30);
+    ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
       ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
@@ -182,16 +204,16 @@ function drawTable(showCards = false) {
       ctx.fill();
     }
   });
-  drawFloatingTexts();
 }
 
 function updateTurnIndicator() {
-  document.getElementById("turnIndicator").innerText = Player ${players[currentPlayer].id}'s Turn;
+  document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
 }
 
 window.restartGame = function () {
   document.getElementById("endOverlay").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
+  document.getElementById("debugLog").innerHTML = '';
   dealerIndex = null;
   startGame();
 };
@@ -224,11 +246,13 @@ function revealCardsSequentially(index = 0) {
   }
   const revealIndex = (startingPlayerIndex + index) % players.length;
   players[revealIndex].card = deck.pop();
+  logDebug(`Dealt card to Player ${players[revealIndex].id}`);
   drawTable(false);
   setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
 window.keepCard = function () {
+  logDebug(`Player ${players[currentPlayer].id} kept their card`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -245,14 +269,15 @@ window.passCard = function () {
   if (!current.card || !next.card) return;
 
   if (current.card.rank === "K") {
-    floatingTexts.push({ text: "Can't Pass a King!", x: current.x, y: current.y - 60, opacity: 1 });
+    logDebug(`Player ${current.id} tried to pass a King — blocked`);
     return;
   } else if (next.card.rank === "K") {
-    floatingTexts.push({ text: "Blocked! Player has a King.", x: next.x, y: next.y - 60, opacity: 1 });
+    logDebug(`Player ${current.id} tried to pass to Player ${next.id} — blocked (King)`);
     return;
   }
 
   [current.card, next.card] = [next.card, current.card];
+  logDebug(`Player ${current.id} passed card to Player ${next.id}`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -275,6 +300,9 @@ function aiTurn() {
   let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
   if (shouldPass) {
     [current.card, next.card] = [next.card, current.card];
+    logDebug(`AI Player ${current.id} passed card to Player ${next.id}`);
+  } else {
+    logDebug(`AI Player ${current.id} kept their card`);
   }
 
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -298,18 +326,13 @@ function processTurn() {
   peekPlayerCard = isHumanTurn;
   updateTurnIndicator();
   drawTable(false);
-
-  console.log(Turn: Player ${current.id} | HumanTurn: ${isHumanTurn});
+  logDebug(`Turn: Player ${current.id} (${isHumanTurn ? "Human" : "AI"})`);
 
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
   } else {
     document.getElementById("actionBtns").style.display = "none";
-    setTimeout(() => {
-      if (!isHumanTurn) {
-        aiTurn();
-      }
-    }, 1000);
+    setTimeout(() => aiTurn(), 1000);
   }
 }
 
@@ -320,7 +343,7 @@ function endRound() {
     players.forEach(p => {
       if (getCardValue(p.card) === minValue) {
         p.chips--;
-        floatingTexts.push({ text: "-1 chip", x: p.x, y: p.y - 50, opacity: 1 });
+        logDebug(`Player ${p.id} lost a chip`);
       }
     });
 
@@ -331,9 +354,13 @@ function endRound() {
       startingPlayerIndex = (loserIndex + 1) % players.length;
     }
 
+    const eliminated = players.filter(p => p.chips <= 0);
+    eliminated.forEach(p => logDebug(`Player ${p.id} eliminated`));
+
     players = players.filter(p => p.chips > 0);
     if (players.length === 1) {
-      document.getElementById("winMessage").innerText = 🏆 Player ${players[0].id} Wins!;
+      logDebug(`🏆 Player ${players[0].id} wins the game!`);
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
       return;
