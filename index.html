@@ -112,6 +112,279 @@
     <div id="debugLog"></div>
   </div>
   <canvas id="gameCanvas" width="1024" height="600"></canvas>
-  <script src="pass_the_ace_fixed.js"></script>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const backgroundImage = new Image();
+backgroundImage.src = './assets/background.png';
+const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 300;
+let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
+let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
+let gameRunning = false;
+
+function logDebug(message) {
+  const log = document.getElementById("debugLog");
+  const entry = document.createElement("div");
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+  console.log("DEBUG:", message);
+}
+
+function getCardValue(card) {
+  if (!card) return 99;
+  if (typeof card.rank === 'number') return card.rank;
+  return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
+}
+
+function createDeck() {
+  let d = [];
+  for (let s of ['S','H','D','C']) {
+    for (let r of [2,3,4,5,6,7,8,9,10,'J','Q','K','A']) {
+      d.push({suit: s, rank: r});
+    }
+  }
+  return d.sort(() => Math.random() - 0.5);
+}
+
+function preloadAssets() {
+  window.cardImages = {};
+  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+  const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
+  for (let s of suits) {
+    for (let r of ranks) {
+      const img = new Image();
+      img.src = `./assets/${r}_of_${s}.png`;
+      cardImages[`${r}_${s}`] = img;
+    }
+  }
+  const back = new Image();
+  back.src = './assets/Back.png';
+  cardImages["Back"] = back;
+}
+
+function drawTable(showCards = false) {
+  ctx.imageSmoothingEnabled = false;
+  if (backgroundImage.complete) {
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  const radiusX = 400, radiusY = 220;
+  players.forEach((p, i) => {
+    const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
+    const x = CENTER_X + Math.cos(angle) * radiusX;
+    const y = CENTER_Y + Math.sin(angle) * radiusY;
+    p.x = x;
+    p.y = y;
+    ctx.beginPath();
+    ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
+    ctx.fillStyle = (i === currentPlayer) ? "#ff0" : "#222";
+    ctx.fill();
+    if (p.card) {
+      let showCard = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
+      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+      const suit = suitMap[p.card.suit];
+      const cardKey = `${rank}_${suit}`;
+      const card = showCard ? cardImages[cardKey] : cardImages["Back"];
+      if (card && card.complete) {
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2 + 10, CARD_W, CARD_H);
+      }
+    }
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
+    for (let c = 0; c < p.chips; c++) {
+      ctx.beginPath();
+      ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "#fc3";
+      ctx.fill();
+    }
+  });
+}
+
+function updateTurnIndicator() {
+  document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
+}
+
+window.restartGame = function () {
+  document.getElementById("endOverlay").style.display = "none";
+  document.getElementById("startBtn").style.display = "block";
+  document.getElementById("debugLog").innerHTML = '';
+  dealerIndex = null;
+  startGame();
+};
+
+window.startGame = function () {
+  document.getElementById("startBtn").style.display = 'none';
+  deck = createDeck();
+  players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null, x: 0, y: 0 }));
+  dealCards();
+  gameRunning = true;
+};
+
+function dealCards() {
+  if (deck.length < players.length + 1) deck = createDeck();
+  players.forEach(p => p.card = deck.pop());
+  let maxVal = Math.max(...players.map(p => getCardValue(p.card)));
+  let topCandidates = players.filter(p => getCardValue(p.card) === maxVal);
+  dealerIndex = players.indexOf(topCandidates[0]);
+  startingPlayerIndex = (dealerIndex + 1) % players.length;
+  players.forEach(p => p.card = null);
+  currentPlayer = startingPlayerIndex;
+  drawTable(false);
+  revealCardsSequentially();
+}
+
+function revealCardsSequentially(index = 0) {
+  if (index >= players.length) {
+    processTurn();
+    return;
+  }
+  const revealIndex = (startingPlayerIndex + index) % players.length;
+  players[revealIndex].card = deck.pop();
+  logDebug(`Dealt card to Player ${players[revealIndex].id}`);
+  drawTable(false);
+  setTimeout(() => revealCardsSequentially(index + 1), 400);
+}
+
+window.keepCard = function () {
+  logDebug(`Player ${players[currentPlayer].id} kept their card`);
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
+};
+
+window.passCard = function () {
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+  if (!current.card || !next.card) return;
+
+  if (current.card.rank === "K") {
+    logDebug(`Player ${current.id} tried to pass a King — blocked`);
+    return;
+  } else if (next.card.rank === "K") {
+    logDebug(`Player ${current.id} tried to pass to Player ${next.id} — blocked (King)`);
+    return;
+  }
+
+  [current.card, next.card] = [next.card, current.card];
+  logDebug(`Player ${current.id} passed card to Player ${next.id}`);
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
+};
+
+function aiTurn() {
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+  if (!current.card || !next.card) {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
+    return;
+  }
+
+  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+  if (shouldPass) {
+    [current.card, next.card] = [next.card, current.card];
+    logDebug(`AI Player ${current.id} passed card to Player ${next.id}`);
+  } else {
+    logDebug(`AI Player ${current.id} kept their card`);
+  }
+
+  currentPlayer = (currentPlayer + 1) % players.length;
+  if (currentPlayer === dealerIndex) {
+    setTimeout(() => endRound(), 1000);
+  } else {
+    processTurn();
+  }
+}
+
+function processTurn() {
+  if (currentPlayer >= players.length) currentPlayer = 0;
+  const current = players[currentPlayer];
+  if (!current || !current.card) {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
+    return;
+  }
+
+  isHumanTurn = (current.id === 1);
+  peekPlayerCard = isHumanTurn;
+  updateTurnIndicator();
+  drawTable(false);
+  logDebug(`Turn: Player ${current.id} (${isHumanTurn ? "Human" : "AI"})`);
+
+  if (isHumanTurn) {
+    document.getElementById("actionBtns").style.display = "block";
+  } else {
+    document.getElementById("actionBtns").style.display = "none";
+
+    // ✅ FIX: prevent AI from acting on Player 1’s turn
+    setTimeout(() => {
+      if (players[currentPlayer].id !== 1) {
+        aiTurn();
+      }
+    }, 1000);
+  }
+}
+
+function endRound() {
+  drawTable(true);
+  setTimeout(() => {
+    const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+    players.forEach(p => {
+      if (getCardValue(p.card) === minValue) {
+        p.chips--;
+        logDebug(`Player ${p.id} lost a chip`);
+      }
+    });
+
+    const losers = players.filter(p => getCardValue(p.card) === minValue);
+    if (losers.length > 0) {
+      const firstLoser = losers[0];
+      const loserIndex = players.indexOf(firstLoser);
+      startingPlayerIndex = (loserIndex + 1) % players.length;
+    }
+
+    const eliminated = players.filter(p => p.chips <= 0);
+    eliminated.forEach(p => logDebug(`Player ${p.id} eliminated`));
+
+    players = players.filter(p => p.chips > 0);
+    if (players.length === 1) {
+      logDebug(`🏆 Player ${players[0].id} wins the game!`);
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
+      document.getElementById("endOverlay").style.display = "flex";
+      document.getElementById("actionBtns").style.display = "none";
+      return;
+    }
+
+    currentPlayer = startingPlayerIndex % players.length;
+    deck = createDeck();
+    players.forEach(p => p.card = null);
+    drawTable(false);
+    setTimeout(dealCards, 1000);
+  }, 1500);
+}
+
+preloadAssets();
+(function gameLoop() {
+  drawTable(false);
+  if (gameRunning) requestAnimationFrame(gameLoop);
+})();
+</script>
 </body>
 </html>
