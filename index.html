@@ -159,10 +159,7 @@ function preloadAssets() {
       cardImages[`${r}_${s}`] = img;
     }
   }
-  const back = new Image();
-back.src = './assets/pass_the_ace_card_back_40x60.png';
-  cardImages["Back"] = back;
-}
+ const CARD_W = 50, CARD_H = 75; // Adjusted for better visibility
 
 function drawTable(showCards = false) {
   ctx.imageSmoothingEnabled = false;
@@ -171,17 +168,21 @@ function drawTable(showCards = false) {
   } else {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
+
   const radiusX = 400, radiusY = 220;
+
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
     const x = CENTER_X + Math.cos(angle) * radiusX;
     const y = CENTER_Y + Math.sin(angle) * radiusY;
     p.x = x;
     p.y = y;
+
     ctx.beginPath();
     ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#ff0" : "#222";
     ctx.fill();
+
     if (p.card) {
       let showCard = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
       const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
@@ -190,13 +191,16 @@ function drawTable(showCards = false) {
       const suit = suitMap[p.card.suit];
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
-      if (card && card.complete) {
-        ctx.drawImage(card, x - 20, y - 30); // no width/height needed;
+
+      if (card && card.complete && card.naturalWidth > 0) {
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2 + 10, CARD_W, CARD_H);
       }
     }
+
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
+
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
       ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
