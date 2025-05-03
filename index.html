@@ -214,9 +214,7 @@
     el.classList.toggle("active-player", p.id === players[currentPlayer]?.id);
   });
 }
-      createPlayerElements(players);
-      dealCards();
-    }
+      
 
     function dealCards() {
       if (deck.length < players.length + 1) deck = createDeck();
