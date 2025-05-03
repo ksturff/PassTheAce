@@ -173,7 +173,7 @@ function drawTable(showCards = false) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  const radiusX = 400, radiusY = 220;
+  const radiusX = 360, radiusY = 200;
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
     const x = CENTER_X + Math.cos(angle) * radiusX;
