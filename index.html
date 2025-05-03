@@ -192,8 +192,28 @@
     }
 
     function updatePlayerStates(players, currentPlayer) {
-      players.forEach(p => {
-        const el = document.getElementById(`player-${p.id}`);
+  players.forEach(p => {
+    const el = document.getElementById(`player-${p.id}`);
+    if (!el) return;
+    const cardImg = el.querySelector(".player-card");
+    const chipsEl = el.querySelector(".chips");
+    const isHuman = p.id === 1;
+    const showCard = (p.id === players[currentPlayer].id && isHuman && peekPlayerCard) || p.card?.rank === "K";
+
+    if (p.card && showCard) {
+      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+      const suit = suitMap[p.card.suit];
+      cardImg.src = `./assets/${rank}_of_${suit}.png`;
+    } else {
+      cardImg.src = "./assets/Back.png";
+    }
+
+    chipsEl.innerText = `Chips: ${p.chips}`;
+    el.classList.toggle("active-player", p.id === players[currentPlayer]?.id);
+  });
+}`);
         if (!el) return;
         const cardImg = el.querySelector(".player-card");
         const chipsEl = el.querySelector(".chips");
@@ -289,11 +309,13 @@
     }
 
     function endRound() {
-      const min = Math.min(...players.map(p => getCardValue(p.card)));
-      players.forEach(p => {
-        if (getCardValue(p.card) === min) p.chips--;
-      });
-      players = players.filter(p => p.chips > 0);
+  const min = Math.min(...players.map(p => getCardValue(p.card)));
+  revealAllCards();
+  setTimeout(() => {
+    players.forEach(p => {
+      if (getCardValue(p.card) === min) p.chips--;
+    });
+    players = players.filter(p => p.chips > 0);
       if (players.length === 1) {
         document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
         document.getElementById("endOverlay").style.display = "flex";
@@ -319,7 +341,12 @@
       setTimeout(() => revealCardsSequentially(index + 1), 400);
     }
 
-    function restartGame() {
+    function revealAllCards() {
+  peekPlayerCard = true;
+  updatePlayerStates(players, currentPlayer);
+}
+
+function restartGame() {
       document.getElementById("endOverlay").style.display = "none";
       document.getElementById("startBtn").style.display = "block";
     }
