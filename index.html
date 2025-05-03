@@ -118,7 +118,9 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const backgroundImage = new Image();
 backgroundImage.src = './assets/background.png';
-const CARD_W = 40, CARD_H = 60, CENTER_X = 512, CENTER_Y = 300;
+
+const CARD_W = 100, CARD_H = 145;
+const CENTER_X = 512, CENTER_Y = 300;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
 let gameRunning = false;
@@ -165,12 +167,12 @@ function preloadAssets() {
 }
 
 function drawTable(showCards = false) {
-  ctx.imageSmoothingEnabled = false;
   if (backgroundImage.complete) {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   } else {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
+
   const radiusX = 400, radiusY = 220;
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
@@ -182,6 +184,7 @@ function drawTable(showCards = false) {
     ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#ff0" : "#222";
     ctx.fill();
+
     if (p.card) {
       let showCard = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === "K";
       const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
@@ -190,10 +193,11 @@ function drawTable(showCards = false) {
       const suit = suitMap[p.card.suit];
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
-      if (card && card.complete) {
-       ctx.drawImage(card, x - 50, y - 72.5, 100, 145);
+      if (card && card.complete && card.naturalWidth && card.naturalHeight) {
+        ctx.drawImage(card, x - card.naturalWidth / 2, y - card.naturalHeight / 2, card.naturalWidth, card.naturalHeight);
       }
     }
+
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
