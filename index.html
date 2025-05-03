@@ -173,6 +173,9 @@
     document.body.insertBefore(canvas, document.getElementById('playerContainer'));
     const ctx = canvas.getContext('2d');
 
+    const backgroundImage = new Image();
+    backgroundImage.src = './assets/background.png';
+
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
@@ -370,6 +373,11 @@
     }
 
     function drawTable(showCards = false) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
+
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
       const radiusX = 360, radiusY = 170;
