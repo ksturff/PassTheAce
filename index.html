@@ -162,7 +162,7 @@ function preloadAssets() {
     }
   }
   const back = new Image();
-  back.src = './assets/Back.png'; // ✅ Correct file name
+  back.src = './assets/Back.png'; // Correct file name
   cardImages["Back"] = back;
 }
 
@@ -194,7 +194,7 @@ function drawTable(showCards = false) {
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
       if (card && card.complete) {
-        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H); // ✅ Forced size
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H); // Forced same size for all cards
       }
     }
 
