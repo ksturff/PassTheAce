@@ -130,7 +130,7 @@
   </div>
   <div id="playerContainer"></div>
 
-  <script>
+<script>
 const canvas = document.createElement('canvas');
 canvas.width = 1024;
 canvas.height = 600;
@@ -351,10 +351,6 @@ function drawTable(showCards = false) {
 }
 
 preloadAssets();
-(function gameLoop() {
-  drawTable(false);
-  if (gameRunning) requestAnimationFrame(gameLoop);
-})();
 </script>
 </body>
 </html>
