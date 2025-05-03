@@ -128,7 +128,7 @@ let gameRunning = false;
 function logDebug(message) {
   const log = document.getElementById("debugLog");
   const entry = document.createElement("div");
-  entry.textContent = [${new Date().toLocaleTimeString()}] ${message};
+  entry.textContent = [${new Date().toLocaleTimeString()] ${message};
   log.appendChild(entry);
   log.scrollTop = log.scrollHeight;
   console.log("DEBUG:", message);
