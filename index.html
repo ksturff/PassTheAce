@@ -113,6 +113,25 @@
     .active-player .avatar {
       box-shadow: 0 0 10px 3px #ff0;
     }
+    #debugPanel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      color: #0ff;
+      font-size: 13px;
+      font-family: monospace;
+      overflow-y: auto;
+      padding: 10px;
+      z-index: 99;
+      border-left: 2px solid #0ff;
+    }
+    #debugPanel h2 {
+      margin-top: 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -129,8 +148,21 @@
     <button onclick="restartGame()">Play Again</button>
   </div>
   <div id="playerContainer"></div>
+  
+    <button onclick="document.getElementById('debugLog').innerHTML = ''" style="display:block;margin:10px auto;padding:6px 12px;background:#222;color:#0ff;border:1px solid #0ff;border-radius:5px;cursor:pointer;">Clear Log</button>
+    <div id="debugLog"></div>
+  </div>
 
-<script>
+  <script>
+function logDebug(message) {
+  const log = document.getElementById("debugLog");
+  const entry = document.createElement("div");
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+  console.log("DEBUG:", message);
+}
+
 const canvas = document.createElement('canvas');
 canvas.width = 1024;
 canvas.height = 600;
@@ -157,6 +189,7 @@ function createDeck() {
       d.push({suit: s, rank: r});
     }
   }
+  logDebug('New deck created and shuffled.');
   return d.sort(() => Math.random() - 0.5);
 }
 
@@ -181,6 +214,7 @@ function updateTurnIndicator() {
 }
 
 window.restartGame = function () {
+  logDebug('Game restarted.');
   document.getElementById("endOverlay").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
   dealerIndex = null;
@@ -188,6 +222,7 @@ window.restartGame = function () {
 };
 
 window.startGame = function () {
+  logDebug('Game started.');
   document.getElementById("startBtn").style.display = 'none';
   deck = createDeck();
   players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null }));
@@ -199,9 +234,11 @@ function dealCards() {
   if (deck.length < players.length + 1) deck = createDeck();
   players.forEach(p => p.card = null);
   const sample = players.map(p => ({ ...p, card: deck.pop() }));
+  sample.forEach(p => logDebug(`Dealt ${p.card.rank} of ${p.suit} to Player ${p.id}`));
   let maxVal = Math.max(...sample.map(p => getCardValue(p.card)));
   let topCandidates = sample.filter(p => getCardValue(p.card) === maxVal);
   dealerIndex = players.findIndex(p => p.id === topCandidates[0].id);
+  logDebug(`Dealer is Player ${players[dealerIndex].id}`);
   startingPlayerIndex = (dealerIndex + 1) % players.length;
   currentPlayer = startingPlayerIndex;
   sample.forEach((p, i) => players[i].card = p.card);
@@ -210,6 +247,7 @@ function dealCards() {
 
 function revealCardsSequentially(index = 0) {
   if (index >= players.length) {
+    logDebug('All players have received cards. Starting round...');
     processTurn();
     return;
   }
@@ -219,6 +257,7 @@ function revealCardsSequentially(index = 0) {
 }
 
 window.keepCard = function () {
+  logDebug(`Player ${players[currentPlayer].id} kept their card.`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -233,8 +272,12 @@ window.passCard = function () {
   let current = players[currentPlayer];
   let next = players[(currentPlayer + 1) % players.length];
   if (!current.card || !next.card) return;
-  if (current.card.rank === "K" || next.card.rank === "K") return;
+  if (current.card.rank === "K" || next.card.rank === "K") {
+    logDebug(`Player ${current.id} tried to pass but was blocked by a King.`);
+    return;
+  }
   [current.card, next.card] = [next.card, current.card];
+  logDebug(`Player ${current.id} passed card to Player ${next.id}`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -256,6 +299,9 @@ function aiTurn() {
   let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
   if (shouldPass) {
     [current.card, next.card] = [next.card, current.card];
+    logDebug(`AI Player ${current.id} passed card to Player ${next.id}`);
+  } else {
+    logDebug(`AI Player ${current.id} kept their card`);
   }
   currentPlayer = (currentPlayer + 1) % players.length;
   if (currentPlayer === dealerIndex) {
@@ -273,6 +319,7 @@ function processTurn() {
   peekPlayerCard = isHumanTurn;
   updateTurnIndicator();
   drawTable(false);
+  logDebug(`Turn: Player ${player.id} (${isHumanTurn ? 'Human' : 'AI'})`);
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
   } else {
@@ -282,14 +329,21 @@ function processTurn() {
 }
 
 function endRound() {
+  logDebug('Round ended. Revealing all cards...');
   drawTable(true);
   setTimeout(() => {
     const minValue = Math.min(...players.map(p => getCardValue(p.card)));
     players.forEach(p => {
-      if (getCardValue(p.card) === minValue) p.chips--;
+      if (getCardValue(p.card) === minValue) {
+        p.chips--;
+        logDebug(`Player ${p.id} lost a chip. Remaining chips: ${p.chips}`);
+      }
     });
+    const eliminated = players.filter(p => p.chips <= 0);
+    eliminated.forEach(p => logDebug(`Player ${p.id} has been eliminated.`));
     players = players.filter(p => p.chips > 0);
     if (players.length === 1) {
+      logDebug(`🏆 Player ${players[0].id} wins the game!`);
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
@@ -301,6 +355,7 @@ function endRound() {
       const firstLoser = losers[0];
       const loserIndex = players.findIndex(p => p.id === firstLoser.id);
       startingPlayerIndex = (loserIndex + 1) % players.length;
+      logDebug(`Next round starts with Player ${players[startingPlayerIndex].id}`);
     }
     if (dealerIndex >= players.length) dealerIndex = 0;
     if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
