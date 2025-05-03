@@ -218,7 +218,7 @@ function drawTable(showCards = false) {
 }
 
 function updateTurnIndicator() {
-  document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer].id}'s Turn`;
+  document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
 }
 
 window.restartGame = function () {
@@ -323,6 +323,8 @@ function aiTurn() {
 
 function processTurn() {
   if (currentPlayer >= players.length) currentPlayer = 0;
+  if (players.length === 0) return;
+
   const current = players[currentPlayer];
   if (!current || !current.card) {
     currentPlayer = (currentPlayer + 1) % players.length;
@@ -359,13 +361,6 @@ function endRound() {
       }
     });
 
-    const losers = players.filter(p => getCardValue(p.card) === minValue);
-    if (losers.length > 0) {
-      const firstLoser = losers[0];
-      const loserIndex = players.indexOf(firstLoser);
-      startingPlayerIndex = (loserIndex + 1) % players.length;
-    }
-
     const eliminated = players.filter(p => p.chips <= 0);
     eliminated.forEach(p => logDebug(`Player ${p.id} eliminated`));
     players = players.filter(p => p.chips > 0);
@@ -375,10 +370,21 @@ function endRound() {
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
+      gameRunning = false;
       return;
     }
 
-    currentPlayer = startingPlayerIndex % players.length;
+    const losers = players.filter(p => getCardValue(p.card) === minValue);
+    if (losers.length > 0) {
+      const firstLoser = losers[0];
+      const loserIndex = players.findIndex(p => p.id === firstLoser.id);
+      startingPlayerIndex = (loserIndex + 1) % players.length;
+    }
+
+    if (dealerIndex >= players.length) dealerIndex = 0;
+    if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
+
+    currentPlayer = startingPlayerIndex;
     deck = createDeck();
     players.forEach(p => p.card = null);
     drawTable(false);
