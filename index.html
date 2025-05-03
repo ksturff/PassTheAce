@@ -316,18 +316,19 @@
       if (getCardValue(p.card) === min) p.chips--;
     });
     players = players.filter(p => p.chips > 0);
-      if (players.length === 1) {
-        document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
-        document.getElementById("endOverlay").style.display = "flex";
-        return;
-      }
-      const losers = players.filter(p => getCardValue(p.card) === min);
-      const loserIndex = players.findIndex(p => p.id === losers[0].id);
-      startingPlayerIndex = (loserIndex + 1) % players.length;
-      deck = createDeck();
-      players.forEach(p => p.card = null);
-      createPlayerElements(players);
-      dealCards();
+    if (players.length === 1) {
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
+      document.getElementById("endOverlay").style.display = "flex";
+      return;
+    }
+    const losers = players.filter(p => getCardValue(p.card) === min);
+    const loserIndex = players.findIndex(p => p.id === losers[0].id);
+    startingPlayerIndex = (loserIndex + 1) % players.length;
+    deck = createDeck();
+    players.forEach(p => p.card = null);
+    createPlayerElements(players);
+    dealCards();
+  }, 1500);
     }
 
     function revealCardsSequentially(index = 0) {
@@ -346,7 +347,7 @@
   updatePlayerStates(players, currentPlayer);
 }
 
-function restartGame() {
+window.restartGame = function() {
       document.getElementById("endOverlay").style.display = "none";
       document.getElementById("startBtn").style.display = "block";
     }
