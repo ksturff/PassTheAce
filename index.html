@@ -129,6 +129,7 @@
     <button onclick="restartGame()">Play Again</button>
   </div>
   <div id="playerContainer"></div>
+
   <script>
 const canvas = document.createElement('canvas');
 canvas.width = 1024;
@@ -213,8 +214,8 @@ function revealCardsSequentially(index = 0) {
     return;
   }
   const revealIndex = (startingPlayerIndex + index) % players.length;
-  drawTable();
-  setTimeout(() => revealCardsSequentially(index + 1), 400);
+  drawTable(false);
+  setTimeout(() => revealCardsSequentially(index + 1), 300);
 }
 
 window.keepCard = function () {
@@ -271,7 +272,7 @@ function processTurn() {
   isHumanTurn = (player.id === 1);
   peekPlayerCard = isHumanTurn;
   updateTurnIndicator();
-  drawTable();
+  drawTable(false);
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
   } else {
@@ -331,7 +332,7 @@ function drawTable(showCards = false) {
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
     const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
     const suit = suitMap[p.card.suit];
-    card.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+    card.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
     card.className = 'player-card';
 
     const avatar = document.createElement('img');
@@ -355,6 +356,5 @@ preloadAssets();
   if (gameRunning) requestAnimationFrame(gameLoop);
 })();
 </script>
-  </script>
 </body>
 </html>
