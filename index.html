@@ -114,32 +114,25 @@
       box-shadow: 0 0 10px 3px #ff0;
     }
     #debugPanel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 300px;
-  height: 100%;
-  background: rgba(0,0,0,0.85);
-  color: #0ff;
-  font-size: 13px;
-  font-family: monospace;
-  overflow-y: auto;
-  padding: 10px;
-  z-index: 99;
-  border-left: 2px solid #0ff;
-  max-height: 100vh;
-}
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      color: #0ff;
+      font-size: 13px;
+      font-family: monospace;
+      overflow-y: auto;
+      padding: 10px;
+      z-index: 99;
+      border-left: 2px solid #0ff;
+      max-height: 100vh;
+    }
     #debugPanel h2 {
       margin-top: 0;
       text-align: center;
     }
-  
-    #debugPanel {
-      max-height: 100vh;
-      overflow-y: auto;
-    }
-    
-    }
 </head>
 <body>
   <div id="ui">
@@ -419,5 +412,4 @@ preloadAssets();
     <button onclick="document.getElementById('debugLog').innerHTML = ''" style="display:block;margin:10px auto;padding:6px 12px;background:#222;color:#0ff;border:1px solid #0ff;border-radius:5px;cursor:pointer;">Clear Log</button>
     <div id="debugLog"></div>
   </div>
-
 </html>
