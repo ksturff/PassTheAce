@@ -198,7 +198,7 @@
     const cardImg = el.querySelector(".player-card");
     const chipsEl = el.querySelector(".chips");
     const isHuman = p.id === 1;
-    const showCard = (p.id === players[currentPlayer].id && isHuman && peekPlayerCard) || p.card?.rank === "K";
+    const showCard = (p.id === players[currentPlayer].id && isHuman && peekPlayerCard) || p.card?.rank === "K" || peekPlayerCard;
 
     if (p.card && showCard) {
       const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
@@ -213,32 +213,7 @@
     chipsEl.innerText = `Chips: ${p.chips}`;
     el.classList.toggle("active-player", p.id === players[currentPlayer]?.id);
   });
-}`);
-        if (!el) return;
-        const cardImg = el.querySelector(".player-card");
-        const chipsEl = el.querySelector(".chips");
-        const isHuman = p.id === 1;
-        const showCard = isHuman || p.card?.rank === "K";
-
-        if (p.card && showCard) {
-          const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-          const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-          const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-          const suit = suitMap[p.card.suit];
-          cardImg.src = `./assets/${rank}_of_${suit}.png`;
-        } else {
-          cardImg.src = "./assets/Back.png";
-        }
-
-        chipsEl.innerText = `Chips: ${p.chips}`;
-        el.classList.toggle("active-player", p.id === players[currentPlayer]?.id);
-      });
-    }
-
-    function startGame() {
-      document.getElementById("startBtn").style.display = 'none';
-      deck = createDeck();
-      players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null }));
+}
       createPlayerElements(players);
       dealCards();
     }
@@ -348,9 +323,13 @@
 }
 
 window.restartGame = function() {
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-    }
+  document.getElementById("endOverlay").style.display = "none";
+  document.getElementById("startBtn").style.display = "block";
+  deck = createDeck();
+  players = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, chips: 3, card: null }));
+  createPlayerElements(players);
+  dealCards();
+};
   </script>
 </body>
 </html>
