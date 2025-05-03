@@ -230,8 +230,10 @@
       const top = players.find(p => getCardValue(p.card) === maxVal);
       dealerIndex = players.indexOf(top);
       startingPlayerIndex = (dealerIndex + 1) % players.length;
+      players.forEach(p => p.card = null); // Clear cards before reveal
       currentPlayer = startingPlayerIndex;
       updatePlayerStates(players, currentPlayer);
+      revealCardsSequentially();
       processTurn();
     }
 
@@ -304,6 +306,17 @@
       players.forEach(p => p.card = null);
       createPlayerElements(players);
       dealCards();
+    }
+
+    function revealCardsSequentially(index = 0) {
+      if (index >= players.length) {
+        processTurn();
+        return;
+      }
+      const revealIndex = (startingPlayerIndex + index) % players.length;
+      players[revealIndex].card = deck.pop();
+      updatePlayerStates(players, currentPlayer);
+      setTimeout(() => revealCardsSequentially(index + 1), 400);
     }
 
     function restartGame() {
