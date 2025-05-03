@@ -71,27 +71,6 @@
       background: #28a745;
       box-shadow: 0 0 15px #28a745;
     }
-    #debugPanel {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 300px;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      color: #0ff;
-      font-size: 14px;
-      padding: 10px;
-      overflow-y: auto;
-      z-index: 99;
-      font-family: monospace;
-      border-left: 2px solid #0ff;
-    }
-    #debugPanel h2 {
-      font-size: 16px;
-      margin-top: 0;
-      color: #0ff;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
@@ -107,10 +86,6 @@
     <div id="winMessage">Player X Wins!</div>
     <button onclick="restartGame()">Play Again</button>
   </div>
-  <div id="debugPanel">
-    <h2>Debug Log</h2>
-    <div id="debugLog"></div>
-  </div>
   <canvas id="gameCanvas" width="1024" height="600"></canvas>
 
 <script>
@@ -124,15 +99,6 @@ const CENTER_X = 512, CENTER_Y = 300;
 let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
 let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
 let gameRunning = false;
-
-function logDebug(message) {
-  const log = document.getElementById("debugLog");
-  const entry = document.createElement("div");
-  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-  log.appendChild(entry);
-  log.scrollTop = log.scrollHeight;
-  console.log("DEBUG:", message);
-}
 
 function getCardValue(card) {
   if (!card) return 99;
@@ -224,7 +190,6 @@ function updateTurnIndicator() {
 window.restartGame = function () {
   document.getElementById("endOverlay").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
-  document.getElementById("debugLog").innerHTML = '';
   dealerIndex = null;
   startGame();
 };
@@ -257,13 +222,11 @@ function revealCardsSequentially(index = 0) {
   }
   const revealIndex = (startingPlayerIndex + index) % players.length;
   players[revealIndex].card = deck.pop();
-  logDebug(`Dealt card to Player ${players[revealIndex].id}`);
   drawTable(false);
   setTimeout(() => revealCardsSequentially(index + 1), 400);
 }
 
 window.keepCard = function () {
-  logDebug(`Player ${players[currentPlayer].id} kept their card`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -279,13 +242,9 @@ window.passCard = function () {
   let next = players[(currentPlayer + 1) % players.length];
   if (!current.card || !next.card) return;
 
-  if (current.card.rank === "K" || next.card.rank === "K") {
-    logDebug(`Player ${current.id} tried to pass — blocked (King involved)`);
-    return;
-  }
+  if (current.card.rank === "K" || next.card.rank === "K") return;
 
   [current.card, next.card] = [next.card, current.card];
-  logDebug(`Player ${current.id} passed card to Player ${next.id}`);
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -308,9 +267,6 @@ function aiTurn() {
   let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
   if (shouldPass) {
     [current.card, next.card] = [next.card, current.card];
-    logDebug(`AI Player ${current.id} passed card to Player ${next.id}`);
-  } else {
-    logDebug(`AI Player ${current.id} kept their card`);
   }
 
   currentPlayer = (currentPlayer + 1) % players.length;
@@ -336,7 +292,6 @@ function processTurn() {
   peekPlayerCard = isHumanTurn;
   updateTurnIndicator();
   drawTable(false);
-  logDebug(`Turn: Player ${current.id} (${isHumanTurn ? "Human" : "AI"})`);
 
   if (isHumanTurn) {
     document.getElementById("actionBtns").style.display = "block";
@@ -355,18 +310,11 @@ function endRound() {
   setTimeout(() => {
     const minValue = Math.min(...players.map(p => getCardValue(p.card)));
     players.forEach(p => {
-      if (getCardValue(p.card) === minValue) {
-        p.chips--;
-        logDebug(`Player ${p.id} lost a chip`);
-      }
+      if (getCardValue(p.card) === minValue) p.chips--;
     });
 
-    const eliminated = players.filter(p => p.chips <= 0);
-    eliminated.forEach(p => logDebug(`Player ${p.id} eliminated`));
     players = players.filter(p => p.chips > 0);
-
     if (players.length === 1) {
-      logDebug(`🏆 Player ${players[0].id} wins the game!`);
       document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
       document.getElementById("actionBtns").style.display = "none";
