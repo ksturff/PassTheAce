@@ -162,7 +162,7 @@ function preloadAssets() {
     }
   }
   const back = new Image();
-  back.src = './assets/pass_the_ace_card_back_40x60.png';
+  back.src = './assets/Back.png'; // ✅ Correct file name
   cardImages["Back"] = back;
 }
 
@@ -193,8 +193,8 @@ function drawTable(showCards = false) {
       const suit = suitMap[p.card.suit];
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
-      if (card && card.complete && card.naturalWidth && card.naturalHeight) {
-        ctx.drawImage(card, x - card.naturalWidth / 2, y - card.naturalHeight / 2, card.naturalWidth, card.naturalHeight);
+      if (card && card.complete) {
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H); // ✅ Forced size
       }
     }
 
