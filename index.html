@@ -191,7 +191,7 @@ function drawTable(showCards = false) {
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
       if (card && card.complete) {
-        ctx.drawImage(card, x - 33, y - 48, 66, 96);
+       ctx.drawImage(card, x - 50, y - 72.5, 100, 145);
       }
     }
     ctx.fillStyle = "white";
