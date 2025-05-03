@@ -13,7 +13,7 @@
       font-family: 'Orbitron', sans-serif;
     }
     canvas {
-      display: none;
+      display: block;
     }
     #ui {
       position: absolute;
@@ -133,8 +133,8 @@
 const canvas = document.createElement('canvas');
 canvas.width = 1024;
 canvas.height = 600;
-canvas.style.display = 'none';
-document.body.appendChild(canvas);
+canvas.style.display = 'block';
+document.body.insertBefore(canvas, document.getElementById('playerContainer'));
 const ctx = canvas.getContext('2d');
 
 const CARD_W = 70, CARD_H = 100;
@@ -326,7 +326,7 @@ function drawTable(showCards = false) {
     if (i === currentPlayer) div.classList.add('active-player');
 
     const card = document.createElement('img');
-    let show = showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === 'K';
+    let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
     const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
