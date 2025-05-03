@@ -176,8 +176,15 @@ function drawTable(showCards = false) {
   const radiusX = 360, radiusY = 170;
   players.forEach((p, i) => {
     const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
-    const x = CENTER_X + Math.cos(angle) * radiusX;
-    const y = CENTER_Y + Math.sin(angle) * radiusY;
+   let angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
+let x = CENTER_X + Math.cos(angle) * radiusX;
+let y = CENTER_Y + Math.sin(angle) * radiusY;
+
+// Vertical alignment fix: nudge top row down, bottom row up
+if (Math.abs(Math.sin(angle)) > 0.98) {
+  y += (Math.sin(angle) > 0 ? -10 : 10);
+}
+
     p.x = x;
     p.y = y;
     ctx.beginPath();
