@@ -162,7 +162,7 @@ function preloadAssets() {
     }
   }
   const back = new Image();
-  back.src = './assets/Back.png'; // Correct file name
+  back.src = './assets/Back.png';
   cardImages["Back"] = back;
 }
 
@@ -175,18 +175,17 @@ function drawTable(showCards = false) {
 
   const radiusX = 360, radiusY = 170;
   players.forEach((p, i) => {
-    const angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
-   let angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
-let x = CENTER_X + Math.cos(angle) * radiusX;
-let y = CENTER_Y + Math.sin(angle) * radiusY;
+    let angle = (2 * Math.PI / players.length) * i - Math.PI / 2;
+    let x = CENTER_X + Math.cos(angle) * radiusX;
+    let y = CENTER_Y + Math.sin(angle) * radiusY;
 
-// Vertical alignment fix: nudge top row down, bottom row up
-if (Math.abs(Math.sin(angle)) > 0.98) {
-  y += (Math.sin(angle) > 0 ? -10 : 10);
-}
+    if (Math.abs(Math.sin(angle)) > 0.98) {
+      y += (Math.sin(angle) > 0 ? -10 : 10);
+    }
 
     p.x = x;
     p.y = y;
+
     ctx.beginPath();
     ctx.arc(x, y - 35, 22, 0, 2 * Math.PI);
     ctx.fillStyle = (i === currentPlayer) ? "#ff0" : "#222";
@@ -201,13 +200,14 @@ if (Math.abs(Math.sin(angle)) > 0.98) {
       const cardKey = `${rank}_${suit}`;
       const card = showCard ? cardImages[cardKey] : cardImages["Back"];
       if (card && card.complete) {
-        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H); // Forced same size for all cards
+        ctx.drawImage(card, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
       }
     }
 
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.fillText(`P${p.id}`, x, y + CARD_H / 2 + 30);
+
     for (let c = 0; c < p.chips; c++) {
       ctx.beginPath();
       ctx.arc(x - 10 + (c * 12), y + CARD_H / 2 + 45, 5, 0, 2 * Math.PI);
