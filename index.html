@@ -135,6 +135,12 @@
     canvas.width = 1024;
     canvas.height = 600;
     canvas.style.display = 'block';
+canvas.style.margin = '0 auto';
+canvas.style.position = 'absolute';
+canvas.style.left = '50%';
+canvas.style.top = '50%';
+canvas.style.transform = 'translate(-50%, -50%)';
+
     document.body.insertBefore(canvas, document.getElementById('playerContainer'));
     const ctx = canvas.getContext('2d');
 
