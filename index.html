@@ -433,7 +433,7 @@
         const angleDeg = angleMap[i];
         const angle = angleDeg * (Math.PI / 180);
         const x = CENTER_X + Math.cos(angle) * 430;
-        const verticalOffset = Math.sin(angle) > 0 ? 180 : 100;
+        const verticalOffset = Math.sin(angle) < 0 ? 180 : 100;
         const y = CENTER_Y + Math.sin(angle) * verticalOffset;
 
 
