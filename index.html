@@ -400,7 +400,7 @@
       }, 1500);
     }
 
-   function drawTable(showCards = false) {
+  function drawTable(showCards = false) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (backgroundImage.complete) {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
@@ -412,6 +412,20 @@
     const count = arr.length;
     return -90 + (i * 360 / count); // top center start, clockwise
   });
+
+  // 🎯 Custom vertical radius per seat to control vertical positioning
+  const customYOffset = [
+    150, // Player 1 (bottom-center)
+    180, // Player 2 (bottom-right)
+    190, // Player 3 (right)
+    190, // Player 4 (top-right)
+    160, // Player 5 (top-center-right)
+    110, // Player 6 (top-center)
+    110, // Player 7 (top-center-left)
+    160, // Player 8 (top-left)
+    190, // Player 9 (left)
+    190  // Player 10 (top-left)
+  ];
 
   players.forEach((p, i) => {
     let existing = document.getElementById(`player-ui-${p.id}`);
@@ -433,18 +447,7 @@
     const angleDeg = angleMap[i];
     const angle = angleDeg * (Math.PI / 180);
     const x = CENTER_X + Math.cos(angle) * 430;
-
-    let verticalOffset;
-    const sin = Math.sin(angle);
-    if (sin < -0.5) {
-      verticalOffset = 190; // Top row
-    } else if (sin > 0.5) {
-      verticalOffset = 120; // Bottom row
-    } else {
-      verticalOffset = 150; // Side players
-    }
-
-    const y = CENTER_Y + sin * verticalOffset;
+    const y = CENTER_Y + Math.sin(angle) * customYOffset[i];
 
     existing.style.left = `${x}px`;
     existing.style.top = `${y}px`;
