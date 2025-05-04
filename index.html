@@ -400,61 +400,69 @@
       }, 1500);
     }
 
-    function drawTable(showCards = false) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (backgroundImage.complete) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      }
+   function drawTable(showCards = false) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (backgroundImage.complete) {
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  }
 
-      const container = document.getElementById('playerContainer');
+  const container = document.getElementById('playerContainer');
 
-      const angleMap = players.map((_, i, arr) => {
-        const count = arr.length;
-        return -90 + (i * 360 / count);
-      });
+  const angleMap = players.map((_, i, arr) => {
+    const count = arr.length;
+    return -90 + (i * 360 / count); // top center start, clockwise
+  });
 
-      players.forEach((p, i) => {
-        let existing = document.getElementById(`player-ui-${p.id}`);
-        if (!existing) {
-          existing = document.createElement('div');
-          existing.className = 'player-ui';
-          existing.id = `player-ui-${p.id}`;
-          existing.innerHTML = `
-            <img class="player-card" />
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="player-right">
-              <div class="name">Player ${p.id}</div>
-              <div class="chips">Chips: ${p.chips}</div>
-            </div>
-          `;
-          container.appendChild(existing);
-        }
-
-        const angleDeg = angleMap[i];
-        const angle = angleDeg * (Math.PI / 180);
-        const x = CENTER_X + Math.cos(angle) * 430;
-        const verticalOffset = Math.sin(angle) < 0 ? 180 : 100;
-        const y = CENTER_Y + Math.sin(angle) * verticalOffset;
-
-
-
-        existing.style.left = `${x}px`;
-        existing.style.top = `${y}px`;
-        existing.style.transform = 'translate(-50%, -50%)';
-
-        existing.classList.toggle('active-player', i === currentPlayer);
-
-        const cardEl = existing.querySelector('.player-card');
-        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
-
-        existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
-      });
+  players.forEach((p, i) => {
+    let existing = document.getElementById(`player-ui-${p.id}`);
+    if (!existing) {
+      existing = document.createElement('div');
+      existing.className = 'player-ui';
+      existing.id = `player-ui-${p.id}`;
+      existing.innerHTML = `
+        <img class="player-card" />
+        <img class="avatar" src="./assets/avatar.png" />
+        <div class="player-right">
+          <div class="name">Player ${p.id}</div>
+          <div class="chips">Chips: ${p.chips}</div>
+        </div>
+      `;
+      container.appendChild(existing);
     }
+
+    const angleDeg = angleMap[i];
+    const angle = angleDeg * (Math.PI / 180);
+    const x = CENTER_X + Math.cos(angle) * 430;
+
+    let verticalOffset;
+    const sin = Math.sin(angle);
+    if (sin < -0.5) {
+      verticalOffset = 190; // Top row
+    } else if (sin > 0.5) {
+      verticalOffset = 120; // Bottom row
+    } else {
+      verticalOffset = 150; // Side players
+    }
+
+    const y = CENTER_Y + sin * verticalOffset;
+
+    existing.style.left = `${x}px`;
+    existing.style.top = `${y}px`;
+    existing.style.transform = 'translate(-50%, -50%)';
+
+    existing.classList.toggle('active-player', i === currentPlayer);
+
+    const cardEl = existing.querySelector('.player-card');
+    let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+    const suit = suitMap[p.card.suit];
+    cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+
+    existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
+  });
+}
 
     preloadAssets().then(() => {
       logDebug("All assets preloaded.");
