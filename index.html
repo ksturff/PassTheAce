@@ -117,7 +117,10 @@
 </head>
 <body>
   <div id="ui">
-    <button id="startBtn" onclick="startGame()" disabled>Start Game</button>
+    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
+    <button onclick="setRadii(380,190)">Test 1</button>
+    <button onclick="setRadii(360,210)">Test 2</button>
+    <button onclick="setRadii(350,230)">Test 3</button>
     <div id="actionBtns" style="display:none;">
       <button onclick="keepCard()">Keep</button>
       <button onclick="passCard()">Pass</button>
@@ -135,11 +138,11 @@
     canvas.width = 1024;
     canvas.height = 600;
     canvas.style.display = 'block';
-canvas.style.margin = '0 auto';
-canvas.style.position = 'absolute';
-canvas.style.left = '50%';
-canvas.style.top = '50%';
-canvas.style.transform = 'translate(-50%, -50%)';
+    canvas.style.margin = '0 auto';
+    canvas.style.position = 'absolute';
+    canvas.style.left = '50%';
+    canvas.style.top = '50%';
+    canvas.style.transform = 'translate(-50%, -50%)';
 
     document.body.insertBefore(canvas, document.getElementById('playerContainer'));
     const ctx = canvas.getContext('2d');
@@ -149,9 +152,17 @@ canvas.style.transform = 'translate(-50%, -50%)';
 
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
+    let X_RADIUS = 430, Y_RADIUS = 150;
+
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
+
+    function setRadii(x, y) {
+      X_RADIUS = x;
+      Y_RADIUS = y;
+      drawTable();
+    }
 
     function getCardValue(card) {
       if (!card) return 99;
@@ -352,11 +363,7 @@ canvas.style.transform = 'translate(-50%, -50%)';
       }
 
       const container = document.getElementById('playerContainer');
-
-      const angleMap = players.map((_, i, arr) => {
-        const count = arr.length;
-        return -90 + (i * 360 / count);
-      });
+      const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
 
       players.forEach((p, i) => {
         let existing = document.getElementById(`player-ui-${p.id}`);
@@ -375,10 +382,9 @@ canvas.style.transform = 'translate(-50%, -50%)';
           container.appendChild(existing);
         }
 
-        const angleDeg = angleMap[i];
-        const angle = angleDeg * (Math.PI / 180);
-        const x = CENTER_X + Math.cos(angle) * 430;
-        const y = CENTER_Y + Math.sin(angle) * 150;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const x = CENTER_X + Math.cos(angle) * X_RADIUS;
+        const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
 
         existing.style.left = `${x}px`;
         existing.style.top = `${y}px`;
