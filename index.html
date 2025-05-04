@@ -388,8 +388,11 @@
 
   const container = document.getElementById('playerContainer');
 
-  // Elliptical spacing using custom angles (degrees)
-  const angleMap = [-90, -55, -30, -5, 20, 90, 160, 135, 115, 85];
+  // 🔄 Dynamically generate evenly spaced angles based on current player count
+  const angleMap = players.map((_, i, arr) => {
+    const count = arr.length;
+    return -90 + (i * 360 / count); // Start at top center (-90°) and go clockwise
+  });
 
   players.forEach((p, i) => {
     let existing = document.getElementById(`player-ui-${p.id}`);
@@ -408,10 +411,9 @@
       container.appendChild(existing);
     }
 
-    // Use mapped angle for elliptical layout
-    const angleDeg = angleMap[p.seatIndex];
+    // 📍 Apply elliptical placement based on the angle
+    const angleDeg = angleMap[i];
     const angle = angleDeg * (Math.PI / 180);
-
     const x = CENTER_X + Math.cos(angle) * 430;
     const y = CENTER_Y + Math.sin(angle) * 150;
 
