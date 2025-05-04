@@ -381,51 +381,58 @@
     }
 
     function drawTable(showCards = false) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (backgroundImage.complete) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (backgroundImage.complete) {
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  }
 
-      const container = document.getElementById('playerContainer');
+  const container = document.getElementById('playerContainer');
 
-      players.forEach((p, i) => {
-        let existing = document.getElementById(`player-ui-${p.id}`);
-        if (!existing) {
-          existing = document.createElement('div');
-          existing.className = 'player-ui';
-          existing.id = `player-ui-${p.id}`;
-          existing.innerHTML = `
-            <img class="player-card" />
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="player-right">
-              <div class="name">Player ${p.id}</div>
-              <div class="chips">Chips: ${p.chips}</div>
-            </div>
-          `;
-          container.appendChild(existing);
-        }
+  // Elliptical spacing using custom angles (degrees)
+  const angleMap = [-90, -55, -30, -5, 20, 90, 160, 135, 115, 85];
 
-        let angle = (2 * Math.PI / 10) * p.seatIndex - Math.PI / 2;
-        let x = CENTER_X + Math.cos(angle) * 360;
-        let y = CENTER_Y + Math.sin(angle) * 170;
-        existing.style.left = `${x}px`;
-        existing.style.top = `${y}px`;
-        existing.style.transform = 'translate(-50%, -50%)';
-
-        existing.classList.toggle('active-player', i === currentPlayer);
-
-        const cardEl = existing.querySelector('.player-card');
-        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
-
-        existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
-      });
+  players.forEach((p, i) => {
+    let existing = document.getElementById(`player-ui-${p.id}`);
+    if (!existing) {
+      existing = document.createElement('div');
+      existing.className = 'player-ui';
+      existing.id = `player-ui-${p.id}`;
+      existing.innerHTML = `
+        <img class="player-card" />
+        <img class="avatar" src="./assets/avatar.png" />
+        <div class="player-right">
+          <div class="name">Player ${p.id}</div>
+          <div class="chips">Chips: ${p.chips}</div>
+        </div>
+      `;
+      container.appendChild(existing);
     }
 
+    // Use mapped angle for elliptical layout
+    const angleDeg = angleMap[p.seatIndex];
+    const angle = angleDeg * (Math.PI / 180);
+
+    const x = CENTER_X + Math.cos(angle) * 430;
+    const y = CENTER_Y + Math.sin(angle) * 150;
+
+    existing.style.left = `${x}px`;
+    existing.style.top = `${y}px`;
+    existing.style.transform = 'translate(-50%, -50%)';
+
+    existing.classList.toggle('active-player', i === currentPlayer);
+
+    const cardEl = existing.querySelector('.player-card');
+    let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+    const suit = suitMap[p.card.suit];
+    cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+
+    existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
+  });
+}
+    
     preloadAssets();
   </script>
 </body>
