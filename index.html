@@ -370,14 +370,11 @@
           existing = document.createElement('div');
           existing.className = 'player-ui';
           existing.id = `player-ui-${p.id}`;
-          let cardFirst = !(p.id === 3 || p.id === 4);
-          existing.innerHTML = `
-            <img class="player-card" />
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="player-right">
-              <div class="name">Player ${p.id}</div>
-              <div class="chips">Chips: ${p.chips}</div>
-            </div>`;
+          let cardFirst = !(p.id === 3 || p.id === 4 || p.id === 7 || p.id === 8 || p.id === 9 || p.id === 10);
+          let cardHTML = `<img class="player-card" />`;
+          let avatarHTML = `<img class="avatar" src="./assets/avatar.png" />`;
+          let infoHTML = `<div class="player-right"><div class="name">Player ${p.id}</div><div class="chips">Chips: ${p.chips}</div></div>`;
+          existing.innerHTML = cardFirst ? `${cardHTML}${avatarHTML}${infoHTML}` : `${avatarHTML}${cardHTML}${infoHTML}`;
           container.appendChild(existing);
         }
 
@@ -389,7 +386,6 @@
         existing.style.left = `${x}px`;
         existing.style.top = `${y}px`;
         existing.style.transform = 'translate(-50%, -50%)';
-
         existing.classList.toggle('active-player', i === currentPlayer);
 
         const cardEl = existing.querySelector('.player-card');
