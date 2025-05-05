@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Pass the Ace - Deluxe Edition</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
@@ -16,12 +16,12 @@
       display: block;
     }
     #ui {
-  position: absolute;
-  bottom: 40px;
-  right: 40px;
-  text-align: right;
-  z-index: 10;
-}
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      text-align: right;
+      z-index: 10;
+    }
     button {
       margin: 5px;
       padding: 12px 25px;
@@ -136,13 +136,10 @@
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 600;
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
     canvas.style.position = 'absolute';
     canvas.style.left = '50%';
     canvas.style.top = '50%';
     canvas.style.transform = 'translate(-50%, -50%)';
-
     document.body.insertBefore(canvas, document.getElementById('playerContainer'));
     const ctx = canvas.getContext('2d');
 
@@ -209,8 +206,34 @@
       return Promise.all(loadPromises);
     }
 
-    function updateTurnIndicator() {
-      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
+    function animateCardPass(fromPlayer, toPlayer, callback) {
+      const fromEl = document.getElementById(`player-ui-${fromPlayer.id}`)?.querySelector('.player-card');
+      const toEl = document.getElementById(`player-ui-${toPlayer.id}`)?.querySelector('.player-card');
+      if (!fromEl || !toEl) return callback();
+
+      const clone = fromEl.cloneNode(true);
+      document.body.appendChild(clone);
+
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = toEl.getBoundingClientRect();
+
+      clone.style.position = 'absolute';
+      clone.style.left = fromRect.left + 'px';
+      clone.style.top = fromRect.top + 'px';
+      clone.style.width = fromRect.width + 'px';
+      clone.style.height = fromRect.height + 'px';
+      clone.style.transition = 'all 0.6s ease-in-out';
+      clone.style.zIndex = 1000;
+
+      requestAnimationFrame(() => {
+        clone.style.left = toRect.left + 'px';
+        clone.style.top = toRect.top + 'px';
+      });
+
+      setTimeout(() => {
+        document.body.removeChild(clone);
+        callback();
+      }, 600);
     }
 
     window.restartGame = function () {
@@ -247,10 +270,7 @@
     }
 
     function revealCardsSequentially(index = 0) {
-      if (index >= players.length) {
-        processTurn();
-        return;
-      }
+      if (index >= players.length) return processTurn();
       drawTable(false);
       setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
@@ -259,52 +279,48 @@
       document.getElementById("actionBtns").style.display = "none";
       peekPlayerCard = false;
       currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
+      if (currentPlayer === dealerIndex) setTimeout(endRound, 1000);
+      else processTurn();
     };
 
     window.passCard = function () {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
+      const current = players[currentPlayer];
+      const next = players[(currentPlayer + 1) % players.length];
       if (!current.card || !next.card) return;
       if (current.card.rank === "K" || next.card.rank === "K") return;
-      [current.card, next.card] = [next.card, current.card];
-      document.getElementById("actionBtns").style.display = "none";
-      peekPlayerCard = false;
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
+
+      animateCardPass(current, next, () => {
+        [current.card, next.card] = [next.card, current.card];
+        document.getElementById("actionBtns").style.display = "none";
+        peekPlayerCard = false;
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) setTimeout(endRound, 1000);
+        else processTurn();
+      });
     };
 
     function aiTurn() {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
+      const current = players[currentPlayer];
+      const next = players[(currentPlayer + 1) % players.length];
       if (!current.card || !next.card) {
         currentPlayer = (currentPlayer + 1) % players.length;
-        processTurn();
-        return;
+        return processTurn();
       }
       let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
       if (shouldPass) {
-        [current.card, next.card] = [next.card, current.card];
-      }
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
+        animateCardPass(current, next, () => {
+          [current.card, next.card] = [next.card, current.card];
+          currentPlayer = (currentPlayer + 1) % players.length;
+          currentPlayer === dealerIndex ? setTimeout(endRound, 1000) : processTurn();
+        });
       } else {
-        processTurn();
+        currentPlayer = (currentPlayer + 1) % players.length;
+        currentPlayer === dealerIndex ? setTimeout(endRound, 1000) : processTurn();
       }
     }
 
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
-      if (players.length === 0) return;
       const player = players[currentPlayer];
       isHumanTurn = (player.id === 1);
       peekPlayerCard = isHumanTurn;
@@ -314,7 +330,7 @@
         document.getElementById("actionBtns").style.display = "block";
       } else {
         document.getElementById("actionBtns").style.display = "none";
-        setTimeout(() => aiTurn(), 1000);
+        setTimeout(aiTurn, 1000);
       }
     }
 
@@ -323,9 +339,7 @@
       setTimeout(() => {
         const minValue = Math.min(...players.map(p => getCardValue(p.card)));
         players.forEach(p => {
-          if (getCardValue(p.card) === minValue) {
-            p.chips--;
-          }
+          if (getCardValue(p.card) === minValue) p.chips--;
         });
         const eliminated = players.filter(p => p.chips <= 0);
         eliminated.forEach(p => {
@@ -337,17 +351,13 @@
           document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
           document.getElementById("endOverlay").style.display = "flex";
           document.getElementById("actionBtns").style.display = "none";
-          gameRunning = false;
           return;
         }
         const losers = players.filter(p => getCardValue(p.card) === minValue);
-        if (losers.length > 0) {
-          const firstLoser = losers[0];
-          const loserIndex = players.findIndex(p => p.id === firstLoser.id);
-          startingPlayerIndex = (loserIndex + 1) % players.length;
-        }
-        if (dealerIndex >= players.length) dealerIndex = 0;
-        if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
+        const firstLoser = losers[0];
+        const loserIndex = players.findIndex(p => p.id === firstLoser.id);
+        startingPlayerIndex = (loserIndex + 1) % players.length;
+        dealerIndex = dealerIndex >= players.length ? 0 : dealerIndex;
         currentPlayer = startingPlayerIndex;
         deck = createDeck();
         players.forEach(p => p.card = null);
@@ -360,7 +370,6 @@
       if (backgroundImage.complete) {
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       }
-
       const container = document.getElementById('playerContainer');
       const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
 
@@ -370,22 +379,26 @@
           existing = document.createElement('div');
           existing.className = 'player-ui';
           existing.id = `player-ui-${p.id}`;
-         let cardFirst = !(p.id === 3 || p.id === 4); // everyone except 3 and 4
-existing.innerHTML = `
-  <img class="player-card" />
-  <img class="avatar" src="./assets/avatar.png" />
-  <div class="player-right">
-    <div class="name">Player ${p.id}</div>
-    <div class="chips">Chips: ${p.chips}</div>
-  </div>
-`;
-
+          const isReversed = (p.id === 3 || p.id === 4);
+          existing.innerHTML = isReversed
+            ? `<img class="avatar" src="./assets/avatar.png" />
+               <div class="player-right">
+                 <div class="name">Player ${p.id}</div>
+                 <div class="chips">Chips: ${p.chips}</div>
+               </div>
+               <img class="player-card" />`
+            : `<img class="player-card" />
+               <img class="avatar" src="./assets/avatar.png" />
+               <div class="player-right">
+                 <div class="name">Player ${p.id}</div>
+                 <div class="chips">Chips: ${p.chips}</div>
+               </div>`;
           container.appendChild(existing);
         }
 
         const angle = angleMap[i] * (Math.PI / 180);
-        let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
-        const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
+        const offset = (p.id === 3 || p.id === 4) ? 115 : 150;
+        const x = CENTER_X + Math.cos(angle) * X_RADIUS + offset;
         const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
 
         existing.style.left = `${x}px`;
@@ -395,13 +408,14 @@ existing.innerHTML = `
         existing.classList.toggle('active-player', i === currentPlayer);
 
         const cardEl = existing.querySelector('.player-card');
-        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
-
+        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+        if (p.card) {
+          const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+          const suit = suitMap[p.card.suit];
+          cardEl.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+        }
         existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
       });
     }
