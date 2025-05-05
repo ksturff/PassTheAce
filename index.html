@@ -16,12 +16,12 @@
       display: block;
     }
     #ui {
-  position: absolute;
-  bottom: 40px;
-  right: 40px;
-  text-align: right;
-  z-index: 10;
-}
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      text-align: right;
+      z-index: 10;
+    }
     button {
       margin: 5px;
       padding: 12px 25px;
@@ -188,9 +188,9 @@
       for (let s of suits) {
         for (let r of ranks) {
           const img = new Image();
-          const src = ./assets/${r}_of_${s}.png;
+          const src = `./assets/${r}_of_${s}.png`;
           img.src = src;
-          cardImages[${r}_${s}] = img;
+          cardImages[`${r}_${s}`] = img;
           loadPromises.push(new Promise((resolve) => {
             img.onload = resolve;
             img.onerror = resolve;
@@ -210,17 +210,17 @@
     }
 
     function updateTurnIndicator() {
-      document.getElementById("turnIndicator").innerText = Player ${players[currentPlayer]?.id}'s Turn;
+      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
     }
 
-    window.restartGame = function () {
+    function restartGame() {
       document.getElementById("endOverlay").style.display = "none";
       document.getElementById("startBtn").style.display = "block";
       dealerIndex = null;
       startGame();
-    };
+    }
 
-    window.startGame = function () {
+    function startGame() {
       document.getElementById("startBtn").style.display = 'none';
       deck = createDeck();
       players = Array.from({ length: 10 }, (_, i) => ({
@@ -231,7 +231,7 @@
       }));
       dealCards();
       gameRunning = true;
-    };
+    }
 
     function dealCards() {
       if (deck.length < players.length + 1) deck = createDeck();
@@ -255,7 +255,7 @@
       setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
 
-    window.keepCard = function () {
+    function keepCard() {
       document.getElementById("actionBtns").style.display = "none";
       peekPlayerCard = false;
       currentPlayer = (currentPlayer + 1) % players.length;
@@ -264,9 +264,9 @@
       } else {
         processTurn();
       }
-    };
+    }
 
-    window.passCard = function () {
+    function passCard() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
       if (!current.card || !next.card) return;
@@ -280,7 +280,7 @@
       } else {
         processTurn();
       }
-    };
+    }
 
     function aiTurn() {
       let current = players[currentPlayer];
@@ -329,12 +329,12 @@
         });
         const eliminated = players.filter(p => p.chips <= 0);
         eliminated.forEach(p => {
-          const el = document.getElementById(player-ui-${p.id});
+          const el = document.getElementById(`player-ui-${p.id}`);
           if (el) el.remove();
         });
         players = players.filter(p => p.chips > 0);
         if (players.length === 1) {
-          document.getElementById("winMessage").innerText = 🏆 Player ${players[0].id} Wins!;
+          document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
           document.getElementById("endOverlay").style.display = "flex";
           document.getElementById("actionBtns").style.display = "none";
           gameRunning = false;
@@ -365,21 +365,19 @@
       const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
 
       players.forEach((p, i) => {
-        let existing = document.getElementById(player-ui-${p.id});
+        let existing = document.getElementById(`player-ui-${p.id}`);
         if (!existing) {
           existing = document.createElement('div');
           existing.className = 'player-ui';
-          existing.id = player-ui-${p.id};
-         let cardFirst = !(p.id === 3 || p.id === 4); // everyone except 3 and 4
-existing.innerHTML = 
-  <img class="player-card" />
-  <img class="avatar" src="./assets/avatar.png" />
-  <div class="player-right">
-    <div class="name">Player ${p.id}</div>
-    <div class="chips">Chips: ${p.chips}</div>
-  </div>
-;
-
+          existing.id = `player-ui-${p.id}`;
+          let cardFirst = !(p.id === 3 || p.id === 4);
+          existing.innerHTML = `
+            <img class="player-card" />
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="player-right">
+              <div class="name">Player ${p.id}</div>
+              <div class="chips">Chips: ${p.chips}</div>
+            </div>`;
           container.appendChild(existing);
         }
 
@@ -388,8 +386,8 @@ existing.innerHTML =
         const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
         const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
 
-        existing.style.left = ${x}px;
-        existing.style.top = ${y}px;
+        existing.style.left = `${x}px`;
+        existing.style.top = `${y}px`;
         existing.style.transform = 'translate(-50%, -50%)';
 
         existing.classList.toggle('active-player', i === currentPlayer);
@@ -400,9 +398,9 @@ existing.innerHTML =
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
         const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
         const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? ./assets/${rank}_of_${suit}.png : './assets/Back.png';
+        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
 
-        existing.querySelector('.chips').innerText = Chips: ${p.chips};
+        existing.querySelector('.chips').innerText = `Chips: ${p.chips}`;
       });
     }
 
