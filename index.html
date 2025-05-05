@@ -115,6 +115,11 @@
   border: 2px solid white;
   box-shadow: 0 0 4px #000;
 }
+    
+.hud .avatar.active-glow {
+  box-shadow: 0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff;
+  border-color: #0ff;
+}
 
 .hud .chips {
   font-size: 10px;
@@ -398,7 +403,12 @@
         div.style.left = `${x}px`;
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
-        div.classList.toggle('active-player', i === currentPlayer);
+       const avatarEl = div.querySelector('.avatar');
+if (i === currentPlayer) {
+  avatarEl.classList.add('active-glow');
+} else {
+  avatarEl.classList.remove('active-glow');
+}
         const cardEl = div.querySelector('.player-card');
         let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
