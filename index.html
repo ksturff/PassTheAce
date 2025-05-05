@@ -370,11 +370,18 @@
           existing = document.createElement('div');
           existing.className = 'player-ui';
           existing.id = `player-ui-${p.id}`;
-          let cardFirst = !(p.id === 3 || p.id === 4 || p.id === 7 || p.id === 8 || p.id === 9 || p.id === 10);
+
+          let isRightSideCard = (p.id >= 7 && p.id <= 10);
           let cardHTML = `<img class="player-card" />`;
           let avatarHTML = `<img class="avatar" src="./assets/avatar.png" />`;
           let infoHTML = `<div class="player-right"><div class="name">Player ${p.id}</div><div class="chips">Chips: ${p.chips}</div></div>`;
-          existing.innerHTML = cardFirst ? `${cardHTML}${avatarHTML}${infoHTML}` : `${avatarHTML}${cardHTML}${infoHTML}`;
+
+          if (isRightSideCard) {
+            existing.innerHTML = `${infoHTML}${avatarHTML}${cardHTML}`;
+          } else {
+            existing.innerHTML = `${cardHTML}${avatarHTML}${infoHTML}`;
+          }
+
           container.appendChild(existing);
         }
 
