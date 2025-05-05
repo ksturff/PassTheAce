@@ -253,10 +253,8 @@ function revealCardsSequentially(index = 0) {
   drawTable(false);
   setTimeout(() => revealCardsSequentially(index + 1), 300);
 }
-  drawTable(false);
-  setTimeout(() => revealCardsSequentially(index + 1), 300);
-}
-  function keepCard() {
+  }  
+function keepCard() {
   document.getElementById("actionBtns").style.display = "none";
   peekPlayerCard = false;
   currentPlayer = (currentPlayer + 1) % players.length;
