@@ -371,23 +371,15 @@
           existing.className = 'player-ui';
           existing.id = `player-ui-${p.id}`;
          let cardFirst = !(p.id === 3 || p.id === 4); // everyone except 3 and 4
-existing.innerHTML = cardFirst
-  ? `
-      <img class="player-card" />
-      <img class="avatar" src="./assets/avatar.png" />
-      <div class="player-right">
-        <div class="name">Player ${p.id}</div>
-        <div class="chips">Chips: ${p.chips}</div>
-      </div>
-    `
-  : `
-      <img class="avatar" src="./assets/avatar.png" />
-      <div class="player-right">
-        <div class="name">Player ${p.id}</div>
-        <div class="chips">Chips: ${p.chips}</div>
-      </div>
-      <img class="player-card" />
-    `;
+existing.innerHTML = `
+  <img class="player-card" />
+  <img class="avatar" src="./assets/avatar.png" />
+  <div class="player-right">
+    <div class="name">Player ${p.id}</div>
+    <div class="chips">Chips: ${p.chips}</div>
+  </div>
+`;
+
           container.appendChild(existing);
         }
 
