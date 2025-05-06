@@ -86,10 +86,6 @@
       font-family: 'Orbitron', sans-serif;
       pointer-events: none;
     }
-    .player-card {
-      width: 60px;
-      height: 90px;
-    }
     .hud {
       display: flex;
       flex-direction: column;
@@ -168,7 +164,7 @@
 
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
-    let X_RADIUS = 360, Y_RADIUS = 210; // ← Test 2 locked in
+    let X_RADIUS = 360, Y_RADIUS = 210;
 
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
@@ -277,35 +273,6 @@
       }
     }
 
-    function animateCardPass(fromPlayerId, toPlayerId, callback) {
-      const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
-      const toEl = document.getElementById(`player-ui-${toPlayerId}`);
-      if (!fromEl || !toEl) return callback();
-
-      const fromCard = fromEl.querySelector('.player-card');
-      const img = document.createElement('img');
-      img.className = 'floating-card';
-      img.src = fromCard.src;
-      document.body.appendChild(img);
-
-      const fromRect = fromCard.getBoundingClientRect();
-      const toCard = toEl.querySelector('.player-card');
-      const toRect = toCard.getBoundingClientRect();
-
-      img.style.left = `${fromRect.left}px`;
-      img.style.top = `${fromRect.top}px`;
-
-      setTimeout(() => {
-        img.style.left = `${toRect.left}px`;
-        img.style.top = `${toRect.top}px`;
-      }, 50);
-
-      setTimeout(() => {
-        img.remove();
-        callback();
-      }, 600);
-    }
-
     function passCard() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
@@ -323,6 +290,10 @@
           processTurn();
         }
       });
+    }
+
+    function animateCardPass(fromPlayerId, toPlayerId, callback) {
+      callback(); // Keep logic intact but skip card DOM animation
     }
 
     function aiTurn() {
@@ -410,7 +381,6 @@
         const div = document.createElement('div');
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
-        const cardHTML = `<img class="player-card" />`;
         const hudHTML = `
           <div class="hud">
             <div class="name">Player ${p.id}</div>
@@ -420,7 +390,7 @@
               ${p.chips}
             </div>
           </div>`;
-        div.innerHTML = `${cardHTML}${hudHTML}`;
+        div.innerHTML = hudHTML;
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
         const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
@@ -434,13 +404,6 @@
         } else {
           avatarEl.classList.remove('active-glow');
         }
-        const cardEl = div.querySelector('.player-card');
-        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
         container.appendChild(div);
       });
     }
