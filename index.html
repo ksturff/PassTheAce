@@ -428,23 +428,57 @@
     }
 
    function drawTable(showCards = false) {
+  // Clear the canvas and redraw the background
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (backgroundImage.complete) {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   }
-
+  
+  // Clear player container (where HUDs and card images are added)
   const container = document.getElementById('playerContainer');
   container.innerHTML = '';
-
-  const angleMap = players.map((_, i, arr) => 90 + ((i - 0) * 360 / arr.length));
-
+  
+  // Set the "base" radii for the HUD (the neon ring around the table).
+  // Adjust these numbers to match your table's art.
+  const baseRadiusX = 420;  // horizontal radius for HUD
+  const baseRadiusY = 170;  // vertical radius for HUD
+  
+  // For the card positions, we want them slightly inside the neon ring,
+  // so we use an offset that pulls them inward
+  const cardOffset = -30;   // negative pulls cards toward the center
+  
+  // Calculate the step (in degrees) between each player
+  const angleStep = 360 / players.length;
+  
+  // For each player, calculate their position along the circle
   players.forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'player-ui';
-    div.id = `player-ui-${p.id}`;
-
-    const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
-    const cardHTML = `<img class="player-card" style="${cardSize}" />`;
+    // Starting from 90° (straight up) then spreading evenly around
+    const angleDeg = 90 + i * angleStep; 
+    const angle = angleDeg * (Math.PI / 180);
+    
+    // Calculate the position for the HUD (avatar/name/chips)
+    const hudX = CENTER_X + Math.cos(angle) * baseRadiusX;
+    const hudY = CENTER_Y + Math.sin(angle) * baseRadiusY;
+    
+    // Calculate the position for the card image – this is offset inward from the HUD
+    const cardX = CENTER_X + Math.cos(angle) * (baseRadiusX + cardOffset);
+    const cardY = CENTER_Y + Math.sin(angle) * (baseRadiusY + cardOffset);
+    
+    // --- Create the HUD element ---
+    const hudDiv = document.createElement('div');
+    hudDiv.className = 'player-ui';
+    hudDiv.id = `player-ui-${p.id}`;
+    hudDiv.style.position = 'absolute';
+    hudDiv.style.left = `${hudX}px`;
+    hudDiv.style.top = `${hudY}px`;
+    hudDiv.style.transform = 'translate(-50%, -50%)';
+    hudDiv.style.display = 'flex';
+    hudDiv.style.flexDirection = 'column';
+    hudDiv.style.alignItems = 'center';
+    hudDiv.style.gap = '8px';
+    hudDiv.style.pointerEvents = 'none';
+    
+    // Create the HUD inner HTML
     const hudHTML = `
       <div class="hud">
         <div class="name">Player ${p.id}</div>
@@ -454,53 +488,44 @@
           ${p.chips}
         </div>
       </div>`;
-
-    if (p.id === 8 || p.id === 9) {
-      div.innerHTML = `${hudHTML}${cardHTML}`;
-      div.style.flexDirection = 'row';
-    } else if (p.id === 3 || p.id === 4) {
-      div.innerHTML = `${cardHTML}${hudHTML}`;
-      div.style.flexDirection = 'row-reverse';
-    } else {
-      div.innerHTML = `${cardHTML}${hudHTML}`;
-      div.style.flexDirection = 'column';
-    }
-
-    div.style.display = 'flex';
-    div.style.position = 'absolute';
-
-    // ✅ Adjusted to sit properly within the canvas background
-    const angle = angleMap[i] * (Math.PI / 180);
-    const adjustedX = CENTER_X + Math.cos(angle) * (X_RADIUS - 40);  // ⬅ Pull in horizontally
-    const adjustedY = CENTER_Y + Math.sin(angle) * (Y_RADIUS - 20);  // ⬅ Pull in vertically
-
-    div.style.left = `${adjustedX}px`;
-    div.style.top = `${adjustedY}px`;
-    div.style.transform = 'translate(-50%, -50%)';
-
-    const avatarEl = div.querySelector('.avatar');
+    hudDiv.innerHTML = hudHTML;
+    
+    // Highlight the active player's avatar
+    const avatarEl = hudDiv.querySelector('.avatar');
     if (i === currentPlayer) {
       avatarEl.classList.add('active-glow');
     } else {
       avatarEl.classList.remove('active-glow');
     }
-
-    const cardEl = div.querySelector('.player-card');
-    const show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-
+    
+    container.appendChild(hudDiv);
+    
+    // --- Create the Card element ---
+    const cardImg = document.createElement('img');
+    cardImg.className = 'player-card';
+    cardImg.style.position = 'absolute';
+    cardImg.style.left = `${cardX}px`;
+    cardImg.style.top = `${cardY}px`;
+    cardImg.style.transform = 'translate(-50%, -50%)';
+    cardImg.style.width = p.id === 1 ? '60px' : '45px';
+    cardImg.style.height = p.id === 1 ? '90px' : '68px';
+    cardImg.style.zIndex = '5';
+    
+    let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
     if (p.card) {
       const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
       const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
       const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
       const suit = suitMap[p.card.suit];
-      cardEl.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+      cardImg.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
     } else {
-      cardEl.src = './assets/Back.png';
+      cardImg.src = './assets/Back.png';
     }
-
-    container.appendChild(div);
+    
+    container.appendChild(cardImg);
   });
 }
+
 
     preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
