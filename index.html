@@ -240,6 +240,18 @@
       dealCards();
       gameRunning = true;
     }
+function restartGame() {
+  document.getElementById("endOverlay").style.display = "none";
+  document.getElementById("startBtn").style.display = "block";
+  deck = createDeck();
+  players = [];
+  dealerIndex = null;
+  currentPlayer = 0;
+  gameRunning = false;
+  preloadAssets().then(() => {
+    document.getElementById("startBtn").disabled = false;
+  });
+}
 
     function dealCards() {
       if (deck.length < players.length + 1) deck = createDeck();
