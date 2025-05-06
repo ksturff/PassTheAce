@@ -154,7 +154,7 @@
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
 
-    const CARD_W = 70, CARD_H = 100;
+    const CARD_W = 50, CARD_H = 80;
     const CENTER_X = 512, CENTER_Y = 300;
     let X_RADIUS = 360, Y_RADIUS = 210;
 
@@ -366,8 +366,8 @@
       players.forEach((p, i) => {
         if (!p.card) return;
         const angle = cardAngleMap[i] * (Math.PI / 180);
-        const radiusX = X_RADIUS - 70;
-        const radiusY = Y_RADIUS - 30;
+        const radiusX = X_RADIUS - 100;
+        const radiusY = Y_RADIUS - 50;
         const cardX = CENTER_X + Math.cos(angle) * radiusX - CARD_W / 2;
         const cardY = CENTER_Y + Math.sin(angle) * radiusY - CARD_H / 2;
 
