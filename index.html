@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Pass the Ace - Deluxe Edition</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
@@ -81,21 +81,12 @@
       position: absolute;
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: white;
-      font-family: 'Orbitron', sans-serif;
       pointer-events: none;
-      flex-direction: column;
-    }
-    .player-card {
-      width: 60px;
-      height: 90px;
     }
     .hud {
       display: flex;
       flex-direction: column;
       align-items: center;
-      pointer-events: none;
       gap: 3px;
     }
     .hud .name {
@@ -230,10 +221,6 @@
       return Promise.all(loadPromises);
     }
 
-    function updateTurnIndicator() {
-      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
-    }
-
     function restartGame() {
       document.getElementById("endOverlay").style.display = "none";
       document.getElementById("startBtn").style.display = "block";
@@ -266,6 +253,10 @@
       sample.forEach((p, i) => players[i].card = p.card);
       drawTable(false);
     }
+    function updateTurnIndicator() {
+      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
+    }
+
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
       if (players.length === 0) return;
@@ -313,9 +304,22 @@
     function aiTurn() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
+      if (!current.card || !next.card) {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        processTurn();
+        return;
+      }
       let currentVal = getCardValue(current.card);
       let nextVal = getCardValue(next.card);
-      let shouldPass = currentVal <= 5 && next.card.rank !== "K";
+      let shouldPass = false;
+
+      if (currentVal <= 5 && next.card.rank !== "K") {
+        shouldPass = true;
+      } else if (currentVal >= 10) {
+        shouldPass = false;
+      } else {
+        shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
+      }
 
       if (shouldPass) {
         [current.card, next.card] = [next.card, current.card];
@@ -368,9 +372,12 @@
             <img class="avatar" src="./assets/avatar.png" />
             <div class="chips"><img src="./assets/coin.png" style="height:14px;" /> ${p.chips}</div>
           </div>`;
+        
         const angle = angleMap[i] * (Math.PI / 180);
-        const x = CENTER_X + Math.cos(angle) * (X_RADIUS + 80);
+        const radius = X_RADIUS + 80;
+        const x = CENTER_X + Math.cos(angle) * radius;
         const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
+
         div.style.left = `${x}px`;
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
@@ -382,30 +389,29 @@
         container.appendChild(div);
       });
 
+      // Draw player cards in the center ring
       players.forEach((p, i) => {
         if (!p.card) return;
+
         const angle = angleMap[i] * (Math.PI / 180);
         const cardRadiusX = X_RADIUS - 90;
         const cardRadiusY = Y_RADIUS - 40;
+
         const cardX = CENTER_X + Math.cos(angle) * cardRadiusX;
         const cardY = CENTER_Y + Math.sin(angle) * cardRadiusY;
+
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
         const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
         const suit = suitMap[p.card.suit];
+
         const img = (showCards || (p.id === 1 && peekPlayerCard) || p.card.rank === 'K')
           ? cardImages[`${rank}_${suit}`]
           : cardImages['Back'];
 
         const drawW = p.id === 1 ? 60 : 45;
         const drawH = p.id === 1 ? 90 : 68;
+
         ctx.drawImage(img, cardX - drawW / 2, cardY - drawH / 2, drawW, drawH);
       });
     }
-
-    preloadAssets().then(() => {
-      document.getElementById("startBtn").disabled = false;
-    });
-  </script>
-</body>
-</html>
