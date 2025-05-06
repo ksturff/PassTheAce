@@ -440,12 +440,13 @@ if (currentVal <= 5 && next.card.rank !== "K") {
       }
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
-      const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
+      const angleMap = players.map((_, i, arr) => 90 + ((i - 0) * 360 / arr.length));
       players.forEach((p, i) => {
         const div = document.createElement('div');
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
-        const cardHTML = `<img class="player-card" />`;
+       const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
+const cardHTML = `<img class="player-card" style="${cardSize}" />`;
 const hudHTML = `
   <div class="hud">
     <div class="name">Player ${p.id}</div>
