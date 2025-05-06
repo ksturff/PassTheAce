@@ -335,24 +335,37 @@
     }
 
     function aiTurn() {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
-      if (!current.card || !next.card) {
-        currentPlayer = (currentPlayer + 1) % players.length;
-        processTurn();
-        return;
-      }
-      let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
-      if (shouldPass) {
-        [current.card, next.card] = [next.card, current.card];
-      }
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+
+  if (!current.card || !next.card) {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
+    return;
+  }
+
+  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+
+  if (shouldPass) {
+    animateCardPass(current.id, next.id, () => {
+      [current.card, next.card] = [next.card, current.card];
       currentPlayer = (currentPlayer + 1) % players.length;
       if (currentPlayer === dealerIndex) {
         setTimeout(() => endRound(), 1000);
       } else {
         processTurn();
       }
+    });
+  } else {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    if (currentPlayer === dealerIndex) {
+      setTimeout(() => endRound(), 1000);
+    } else {
+      processTurn();
     }
+  }
+}
+
 
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
