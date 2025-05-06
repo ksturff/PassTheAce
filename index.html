@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -209,7 +209,7 @@
       for (let s of suits) {
         for (let r of ranks) {
           const img = new Image();
-          const src = `./assets/${r}_of_${s}.png`;
+          const src = ./assets/${r}_of_${s}.png;
           img.src = src;
           cardImages[${r}_${s}] = img;
           loadPromises.push(new Promise((resolve) => {
@@ -232,6 +232,13 @@
 
     function updateTurnIndicator() {
       document.getElementById("turnIndicator").innerText = Player ${players[currentPlayer]?.id}'s Turn;
+    }
+
+    function restartGame() {
+      document.getElementById("endOverlay").style.display = "none";
+      document.getElementById("startBtn").style.display = "block";
+      dealerIndex = null;
+      startGame();
     }
 
     function startGame() {
@@ -389,12 +396,6 @@ if (currentVal <= 5 && next.card.rank !== "K") {
         setTimeout(() => aiTurn(), 1000);
       }
     }
-function restartGame() {
-  document.getElementById("endOverlay").style.display = "none";
-  document.getElementById("startBtn").style.display = "block";
-  dealerIndex = null;
-  startGame();
-}
 
     function endRound() {
       drawTable(true);
