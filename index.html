@@ -432,27 +432,29 @@
   if (backgroundImage.complete) {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   }
+
   const container = document.getElementById('playerContainer');
   container.innerHTML = '';
+
+  // Ensure correct radii for an oval table layout
+  const HUD_X_RADIUS = 390;
+  const HUD_Y_RADIUS = 170;
+  const CARD_X_RADIUS = HUD_X_RADIUS - 60;
+  const CARD_Y_RADIUS = HUD_Y_RADIUS - 40;
 
   const angleMap = players.map((_, i, arr) => 90 + ((i - 0) * 360 / arr.length));
 
   players.forEach((p, i) => {
     const angle = angleMap[i] * (Math.PI / 180);
 
-    // Position for HUD (neon ring)
-    const hudX = CENTER_X + Math.cos(angle) * X_RADIUS;
-    const hudY = CENTER_Y + Math.sin(angle) * Y_RADIUS;
+    // === HUD (avatar, name, chips) ===
+    const hudX = CENTER_X + Math.cos(angle) * HUD_X_RADIUS;
+    const hudY = CENTER_Y + Math.sin(angle) * HUD_Y_RADIUS;
 
-    // Position for Card (further out)
-    const cardRadiusOffset = 20;
-    const cardX = CENTER_X + Math.cos(angle) * (X_RADIUS + cardRadiusOffset);
-    const cardY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + cardRadiusOffset);
-
-    // === HUD ===
     const div = document.createElement('div');
     div.className = 'player-ui';
     div.id = `player-ui-${p.id}`;
+
     const hudHTML = `
       <div class="hud">
         <div class="name">Player ${p.id}</div>
@@ -462,6 +464,7 @@
           ${p.chips}
         </div>
       </div>`;
+
     div.innerHTML = hudHTML;
     div.style.left = `${hudX}px`;
     div.style.top = `${hudY}px`;
@@ -470,7 +473,18 @@
     div.style.flexDirection = 'column';
     container.appendChild(div);
 
-    // === Card ===
+    // Highlight current player
+    const avatarEl = div.querySelector('.avatar');
+    if (i === currentPlayer) {
+      avatarEl.classList.add('active-glow');
+    } else {
+      avatarEl.classList.remove('active-glow');
+    }
+
+    // === Card (placed on table felt) ===
+    const cardX = CENTER_X + Math.cos(angle) * CARD_X_RADIUS;
+    const cardY = CENTER_Y + Math.sin(angle) * CARD_Y_RADIUS;
+
     const cardImg = document.createElement('img');
     cardImg.className = 'player-card';
     cardImg.style.position = 'absolute';
@@ -489,16 +503,9 @@
     cardImg.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
 
     container.appendChild(cardImg);
-
-    // Highlight active player avatar
-    const avatarEl = div.querySelector('.avatar');
-    if (i === currentPlayer) {
-      avatarEl.classList.add('active-glow');
-    } else {
-      avatarEl.classList.remove('active-glow');
-    }
   });
 }
+
 
 
     preloadAssets().then(() => {
