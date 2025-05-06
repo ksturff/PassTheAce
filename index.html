@@ -139,9 +139,6 @@
 <body>
   <div id="ui">
     <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
-    <button onclick="setRadii(380,190)">Test 1</button>
-    <button onclick="setRadii(360,210)">Test 2</button>
-    <button onclick="setRadii(350,230)">Test 3</button>
     <div id="actionBtns" style="display:none;">
       <button onclick="keepCard()">Keep</button>
       <button onclick="passCard()">Pass</button>
@@ -171,17 +168,11 @@
 
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
-    let X_RADIUS = 430, Y_RADIUS = 150;
+    let X_RADIUS = 360, Y_RADIUS = 210; // ← Test 2 locked in
 
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
-
-    function setRadii(x, y) {
-      X_RADIUS = x;
-      Y_RADIUS = y;
-      drawTable();
-    }
 
     function getCardValue(card) {
       if (!card) return 99;
