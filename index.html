@@ -361,21 +361,35 @@
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   }
 
-  // 🎯 Custom offsets for card placement
+  // 🔧 Per-player card offsets
   const cardOffsets = [
     { x: 0, y: 50 },   // Player 1
     { x: 0, y: 20 },   // Player 2
-    { x: 0, y: -10 },   // Player 3
+    { x: 0, y: -10 },  // Player 3
     { x: 0, y: 10 },   // Player 4
     { x: 0, y: -15 },  // Player 5
     { x: 0, y: -50 },  // Player 6
     { x: 0, y: -15 },  // Player 7
     { x: 0, y: 10 },   // Player 8
-    { x: 0, y: -10 },   // Player 9
+    { x: 0, y: -10 },  // Player 9
     { x: 0, y: 20 }    // Player 10
   ];
 
-  // 🎴 Draw cards on the table
+  // 🔧 Per-player HUD (avatar) offsets
+  const hudOffsets = [
+    { x: 0, y: 40 },   // Player 1
+    { x: 0, y: 30 },   // Player 2
+    { x: 0, y: 30 },   // Player 3
+    { x: 10, y: 15 },  // Player 4
+    { x: 0, y: -10 },  // Player 5
+    { x: 0, y: -40 },  // Player 6
+    { x: 0, y: -10 },  // Player 7
+    { x: -10, y: 15 }, // Player 8
+    { x: 0, y: 30 },   // Player 9
+    { x: 0, y: 40 }    // Player 10
+  ];
+
+  // 🎴 Draw cards
   const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
   players.forEach((p, i) => {
     if (!p.card) return;
@@ -420,8 +434,10 @@
     const angle = angleMap[i] * (Math.PI / 180);
     const outerX = X_RADIUS + 30;
     const outerY = Y_RADIUS + 30;
-    const x = CENTER_X + Math.cos(angle) * outerX + (p.id === 3 || p.id === 4 ? 115 : 150);
-    const y = CENTER_Y + Math.sin(angle) * outerY;
+    const hudOffset = hudOffsets[i] || { x: 0, y: 0 };
+
+    const x = CENTER_X + Math.cos(angle) * outerX + hudOffset.x;
+    const y = CENTER_Y + Math.sin(angle) * outerY + hudOffset.y;
 
     div.style.left = `${x}px`;
     div.style.top = `${y}px`;
@@ -433,6 +449,7 @@
     container.appendChild(div);
   });
 }
+
 
 
     preloadAssets().then(() => {
