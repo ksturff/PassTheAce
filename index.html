@@ -459,10 +459,16 @@ const hudHTML = `
 
 // Flip order for players 8 and 9
 if (p.id === 8 || p.id === 9) {
+  // Card on the right
   div.innerHTML = `${hudHTML}${cardHTML}`;
+} else if (p.id === 3 || p.id === 4) {
+  // Card on the left
+  div.innerHTML = `${cardHTML}${hudHTML}`;
 } else {
+  // Default (e.g. top/bottom players)
   div.innerHTML = `${cardHTML}${hudHTML}`;
 }
+
 
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
