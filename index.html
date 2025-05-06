@@ -393,8 +393,11 @@
         div.innerHTML = hudHTML;
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
-        const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
-        const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
+        const outerX = X_RADIUS + 30;
+const outerY = Y_RADIUS + 30;
+const x = CENTER_X + Math.cos(angle) * outerX + extraOffset;
+const y = CENTER_Y + Math.sin(angle) * outerY;
+
         div.style.left = `${x}px`;
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
