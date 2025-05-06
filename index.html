@@ -460,17 +460,20 @@ const hudHTML = `
 
 // Flip order for players 8 and 9
 if (p.id === 8 || p.id === 9) {
-  // Card on the right
+  // Card on the right of avatar
   div.innerHTML = `${hudHTML}${cardHTML}`;
+  div.style.display = 'flex';
   div.style.flexDirection = 'row'; // left → right
 } else if (p.id === 3 || p.id === 4) {
-  // Card on the left
+  // Card on the left of avatar
   div.innerHTML = `${cardHTML}${hudHTML}`;
+  div.style.display = 'flex';
   div.style.flexDirection = 'row-reverse'; // right → left
 } else {
-  // Default: card on left
+  // Default stack
   div.innerHTML = `${cardHTML}${hudHTML}`;
-  div.style.flexDirection = 'row'; // optional, could be column for others
+  div.style.display = 'flex';
+  div.style.flexDirection = 'column';
 }
 
 
