@@ -1,4 +1,3 @@
-<!-- ⬇️ FULL HTML CONTENT WITH STYLED HUD BELOW THIS LINE ⬇️ -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,45 +91,49 @@
       height: 90px;
     }
     .hud {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  gap: 3px;
-}
-
-.hud .name {
-  background: #000;
-  color: white;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  text-align: center;
-}
-
-.hud .avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 0 4px #000;
-}
-    
-.hud .avatar.active-glow {
-  box-shadow: 0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff;
-  border-color: #0ff;
-}
-
-.hud .chips {
-  font-size: 10px;
-  color: gold;
-  background: none;
-  padding: 1px 4px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      gap: 3px;
+    }
+    .hud .name {
+      background: #000;
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-align: center;
+    }
+    .hud .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 4px #000;
+    }
+    .hud .avatar.active-glow {
+      box-shadow: 0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff;
+      border-color: #0ff;
+    }
+    .hud .chips {
+      font-size: 10px;
+      color: gold;
+      background: none;
+      padding: 1px 4px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .floating-card {
+      position: absolute;
+      width: 60px;
+      height: 90px;
+      z-index: 999;
+      transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -150,7 +153,6 @@
     <button onclick="restartGame()">Play Again</button>
   </div>
   <div id="playerContainer"></div>
-
   <script>
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -284,20 +286,52 @@
       }
     }
 
+    function animateCardPass(fromPlayerId, toPlayerId, callback) {
+      const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
+      const toEl = document.getElementById(`player-ui-${toPlayerId}`);
+      if (!fromEl || !toEl) return callback();
+
+      const fromCard = fromEl.querySelector('.player-card');
+      const img = document.createElement('img');
+      img.className = 'floating-card';
+      img.src = fromCard.src;
+      document.body.appendChild(img);
+
+      const fromRect = fromCard.getBoundingClientRect();
+      const toCard = toEl.querySelector('.player-card');
+      const toRect = toCard.getBoundingClientRect();
+
+      img.style.left = `${fromRect.left}px`;
+      img.style.top = `${fromRect.top}px`;
+
+      setTimeout(() => {
+        img.style.left = `${toRect.left}px`;
+        img.style.top = `${toRect.top}px`;
+      }, 50);
+
+      setTimeout(() => {
+        img.remove();
+        callback();
+      }, 600);
+    }
+
     function passCard() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
       if (!current.card || !next.card) return;
       if (current.card.rank === "K" || next.card.rank === "K") return;
-      [current.card, next.card] = [next.card, current.card];
-      document.getElementById("actionBtns").style.display = "none";
-      peekPlayerCard = false;
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
+
+      animateCardPass(current.id, next.id, () => {
+        [current.card, next.card] = [next.card, current.card];
+        document.getElementById("actionBtns").style.display = "none";
+        peekPlayerCard = false;
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
+      });
     }
 
     function aiTurn() {
@@ -379,7 +413,7 @@
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       }
       const container = document.getElementById('playerContainer');
-      container.innerHTML = ''; // clear all existing UI
+      container.innerHTML = '';
       const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
       players.forEach((p, i) => {
         const div = document.createElement('div');
@@ -403,12 +437,12 @@
         div.style.left = `${x}px`;
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
-       const avatarEl = div.querySelector('.avatar');
-if (i === currentPlayer) {
-  avatarEl.classList.add('active-glow');
-} else {
-  avatarEl.classList.remove('active-glow');
-}
+        const avatarEl = div.querySelector('.avatar');
+        if (i === currentPlayer) {
+          avatarEl.classList.add('active-glow');
+        } else {
+          avatarEl.classList.remove('active-glow');
+        }
         const cardEl = div.querySelector('.player-card');
         let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
