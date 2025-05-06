@@ -436,29 +436,16 @@
   const container = document.getElementById('playerContainer');
   container.innerHTML = '';
 
-  // Unified radii (standard oval)
-  const BASE_X_RADIUS = 400;
-  const BASE_Y_RADIUS = 180;
-  const CARD_OFFSET = -40; // inward
-
-  const angleMap = players.map((_, i, arr) => 90 + (i * 360 / arr.length));
+  const angleMap = players.map((_, i, arr) => 90 + ((i - 0) * 360 / arr.length));
 
   players.forEach((p, i) => {
-    const angle = angleMap[i] * (Math.PI / 180);
-
-    // HUD position (on neon)
-    const hudX = CENTER_X + Math.cos(angle) * BASE_X_RADIUS;
-    const hudY = CENTER_Y + Math.sin(angle) * BASE_Y_RADIUS;
-
-    // Card position (just inside neon)
-    const cardX = CENTER_X + Math.cos(angle) * (BASE_X_RADIUS + CARD_OFFSET);
-    const cardY = CENTER_Y + Math.sin(angle) * (BASE_Y_RADIUS + CARD_OFFSET);
-
-    // --- HUD ---
     const div = document.createElement('div');
     div.className = 'player-ui';
     div.id = `player-ui-${p.id}`;
-    div.innerHTML = `
+
+    const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
+    const cardHTML = `<img class="player-card" style="${cardSize}" />`;
+    const hudHTML = `
       <div class="hud">
         <div class="name">Player ${p.id}</div>
         <img class="avatar" src="./assets/avatar.png" />
@@ -467,14 +454,30 @@
           ${p.chips}
         </div>
       </div>`;
-    div.style.left = `${hudX}px`;
-    div.style.top = `${hudY}px`;
-    div.style.transform = 'translate(-50%, -50%)';
-    div.style.display = 'flex';
-    div.style.flexDirection = 'column';
-    container.appendChild(div);
 
-    // Glow if current player
+    if (p.id === 8 || p.id === 9) {
+      div.innerHTML = `${hudHTML}${cardHTML}`;
+      div.style.flexDirection = 'row';
+    } else if (p.id === 3 || p.id === 4) {
+      div.innerHTML = `${cardHTML}${hudHTML}`;
+      div.style.flexDirection = 'row-reverse';
+    } else {
+      div.innerHTML = `${cardHTML}${hudHTML}`;
+      div.style.flexDirection = 'column';
+    }
+
+    div.style.display = 'flex';
+    div.style.position = 'absolute';
+
+    // ✅ Adjusted to sit properly within the canvas background
+    const angle = angleMap[i] * (Math.PI / 180);
+    const adjustedX = CENTER_X + Math.cos(angle) * (X_RADIUS - 40);  // ⬅ Pull in horizontally
+    const adjustedY = CENTER_Y + Math.sin(angle) * (Y_RADIUS - 20);  // ⬅ Pull in vertically
+
+    div.style.left = `${adjustedX}px`;
+    div.style.top = `${adjustedY}px`;
+    div.style.transform = 'translate(-50%, -50%)';
+
     const avatarEl = div.querySelector('.avatar');
     if (i === currentPlayer) {
       avatarEl.classList.add('active-glow');
@@ -482,30 +485,22 @@
       avatarEl.classList.remove('active-glow');
     }
 
-    // --- Card ---
-    const cardImg = document.createElement('img');
-    cardImg.className = 'player-card';
-    cardImg.style.position = 'absolute';
-    cardImg.style.left = `${cardX}px`;
-    cardImg.style.top = `${cardY}px`;
-    cardImg.style.transform = 'translate(-50%, -50%)';
-    cardImg.style.width = p.id === 1 ? '60px' : '45px';
-    cardImg.style.height = p.id === 1 ? '90px' : '68px';
-    cardImg.style.zIndex = '5';
-
+    const cardEl = div.querySelector('.player-card');
     const show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-    const suit = suitMap[p.card.suit];
-    cardImg.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
 
-    container.appendChild(cardImg);
+    if (p.card) {
+      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+      const suit = suitMap[p.card.suit];
+      cardEl.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+    } else {
+      cardEl.src = './assets/Back.png';
+    }
+
+    container.appendChild(div);
   });
 }
-
-
-
 
     preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
