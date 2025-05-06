@@ -78,15 +78,15 @@
       pointer-events: none;
     }
     .player-ui {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  font-family: 'Orbitron', sans-serif;
-  pointer-events: none;
-  flex-direction: row; /* <-- add this default direction */
-}
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      pointer-events: none;
+      flex-direction: row;
+    }
     .player-card {
       width: 60px;
       height: 90px;
@@ -336,50 +336,46 @@
     }
 
     function aiTurn() {
-  let current = players[currentPlayer];
-  let next = players[(currentPlayer + 1) % players.length];
+      let current = players[currentPlayer];
+      let next = players[(currentPlayer + 1) % players.length];
 
-  if (!current.card || !next.card) {
-    currentPlayer = (currentPlayer + 1) % players.length;
-    processTurn();
-    return;
-  }
-
-  let currentVal = getCardValue(current.card);
-let nextVal = getCardValue(next.card);
-let shouldPass = false;
-
-// Avoid passing if card is high
-if (currentVal <= 5 && next.card.rank !== "K") {
-  shouldPass = true;
-} else if (currentVal >= 10) {
-  shouldPass = false;
-} else {
-  // 50/50 decision on mid-range cards
-  shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
-}
-
-
-  if (shouldPass) {
-    animateCardPass(current.id, next.id, () => {
-      [current.card, next.card] = [next.card, current.card];
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
+      if (!current.card || !next.card) {
+        currentPlayer = (currentPlayer + 1) % players.length;
         processTurn();
+        return;
       }
-    });
-  } else {
-    currentPlayer = (currentPlayer + 1) % players.length;
-    if (currentPlayer === dealerIndex) {
-      setTimeout(() => endRound(), 1000);
-    } else {
-      processTurn();
-    }
-  }
-}
 
+      let currentVal = getCardValue(current.card);
+      let nextVal = getCardValue(next.card);
+      let shouldPass = false;
+
+      if (currentVal <= 5 && next.card.rank !== "K") {
+        shouldPass = true;
+      } else if (currentVal >= 10) {
+        shouldPass = false;
+      } else {
+        shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
+      }
+
+      if (shouldPass) {
+        animateCardPass(current.id, next.id, () => {
+          [current.card, next.card] = [next.card, current.card];
+          currentPlayer = (currentPlayer + 1) % players.length;
+          if (currentPlayer === dealerIndex) {
+            setTimeout(() => endRound(), 1000);
+          } else {
+            processTurn();
+          }
+        });
+      } else {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
+      }
+    }
 
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
@@ -446,38 +442,30 @@ if (currentVal <= 5 && next.card.rank !== "K") {
         const div = document.createElement('div');
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
-       const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
-const cardHTML = `<img class="player-card" style="${cardSize}" />`;
-const hudHTML = `
-  <div class="hud">
-    <div class="name">Player ${p.id}</div>
-    <img class="avatar" src="./assets/avatar.png" />
-    <div class="chips">
-      <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-      ${p.chips}
-    </div>
-  </div>`;
-
-// Flip order for players 8 and 9
-if (p.id === 8 || p.id === 9) {
-  // Card on the right of avatar
-  div.innerHTML = `${hudHTML}${cardHTML}`;
-  div.style.display = 'flex';
-  div.style.flexDirection = 'row'; // left → right
-} else if (p.id === 3 || p.id === 4) {
-  // Card on the left of avatar
-  div.innerHTML = `${cardHTML}${hudHTML}`;
-  div.style.display = 'flex';
-  div.style.flexDirection = 'row-reverse'; // right → left
-} else {
-  // Default stack
-  div.innerHTML = `${cardHTML}${hudHTML}`;
-  div.style.display = 'flex';
-  div.style.flexDirection = 'column';
-}
-
-
-
+        const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
+        const cardHTML = `<img class="player-card" style="${cardSize}" />`;
+        const hudHTML = `
+          <div class="hud">
+            <div class="name">Player ${p.id}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>`;
+        if (p.id === 8 || p.id === 9) {
+          div.innerHTML = `${hudHTML}${cardHTML}`;
+          div.style.display = 'flex';
+          div.style.flexDirection = 'row';
+        } else if (p.id === 3 || p.id === 4) {
+          div.innerHTML = `${cardHTML}${hudHTML}`;
+          div.style.display = 'flex';
+          div.style.flexDirection = 'row-reverse';
+        } else {
+          div.innerHTML = `${cardHTML}${hudHTML}`;
+          div.style.display = 'flex';
+          div.style.flexDirection = 'column';
+        }
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
         const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
@@ -499,6 +487,24 @@ if (p.id === 8 || p.id === 9) {
         const suit = suitMap[p.card.suit];
         cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
         container.appendChild(div);
+      });
+
+      // 👇 Add at the END of drawTable()
+      players.forEach((p, i) => {
+        if (!p.card) return;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const cardRadiusX = X_RADIUS - 90;
+        const cardRadiusY = Y_RADIUS - 40;
+        const cardX = CENTER_X + Math.cos(angle) * cardRadiusX - CARD_W / 2;
+        const cardY = CENTER_Y + Math.sin(angle) * cardRadiusY - CARD_H / 2;
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        const img = (showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K'))
+          ? cardImages[`${rank}_${suit}`]
+          : cardImages['Back'];
+        ctx.drawImage(img, cardX, cardY, CARD_W, CARD_H);
       });
     }
 
