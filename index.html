@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Pass the Ace - Deluxe Edition</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -14,10 +14,6 @@
     }
     canvas {
       display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
     }
     #ui {
       position: absolute;
@@ -42,68 +38,14 @@
       background: linear-gradient(45deg, #666, #aaa);
       box-shadow: 0 0 20px #00f7ff;
     }
-    #playerContainer {
+    #turnIndicator {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 60px;
       width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .player-ui {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
       text-align: center;
-      pointer-events: none;
-    }
-    .hud {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .hud .name {
-      background: #000;
-      color: white;
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-    .hud .avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 0 4px #000;
-    }
-    .hud .avatar.active-glow {
-      box-shadow: 0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff;
-      border-color: #0ff;
-    }
-    .hud .chips {
-      font-size: 10px;
-      color: gold;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-    }
-    .player-card {
-      width: 60px;
-      height: 90px;
-      border-radius: 6px;
-      position: absolute;
-      z-index: 1;
-    }
-    .floating-card {
-      position: absolute;
-      width: 60px;
-      height: 90px;
-      z-index: 999;
-      pointer-events: none;
-      transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+      font-size: 20px;
+      color: #0ff;
+      text-shadow: 0 0 5px #0ff;
     }
     #endOverlay {
       display: none;
@@ -127,186 +69,394 @@
       background: #28a745;
       box-shadow: 0 0 15px #28a745;
     }
+    #playerContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .player-ui {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      pointer-events: none;
+    }
+    .player-card {
+      width: 60px;
+      height: 90px;
+    }
+    .hud {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      gap: 3px;
+    }
+    .hud .name {
+      background: #000;
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-align: center;
+    }
+    .hud .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 4px #000;
+    }
+    .hud .avatar.active-glow {
+      box-shadow: 0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff;
+      border-color: #0ff;
+    }
+    .hud .chips {
+      font-size: 10px;
+      color: gold;
+      background: none;
+      padding: 1px 4px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .floating-card {
+      position: absolute;
+      width: 60px;
+      height: 90px;
+      z-index: 999;
+      transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="1024" height="600"></canvas>
-
   <div id="ui">
-    <button id="startBtn" onclick="startGame()">Start Game</button>
+    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
+    <button onclick="setRadii(380,190)">Test 1</button>
+    <button onclick="setRadii(360,210)">Test 2</button>
+    <button onclick="setRadii(350,230)">Test 3</button>
     <div id="actionBtns" style="display:none;">
       <button onclick="keepCard()">Keep</button>
       <button onclick="passCard()">Pass</button>
     </div>
   </div>
-
+  <div id="turnIndicator"></div>
   <div id="endOverlay">
     <div id="winMessage">Player X Wins!</div>
     <button onclick="restartGame()">Play Again</button>
   </div>
-
   <div id="playerContainer"></div>
-
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const playerContainer = document.getElementById("playerContainer");
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 600;
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
+    canvas.style.position = 'absolute';
+    canvas.style.left = '50%';
+    canvas.style.top = '50%';
+    canvas.style.transform = 'translate(-50%, -50%)';
+    document.body.insertBefore(canvas, document.getElementById('playerContainer'));
+    const ctx = canvas.getContext('2d');
 
-    const playerPositions = [
-      { x: 100, y: 80 }, { x: 320, y: 40 }, { x: 512, y: 30 }, { x: 700, y: 40 }, { x: 920, y: 80 },
-      { x: 920, y: 480 }, { x: 700, y: 520 }, { x: 512, y: 530 }, { x: 320, y: 520 }, { x: 100, y: 480 }
-    ];
-    const cardPositions = [
-      { x: 312, y: 200 }, { x: 412, y: 200 }, { x: 512, y: 200 }, { x: 612, y: 200 }, { x: 712, y: 200 },
-      { x: 312, y: 320 }, { x: 412, y: 320 }, { x: 512, y: 320 }, { x: 612, y: 320 }, { x: 712, y: 320 }
-    ];
+    const backgroundImage = new Image();
+    backgroundImage.src = './assets/background.png';
 
-    let players = [];
-    let deck = [], currentPlayer = 0, dealerIndex = 0;
+    const CARD_W = 70, CARD_H = 100;
+    const CENTER_X = 512, CENTER_Y = 300;
+    let X_RADIUS = 430, Y_RADIUS = 150;
+
+    let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
+    let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
 
-    function createDeck() {
-      const suits = ['S', 'H', 'D', 'C'];
-      const ranks = [2,3,4,5,6,7,8,9,10,'J','Q','K','A'];
-      return suits.flatMap(suit => ranks.map(rank => ({ suit, rank }))).sort(() => Math.random() - 0.5);
+    function setRadii(x, y) {
+      X_RADIUS = x;
+      Y_RADIUS = y;
+      drawTable();
     }
 
     function getCardValue(card) {
+      if (!card) return 99;
       if (typeof card.rank === 'number') return card.rank;
       return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
     }
 
+    function createDeck() {
+      let d = [];
+      for (let s of ['S','H','D','C']) {
+        for (let r of [2,3,4,5,6,7,8,9,10,'J','Q','K','A']) {
+          d.push({suit: s, rank: r});
+        }
+      }
+      return d.sort(() => Math.random() - 0.5);
+    }
+
+    function preloadAssets() {
+      window.cardImages = {};
+      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
+      const loadPromises = [];
+
+      for (let s of suits) {
+        for (let r of ranks) {
+          const img = new Image();
+          const src = `./assets/${r}_of_${s}.png`;
+          img.src = src;
+          cardImages[`${r}_${s}`] = img;
+          loadPromises.push(new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }));
+        }
+      }
+
+      const back = new Image();
+      back.src = './assets/Back.png';
+      cardImages['Back'] = back;
+      loadPromises.push(new Promise((resolve) => {
+        back.onload = resolve;
+        back.onerror = resolve;
+      }));
+
+      return Promise.all(loadPromises);
+    }
+
+    function updateTurnIndicator() {
+      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
+    }
+
+    function restartGame() {
+      document.getElementById("endOverlay").style.display = "none";
+      document.getElementById("startBtn").style.display = "block";
+      dealerIndex = null;
+      startGame();
+    }
+
     function startGame() {
+      document.getElementById("startBtn").style.display = 'none';
+      deck = createDeck();
       players = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         chips: 3,
-        card: null
+        card: null,
+        seatIndex: i
       }));
-      gameRunning = true;
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "none";
       dealCards();
+      gameRunning = true;
     }
 
     function dealCards() {
-      deck = createDeck();
-      players.forEach(p => p.card = deck.pop());
-      dealerIndex = players.reduce((highestIdx, p, i) =>
-        getCardValue(p.card) > getCardValue(players[highestIdx].card) ? i : highestIdx, 0);
-      currentPlayer = (dealerIndex + 1) % players.length;
-      drawTable();
-      processTurn();
+      if (deck.length < players.length + 1) deck = createDeck();
+      players.forEach(p => p.card = null);
+      const sample = players.map(p => ({ ...p, card: deck.pop() }));
+      let maxVal = Math.max(...sample.map(p => getCardValue(p.card)));
+      let topCandidates = sample.filter(p => getCardValue(p.card) === maxVal);
+      dealerIndex = players.findIndex(p => p.id === topCandidates[0].id);
+      startingPlayerIndex = (dealerIndex + 1) % players.length;
+      currentPlayer = startingPlayerIndex;
+      sample.forEach((p, i) => players[i].card = p.card);
+      revealCardsSequentially();
     }
 
-    function drawTable() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      playerContainer.innerHTML = "";
-
-      // Draw cards
-      players.forEach((p, i) => {
-        const cardPos = cardPositions[i];
-        const card = new Image();
-        card.src = "./assets/Back.png";
-        card.onload = () => ctx.drawImage(card, cardPos.x, cardPos.y, 60, 90);
-        if (card.complete) ctx.drawImage(card, cardPos.x, cardPos.y, 60, 90);
-      });
-
-      // Draw HUD
-      players.forEach((p, i) => {
-        const pos = playerPositions[i];
-        const div = document.createElement("div");
-        div.className = "player-ui";
-        div.style.left = `${pos.x}px`;
-        div.style.top = `${pos.y}px`;
-
-        const cardImg = document.createElement("img");
-        cardImg.className = "player-card";
-        cardImg.src = "./assets/Back.png";
-
-        const nameDiv = document.createElement("div");
-        nameDiv.className = "name";
-        nameDiv.textContent = `Player ${p.id}`;
-
-        const avatar = document.createElement("img");
-        avatar.className = "avatar";
-        avatar.src = "./assets/avatar.png";
-        if (i === currentPlayer) avatar.classList.add("active-glow");
-
-        const chipDiv = document.createElement("div");
-        chipDiv.className = "chips";
-        chipDiv.innerHTML = `<img src="./assets/coin.png" style="height:14px;" /> ${p.chips}`;
-
-        const hud = document.createElement("div");
-        hud.className = "hud";
-        hud.appendChild(nameDiv);
-        hud.appendChild(avatar);
-        hud.appendChild(chipDiv);
-
-        div.appendChild(cardImg);
-        div.appendChild(hud);
-        playerContainer.appendChild(div);
-      });
-    }
-
-    function processTurn() {
-      if (players.length <= 1) return;
-      if (players[currentPlayer].id === 1) {
-        document.getElementById("actionBtns").style.display = "block";
-      } else {
-        setTimeout(() => {
-          let p = players[currentPlayer];
-          let next = players[(currentPlayer + 1) % players.length];
-          let shouldPass = getCardValue(p.card) < 8 && getCardValue(next.card) !== 13;
-          if (shouldPass) [p.card, next.card] = [next.card, p.card];
-          advanceTurn();
-        }, 1000);
+    function revealCardsSequentially(index = 0) {
+      if (index >= players.length) {
+        processTurn();
+        return;
       }
+      drawTable(false);
+      setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
 
     function keepCard() {
       document.getElementById("actionBtns").style.display = "none";
-      advanceTurn();
-    }
-
-    function passCard() {
-      let p = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
-      if (p.card && next.card && getCardValue(next.card) !== 13) {
-        [p.card, next.card] = [next.card, p.card];
-      }
-      document.getElementById("actionBtns").style.display = "none";
-      advanceTurn();
-    }
-
-    function advanceTurn() {
+      peekPlayerCard = false;
       currentPlayer = (currentPlayer + 1) % players.length;
       if (currentPlayer === dealerIndex) {
-        endRound();
+        setTimeout(() => endRound(), 1000);
       } else {
-        drawTable();
         processTurn();
       }
     }
 
-    function endRound() {
-      const minVal = Math.min(...players.map(p => getCardValue(p.card)));
-      players.forEach(p => {
-        if (getCardValue(p.card) === minVal) p.chips--;
-      });
-      players = players.filter(p => p.chips > 0);
-      if (players.length === 1) {
-        document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
-        document.getElementById("endOverlay").style.display = "flex";
-        return;
-      }
-      dealerIndex = 0;
-      currentPlayer = 1;
-      dealCards();
+    function animateCardPass(fromPlayerId, toPlayerId, callback) {
+      const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
+      const toEl = document.getElementById(`player-ui-${toPlayerId}`);
+      if (!fromEl || !toEl) return callback();
+
+      const fromCard = fromEl.querySelector('.player-card');
+      const img = document.createElement('img');
+      img.className = 'floating-card';
+      img.src = fromCard.src;
+      document.body.appendChild(img);
+
+      const fromRect = fromCard.getBoundingClientRect();
+      const toCard = toEl.querySelector('.player-card');
+      const toRect = toCard.getBoundingClientRect();
+
+      img.style.left = `${fromRect.left}px`;
+      img.style.top = `${fromRect.top}px`;
+
+      setTimeout(() => {
+        img.style.left = `${toRect.left}px`;
+        img.style.top = `${toRect.top}px`;
+      }, 50);
+
+      setTimeout(() => {
+        img.remove();
+        callback();
+      }, 600);
     }
 
-    function restartGame() {
-      startGame();
+    function passCard() {
+      let current = players[currentPlayer];
+      let next = players[(currentPlayer + 1) % players.length];
+      if (!current.card || !next.card) return;
+      if (current.card.rank === "K" || next.card.rank === "K") return;
+
+      animateCardPass(current.id, next.id, () => {
+        [current.card, next.card] = [next.card, current.card];
+        document.getElementById("actionBtns").style.display = "none";
+        peekPlayerCard = false;
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
+      });
     }
+
+    function aiTurn() {
+      let current = players[currentPlayer];
+      let next = players[(currentPlayer + 1) % players.length];
+      if (!current.card || !next.card) {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        processTurn();
+        return;
+      }
+      let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+      if (shouldPass) {
+        [current.card, next.card] = [next.card, current.card];
+      }
+      currentPlayer = (currentPlayer + 1) % players.length;
+      if (currentPlayer === dealerIndex) {
+        setTimeout(() => endRound(), 1000);
+      } else {
+        processTurn();
+      }
+    }
+
+    function processTurn() {
+      if (currentPlayer >= players.length) currentPlayer = 0;
+      if (players.length === 0) return;
+      const player = players[currentPlayer];
+      isHumanTurn = (player.id === 1);
+      peekPlayerCard = isHumanTurn;
+      updateTurnIndicator();
+      requestAnimationFrame(() => drawTable(false));
+      if (isHumanTurn) {
+        document.getElementById("actionBtns").style.display = "block";
+      } else {
+        document.getElementById("actionBtns").style.display = "none";
+        setTimeout(() => aiTurn(), 1000);
+      }
+    }
+
+    function endRound() {
+      drawTable(true);
+      setTimeout(() => {
+        const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+        players.forEach(p => {
+          if (getCardValue(p.card) === minValue) {
+            p.chips--;
+          }
+        });
+        const eliminated = players.filter(p => p.chips <= 0);
+        eliminated.forEach(p => {
+          const el = document.getElementById(`player-ui-${p.id}`);
+          if (el) el.remove();
+        });
+        players = players.filter(p => p.chips > 0);
+        if (players.length === 1) {
+          document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
+          document.getElementById("endOverlay").style.display = "flex";
+          document.getElementById("actionBtns").style.display = "none";
+          gameRunning = false;
+          return;
+        }
+        const losers = players.filter(p => getCardValue(p.card) === minValue);
+        if (losers.length > 0) {
+          const firstLoser = losers[0];
+          const loserIndex = players.findIndex(p => p.id === firstLoser.id);
+          startingPlayerIndex = (loserIndex + 1) % players.length;
+        }
+        if (dealerIndex >= players.length) dealerIndex = 0;
+        if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
+        currentPlayer = startingPlayerIndex;
+        deck = createDeck();
+        players.forEach(p => p.card = null);
+        setTimeout(dealCards, 1000);
+      }, 1500);
+    }
+
+    function drawTable(showCards = false) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+      const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
+      players.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        const cardHTML = `<img class="player-card" />`;
+        const hudHTML = `
+          <div class="hud">
+            <div class="name">Player ${p.id}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>`;
+        div.innerHTML = `${cardHTML}${hudHTML}`;
+        const angle = angleMap[i] * (Math.PI / 180);
+        let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
+        const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
+        const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)';
+        const avatarEl = div.querySelector('.avatar');
+        if (i === currentPlayer) {
+          avatarEl.classList.add('active-glow');
+        } else {
+          avatarEl.classList.remove('active-glow');
+        }
+        const cardEl = div.querySelector('.player-card');
+        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+        container.appendChild(div);
+      });
+    }
+
+    preloadAssets().then(() => {
+      document.getElementById("startBtn").disabled = false;
+    });
   </script>
 </body>
 </html>
