@@ -209,7 +209,7 @@
       for (let s of suits) {
         for (let r of ranks) {
           const img = new Image();
-          const src = ./assets/${r}_of_${s}.png;
+          const src = `./assets/${r}_of_${s}.png`;
           img.src = src;
           cardImages[${r}_${s}] = img;
           loadPromises.push(new Promise((resolve) => {
@@ -288,7 +288,7 @@
     }
 
     function animateCardPass(fromPlayerId, toPlayerId, callback) {
-      const fromEl = document.getElementById(player-ui-${fromPlayerId});
+      const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
       const toEl = document.getElementById(player-ui-${toPlayerId});
       if (!fromEl || !toEl) return callback();
 
