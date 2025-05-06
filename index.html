@@ -122,14 +122,6 @@
       align-items: center;
       gap: 2px;
     }
-    .floating-card {
-      position: absolute;
-      width: 60px;
-      height: 90px;
-      z-index: 999;
-      transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
@@ -279,21 +271,15 @@
       if (!current.card || !next.card) return;
       if (current.card.rank === "K" || next.card.rank === "K") return;
 
-      animateCardPass(current.id, next.id, () => {
-        [current.card, next.card] = [next.card, current.card];
-        document.getElementById("actionBtns").style.display = "none";
-        peekPlayerCard = false;
-        currentPlayer = (currentPlayer + 1) % players.length;
-        if (currentPlayer === dealerIndex) {
-          setTimeout(() => endRound(), 1000);
-        } else {
-          processTurn();
-        }
-      });
-    }
-
-    function animateCardPass(fromPlayerId, toPlayerId, callback) {
-      callback(); // Keep logic intact but skip card DOM animation
+      [current.card, next.card] = [next.card, current.card];
+      document.getElementById("actionBtns").style.display = "none";
+      peekPlayerCard = false;
+      currentPlayer = (currentPlayer + 1) % players.length;
+      if (currentPlayer === dealerIndex) {
+        setTimeout(() => endRound(), 1000);
+      } else {
+        processTurn();
+      }
     }
 
     function aiTurn() {
@@ -374,6 +360,30 @@
       if (backgroundImage.complete) {
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       }
+
+      // 🎴 Draw cards on the table separately
+      const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
+      players.forEach((p, i) => {
+        if (!p.card) return;
+        const angle = cardAngleMap[i] * (Math.PI / 180);
+        const radiusX = X_RADIUS - 70;
+        const radiusY = Y_RADIUS - 30;
+        const cardX = CENTER_X + Math.cos(angle) * radiusX - CARD_W / 2;
+        const cardY = CENTER_Y + Math.sin(angle) * radiusY - CARD_H / 2;
+
+        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        const cardImg = cardImages[show ? `${rank}_${suit}` : 'Back'];
+
+        if (cardImg?.complete) {
+          ctx.drawImage(cardImg, cardX, cardY, CARD_W, CARD_H);
+        }
+      });
+
+      // 🧍 Draw player HUDs outside the table
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
       const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
@@ -392,12 +402,10 @@
           </div>`;
         div.innerHTML = hudHTML;
         const angle = angleMap[i] * (Math.PI / 180);
-        let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
         const outerX = X_RADIUS + 30;
-const outerY = Y_RADIUS + 30;
-const x = CENTER_X + Math.cos(angle) * outerX + extraOffset;
-const y = CENTER_Y + Math.sin(angle) * outerY;
-
+        const outerY = Y_RADIUS + 30;
+        const x = CENTER_X + Math.cos(angle) * outerX + (p.id === 3 || p.id === 4 ? 115 : 150);
+        const y = CENTER_Y + Math.sin(angle) * outerY;
         div.style.left = `${x}px`;
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
