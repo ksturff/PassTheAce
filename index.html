@@ -344,7 +344,20 @@
     return;
   }
 
-  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+  let currentVal = getCardValue(current.card);
+let nextVal = getCardValue(next.card);
+let shouldPass = false;
+
+// Avoid passing if card is high
+if (currentVal <= 5 && next.card.rank !== "K") {
+  shouldPass = true;
+} else if (currentVal >= 10) {
+  shouldPass = false;
+} else {
+  // 50/50 decision on mid-range cards
+  shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
+}
+
 
   if (shouldPass) {
     animateCardPass(current.id, next.id, () => {
