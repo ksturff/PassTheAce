@@ -1,4 +1,4 @@
-f<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -85,7 +85,6 @@ f<!DOCTYPE html>
       color: white;
       font-family: 'Orbitron', sans-serif;
       pointer-events: none;
-      flex-direction: row;
     }
     .player-card {
       width: 60px;
@@ -139,7 +138,7 @@ f<!DOCTYPE html>
 </head>
 <body>
   <div id="ui">
-    <button id="startBtn" onclick="startGame()">Start Game</button><br>
+    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
     <button onclick="setRadii(380,190)">Test 1</button>
     <button onclick="setRadii(360,210)">Test 2</button>
     <button onclick="setRadii(350,230)">Test 3</button>
@@ -173,6 +172,7 @@ f<!DOCTYPE html>
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
     let X_RADIUS = 430, Y_RADIUS = 150;
+
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
@@ -274,6 +274,7 @@ f<!DOCTYPE html>
       drawTable(false);
       setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
+
     function keepCard() {
       document.getElementById("actionBtns").style.display = "none";
       peekPlayerCard = false;
@@ -336,42 +337,20 @@ f<!DOCTYPE html>
     function aiTurn() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
-
       if (!current.card || !next.card) {
         currentPlayer = (currentPlayer + 1) % players.length;
         processTurn();
         return;
       }
-
-      let currentVal = getCardValue(current.card);
-      let nextVal = getCardValue(next.card);
-      let shouldPass = false;
-
-      if (currentVal <= 5 && next.card.rank !== "K") {
-        shouldPass = true;
-      } else if (currentVal >= 10) {
-        shouldPass = false;
-      } else {
-        shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
-      }
-
+      let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
       if (shouldPass) {
-        animateCardPass(current.id, next.id, () => {
-          [current.card, next.card] = [next.card, current.card];
-          currentPlayer = (currentPlayer + 1) % players.length;
-          if (currentPlayer === dealerIndex) {
-            setTimeout(() => endRound(), 1000);
-          } else {
-            processTurn();
-          }
-        });
+        [current.card, next.card] = [next.card, current.card];
+      }
+      currentPlayer = (currentPlayer + 1) % players.length;
+      if (currentPlayer === dealerIndex) {
+        setTimeout(() => endRound(), 1000);
       } else {
-        currentPlayer = (currentPlayer + 1) % players.length;
-        if (currentPlayer === dealerIndex) {
-          setTimeout(() => endRound(), 1000);
-        } else {
-          processTurn();
-        }
+        processTurn();
       }
     }
 
@@ -390,6 +369,7 @@ f<!DOCTYPE html>
         setTimeout(() => aiTurn(), 1000);
       }
     }
+
     function endRound() {
       drawTable(true);
       setTimeout(() => {
@@ -427,92 +407,52 @@ f<!DOCTYPE html>
       }, 1500);
     }
 
-   function drawTable(showCards = false) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (backgroundImage.complete) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  }
-
-  const container = document.getElementById('playerContainer');
-  container.innerHTML = '';
-
-  const angleMap = players.map((_, i, arr) => 90 + ((i - 0) * 360 / arr.length));
-
-  players.forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'player-ui';
-    div.id = `player-ui-${p.id}`;
-
-    // Card (on table)
-    const cardEl = document.createElement('img');
-    cardEl.className = 'player-card';
-    cardEl.style.position = 'absolute';
-    cardEl.style.width = '50px';
-    cardEl.style.height = '75px';
-    cardEl.style.zIndex = 1;
-    const show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
-    if (p.card) {
-      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-      const suit = suitMap[p.card.suit];
-      cardEl.src = show ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
-    } else {
-      cardEl.src = './assets/Back.png';
+    function drawTable(showCards = false) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+      const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
+      players.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        const cardHTML = `<img class="player-card" />`;
+        const hudHTML = `
+          <div class="hud">
+            <div class="name">Player ${p.id}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>`;
+        div.innerHTML = `${cardHTML}${hudHTML}`;
+        const angle = angleMap[i] * (Math.PI / 180);
+        let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
+        const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
+        const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)';
+        const avatarEl = div.querySelector('.avatar');
+        if (i === currentPlayer) {
+          avatarEl.classList.add('active-glow');
+        } else {
+          avatarEl.classList.remove('active-glow');
+        }
+        const cardEl = div.querySelector('.player-card');
+        let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
+        container.appendChild(div);
+      });
     }
-
-    // HUD
-    const hud = document.createElement('div');
-    hud.className = 'hud';
-    hud.innerHTML = `
-      <div class="name">Player ${p.id}</div>
-      <img class="avatar" src="./assets/avatar.png" />
-      <div class="chips">
-        <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-        ${p.chips}
-      </div>
-    `;
-
-    // Layout HUD direction
-    div.style.display = 'flex';
-    if (p.id === 8 || p.id === 9) {
-      div.style.flexDirection = 'row';
-      div.appendChild(hud);
-      div.appendChild(cardEl);
-    } else if (p.id === 3 || p.id === 4) {
-      div.style.flexDirection = 'row-reverse';
-      div.appendChild(hud);
-      div.appendChild(cardEl);
-    } else {
-      div.style.flexDirection = 'column';
-      div.appendChild(cardEl);
-      div.appendChild(hud);
-    }
-
-    // Positioning
-    const angle = angleMap[i] * (Math.PI / 180);
-    const radiusX = X_RADIUS;
-    const radiusY = Y_RADIUS;
-    const x = CENTER_X + Math.cos(angle) * radiusX;
-    const y = CENTER_Y + Math.sin(angle) * radiusY;
-    div.style.position = 'absolute';
-    div.style.left = `${x}px`;
-    div.style.top = `${y}px`;
-    div.style.transform = 'translate(-50%, -50%)`;
-
-    // Highlight current player
-    const avatar = hud.querySelector('.avatar');
-    if (i === currentPlayer) {
-      avatar.classList.add('active-glow');
-    } else {
-      avatar.classList.remove('active-glow');
-    }
-
-    container.appendChild(div);
-  });
-}
-
-
 
     preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
