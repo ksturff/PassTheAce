@@ -78,14 +78,15 @@
       pointer-events: none;
     }
     .player-ui {
-      position: absolute;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: white;
-      font-family: 'Orbitron', sans-serif;
-      pointer-events: none;
-    }
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  pointer-events: none;
+  flex-direction: row; /* <-- add this default direction */
+}
     .player-card {
       width: 60px;
       height: 90px;
@@ -461,13 +462,17 @@ const hudHTML = `
 if (p.id === 8 || p.id === 9) {
   // Card on the right
   div.innerHTML = `${hudHTML}${cardHTML}`;
+  div.style.flexDirection = 'row'; // left → right
 } else if (p.id === 3 || p.id === 4) {
   // Card on the left
   div.innerHTML = `${cardHTML}${hudHTML}`;
+  div.style.flexDirection = 'row-reverse'; // right → left
 } else {
-  // Default (e.g. top/bottom players)
+  // Default: card on left
   div.innerHTML = `${cardHTML}${hudHTML}`;
+  div.style.flexDirection = 'row'; // optional, could be column for others
 }
+
 
 
         const angle = angleMap[i] * (Math.PI / 180);
