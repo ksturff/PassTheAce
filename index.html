@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -78,15 +78,15 @@
       pointer-events: none;
     }
     .player-ui {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  font-family: 'Orbitron', sans-serif;
-  pointer-events: none;
-  flex-direction: row; /* <-- add this default direction */
-}
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      pointer-events: none;
+      flex-direction: row;
+    }
     .player-card {
       width: 60px;
       height: 90px;
@@ -139,7 +139,7 @@
 </head>
 <body>
   <div id="ui">
-    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
+    <button id="startBtn" onclick="startGame()">Start Game</button><br>
     <button onclick="setRadii(380,190)">Test 1</button>
     <button onclick="setRadii(360,210)">Test 2</button>
     <button onclick="setRadii(350,230)">Test 3</button>
@@ -173,7 +173,6 @@
     const CARD_W = 70, CARD_H = 100;
     const CENTER_X = 512, CENTER_Y = 300;
     let X_RADIUS = 430, Y_RADIUS = 150;
-
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
@@ -211,7 +210,7 @@
           const img = new Image();
           const src = `./assets/${r}_of_${s}.png`;
           img.src = src;
-          cardImages[${r}_${s}] = img;
+          cardImages[`${r}_${s}`] = img;
           loadPromises.push(new Promise((resolve) => {
             img.onload = resolve;
             img.onerror = resolve;
@@ -231,7 +230,7 @@
     }
 
     function updateTurnIndicator() {
-      document.getElementById("turnIndicator").innerText = Player ${players[currentPlayer]?.id}'s Turn;
+      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
     }
 
     function restartGame() {
@@ -275,7 +274,6 @@
       drawTable(false);
       setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
-
     function keepCard() {
       document.getElementById("actionBtns").style.display = "none";
       peekPlayerCard = false;
@@ -289,7 +287,7 @@
 
     function animateCardPass(fromPlayerId, toPlayerId, callback) {
       const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
-      const toEl = document.getElementById(player-ui-${toPlayerId});
+      const toEl = document.getElementById(`player-ui-${toPlayerId}`);
       if (!fromEl || !toEl) return callback();
 
       const fromCard = fromEl.querySelector('.player-card');
@@ -302,12 +300,12 @@
       const toCard = toEl.querySelector('.player-card');
       const toRect = toCard.getBoundingClientRect();
 
-      img.style.left = ${fromRect.left}px;
-      img.style.top = ${fromRect.top}px;
+      img.style.left = `${fromRect.left}px`;
+      img.style.top = `${fromRect.top}px`;
 
       setTimeout(() => {
-        img.style.left = ${toRect.left}px;
-        img.style.top = ${toRect.top}px;
+        img.style.left = `${toRect.left}px`;
+        img.style.top = `${toRect.top}px`;
       }, 50);
 
       setTimeout(() => {
@@ -336,50 +334,46 @@
     }
 
     function aiTurn() {
-  let current = players[currentPlayer];
-  let next = players[(currentPlayer + 1) % players.length];
+      let current = players[currentPlayer];
+      let next = players[(currentPlayer + 1) % players.length];
 
-  if (!current.card || !next.card) {
-    currentPlayer = (currentPlayer + 1) % players.length;
-    processTurn();
-    return;
-  }
-
-  let currentVal = getCardValue(current.card);
-let nextVal = getCardValue(next.card);
-let shouldPass = false;
-
-// Avoid passing if card is high
-if (currentVal <= 5 && next.card.rank !== "K") {
-  shouldPass = true;
-} else if (currentVal >= 10) {
-  shouldPass = false;
-} else {
-  // 50/50 decision on mid-range cards
-  shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
-}
-
-
-  if (shouldPass) {
-    animateCardPass(current.id, next.id, () => {
-      [current.card, next.card] = [next.card, current.card];
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
+      if (!current.card || !next.card) {
+        currentPlayer = (currentPlayer + 1) % players.length;
         processTurn();
+        return;
       }
-    });
-  } else {
-    currentPlayer = (currentPlayer + 1) % players.length;
-    if (currentPlayer === dealerIndex) {
-      setTimeout(() => endRound(), 1000);
-    } else {
-      processTurn();
-    }
-  }
-}
 
+      let currentVal = getCardValue(current.card);
+      let nextVal = getCardValue(next.card);
+      let shouldPass = false;
+
+      if (currentVal <= 5 && next.card.rank !== "K") {
+        shouldPass = true;
+      } else if (currentVal >= 10) {
+        shouldPass = false;
+      } else {
+        shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
+      }
+
+      if (shouldPass) {
+        animateCardPass(current.id, next.id, () => {
+          [current.card, next.card] = [next.card, current.card];
+          currentPlayer = (currentPlayer + 1) % players.length;
+          if (currentPlayer === dealerIndex) {
+            setTimeout(() => endRound(), 1000);
+          } else {
+            processTurn();
+          }
+        });
+      } else {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
+      }
+    }
 
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
@@ -396,7 +390,6 @@ if (currentVal <= 5 && next.card.rank !== "K") {
         setTimeout(() => aiTurn(), 1000);
       }
     }
-
     function endRound() {
       drawTable(true);
       setTimeout(() => {
@@ -408,12 +401,12 @@ if (currentVal <= 5 && next.card.rank !== "K") {
         });
         const eliminated = players.filter(p => p.chips <= 0);
         eliminated.forEach(p => {
-          const el = document.getElementById(player-ui-${p.id});
+          const el = document.getElementById(`player-ui-${p.id}`);
           if (el) el.remove();
         });
         players = players.filter(p => p.chips > 0);
         if (players.length === 1) {
-          document.getElementById("winMessage").innerText = 🏆 Player ${players[0].id} Wins!;
+          document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
           document.getElementById("endOverlay").style.display = "flex";
           document.getElementById("actionBtns").style.display = "none";
           gameRunning = false;
@@ -445,59 +438,54 @@ if (currentVal <= 5 && next.card.rank !== "K") {
       players.forEach((p, i) => {
         const div = document.createElement('div');
         div.className = 'player-ui';
-        div.id = player-ui-${p.id};
-       const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
-const cardHTML = <img class="player-card" style="${cardSize}" />;
-const hudHTML = 
-  <div class="hud">
-    <div class="name">Player ${p.id}</div>
-    <img class="avatar" src="./assets/avatar.png" />
-    <div class="chips">
-      <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-      ${p.chips}
-    </div>
-  </div>;
+        div.id = `player-ui-${p.id}`;
 
-// Flip order for players 8 and 9
-if (p.id === 8 || p.id === 9) {
-  // Card on the right of avatar
-  div.innerHTML = ${hudHTML}${cardHTML};
-  div.style.display = 'flex';
-  div.style.flexDirection = 'row'; // left → right
-} else if (p.id === 3 || p.id === 4) {
-  // Card on the left of avatar
-  div.innerHTML = ${cardHTML}${hudHTML};
-  div.style.display = 'flex';
-  div.style.flexDirection = 'row-reverse'; // right → left
-} else {
-  // Default stack
-  div.innerHTML = ${cardHTML}${hudHTML};
-  div.style.display = 'flex';
-  div.style.flexDirection = 'column';
-}
+        const cardSize = p.id === 1 ? 'width: 60px; height: 90px;' : 'width: 45px; height: 68px;';
+        const cardHTML = `<img class="player-card" style="${cardSize}" />`;
+        const hudHTML = `
+          <div class="hud">
+            <div class="name">Player ${p.id}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>`;
 
-
+        if (p.id === 8 || p.id === 9) {
+          div.innerHTML = `${hudHTML}${cardHTML}`;
+          div.style.flexDirection = 'row';
+        } else if (p.id === 3 || p.id === 4) {
+          div.innerHTML = `${cardHTML}${hudHTML}`;
+          div.style.flexDirection = 'row-reverse';
+        } else {
+          div.innerHTML = `${cardHTML}${hudHTML}`;
+          div.style.flexDirection = 'column';
+        }
 
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
         const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
         const y = CENTER_Y + Math.sin(angle) * Y_RADIUS;
-        div.style.left = ${x}px;
-        div.style.top = ${y}px;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
+        div.style.display = 'flex';
+
         const avatarEl = div.querySelector('.avatar');
         if (i === currentPlayer) {
           avatarEl.classList.add('active-glow');
         } else {
           avatarEl.classList.remove('active-glow');
         }
+
         const cardEl = div.querySelector('.player-card');
         let show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
         const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
         const suit = suitMap[p.card.suit];
-        cardEl.src = (p.card && show) ? ./assets/${rank}_of_${suit}.png : './assets/Back.png';
+        cardEl.src = (p.card && show) ? `./assets/${rank}_of_${suit}.png` : './assets/Back.png';
         container.appendChild(div);
       });
     }
