@@ -446,16 +446,23 @@ if (currentVal <= 5 && next.card.rank !== "K") {
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
         const cardHTML = `<img class="player-card" />`;
-        const hudHTML = `
-          <div class="hud">
-            <div class="name">Player ${p.id}</div>
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="chips">
-              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-              ${p.chips}
-            </div>
-          </div>`;
-        div.innerHTML = `${cardHTML}${hudHTML}`;
+const hudHTML = `
+  <div class="hud">
+    <div class="name">Player ${p.id}</div>
+    <img class="avatar" src="./assets/avatar.png" />
+    <div class="chips">
+      <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+      ${p.chips}
+    </div>
+  </div>`;
+
+// Flip order for players 8 and 9
+if (p.id === 8 || p.id === 9) {
+  div.innerHTML = `${hudHTML}${cardHTML}`;
+} else {
+  div.innerHTML = `${cardHTML}${hudHTML}`;
+}
+
         const angle = angleMap[i] * (Math.PI / 180);
         let extraOffset = (p.id === 3 || p.id === 4) ? 115 : 150;
         const x = CENTER_X + Math.cos(angle) * X_RADIUS + extraOffset;
