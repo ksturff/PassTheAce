@@ -98,6 +98,8 @@
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
     let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false;
+    let eliminatedPlayers = []; // 🆕 Track spectators
+
 
     function getCardValue(card) {
       if (!card) return 99;
@@ -299,39 +301,53 @@
     }
 
     function endRound() {
-      drawTable(true);
-      setTimeout(() => {
-        const minValue = Math.min(...players.map(p => getCardValue(p.card)));
-        players.forEach(p => {
-          if (getCardValue(p.card) === minValue) p.chips--;
-        });
-        const eliminated = players.filter(p => p.chips <= 0);
-        eliminated.forEach(p => {
-          const el = document.getElementById(`player-ui-${p.id}`);
-          if (el) el.remove();
-        });
-        players = players.filter(p => p.chips > 0);
-        if (players.length === 1) {
-          document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
-          document.getElementById("endOverlay").style.display = "flex";
-          document.getElementById("actionBtns").style.display = "none";
-          gameRunning = false;
-          return;
+  drawTable(true);
+  setTimeout(() => {
+    const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+    players.forEach(p => {
+      if (getCardValue(p.card) === minValue) p.chips--;
+    });
+
+    const eliminated = players.filter(p => p.chips <= 0);
+    eliminated.forEach(p => {
+      if (p.id === 1) {
+        const spectate = confirm("You're out of chips! Would you like to spectate?");
+        if (spectate) {
+          eliminatedPlayers.push({ ...p, chips: 0, card: null });
         }
-        const losers = players.filter(p => getCardValue(p.card) === minValue);
-        if (losers.length > 0) {
-          const firstLoser = losers[0];
-          const loserIndex = players.findIndex(p => p.id === firstLoser.id);
-          startingPlayerIndex = (loserIndex + 1) % players.length;
-        }
-        if (dealerIndex >= players.length) dealerIndex = 0;
-        if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
-        currentPlayer = startingPlayerIndex;
-        deck = createDeck();
-        players.forEach(p => p.card = null);
-        setTimeout(dealCards, 1000);
-      }, 1500);
+        const el = document.getElementById(`player-ui-${p.id}`);
+        if (el) el.remove();
+      } else {
+        const el = document.getElementById(`player-ui-${p.id}`);
+        if (el) el.remove();
+      }
+    });
+
+    players = players.filter(p => p.chips > 0);
+    if (players.length === 1) {
+      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
+      document.getElementById("endOverlay").style.display = "flex";
+      document.getElementById("actionBtns").style.display = "none";
+      gameRunning = false;
+      return;
     }
+
+    const losers = players.filter(p => getCardValue(p.card) === minValue);
+    if (losers.length > 0) {
+      const firstLoser = losers[0];
+      const loserIndex = players.findIndex(p => p.id === firstLoser.id);
+      startingPlayerIndex = (loserIndex + 1) % players.length;
+    }
+
+    if (dealerIndex >= players.length) dealerIndex = 0;
+    if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
+    currentPlayer = startingPlayerIndex;
+    deck = createDeck();
+    players.forEach(p => p.card = null);
+    setTimeout(dealCards, 1000);
+  }, 1500);
+}
+
     function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
@@ -348,7 +364,7 @@
       ];
 
       const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
-      players.forEach((p, i) => {
+      [...players, ...eliminatedPlayers].forEach((p, i) => {
         const angle = cardAngleMap[i] * (Math.PI / 180);
         const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
         const offset = cardOffsets[i];
