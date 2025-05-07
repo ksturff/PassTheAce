@@ -92,7 +92,6 @@
 
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
-
     const CARD_W = 40, CARD_H = 55;
     const CENTER_X = 512, CENTER_Y = 300;
     let X_RADIUS = 360, Y_RADIUS = 210;
@@ -208,20 +207,50 @@
       }
     }
 
+    // ⬇️ Replacing passCard() and aiTurn() next
+    function animateCardPass(fromPlayer, toPlayer, callback) {
+      const startX = fromPlayer.cardX;
+      const startY = fromPlayer.cardY;
+      const endX = toPlayer.cardX;
+      const endY = toPlayer.cardY;
+
+      let frame = 0;
+      const totalFrames = 20;
+
+      function animate() {
+        const t = frame / totalFrames;
+        const midX = startX + (endX - startX) * t;
+        const midY = startY + (endY - startY) * t;
+        drawTable(false, { x: midX, y: midY, card: fromPlayer.card });
+        frame++;
+        if (frame <= totalFrames) {
+          requestAnimationFrame(animate);
+        } else {
+          [fromPlayer.card, toPlayer.card] = [toPlayer.card, fromPlayer.card];
+          callback();
+        }
+      }
+
+      animate();
+    }
+
     function passCard() {
       let current = players[currentPlayer];
       let next = players[(currentPlayer + 1) % players.length];
       if (!current.card || !next.card) return;
       if (current.card.rank === "K" || next.card.rank === "K") return;
-      [current.card, next.card] = [next.card, current.card];
+
       document.getElementById("actionBtns").style.display = "none";
       peekPlayerCard = false;
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
+
+      animateCardPass(current, next, () => {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
+      });
     }
 
     function aiTurn() {
@@ -232,18 +261,27 @@
         processTurn();
         return;
       }
+
       let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+
       if (shouldPass) {
-        [current.card, next.card] = [next.card, current.card];
-      }
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
+        animateCardPass(current, next, () => {
+          currentPlayer = (currentPlayer + 1) % players.length;
+          if (currentPlayer === dealerIndex) {
+            setTimeout(() => endRound(), 1000);
+          } else {
+            processTurn();
+          }
+        });
       } else {
-        processTurn();
+        currentPlayer = (currentPlayer + 1) % players.length;
+        if (currentPlayer === dealerIndex) {
+          setTimeout(() => endRound(), 1000);
+        } else {
+          processTurn();
+        }
       }
     }
-
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
       if (players.length === 0) return;
@@ -294,8 +332,7 @@
         setTimeout(dealCards, 1000);
       }, 1500);
     }
-
-    function drawTable(showCards = false) {
+    function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 
@@ -312,12 +349,14 @@
 
       const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
       players.forEach((p, i) => {
-        if (!p.card) return;
         const angle = cardAngleMap[i] * (Math.PI / 180);
         const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
         const offset = cardOffsets[i];
-        const cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x - CARD_W / 2;
-        const cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y - CARD_H / 2;
+        p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+        p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
+
+        if (!p.card || animCard?.card === p.card) return;
+
         const show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
@@ -325,11 +364,23 @@
         const suit = suitMap[p.card.suit];
         const cardImg = cardImages[show ? `${rank}_${suit}` : 'Back'];
         if (cardImg?.complete) {
-          const isBack = cardImg === cardImages['Back'];
-          const scale = isBack ? 1.0 : 0.95;
-          ctx.drawImage(cardImg, cardX + (CARD_W * (1 - scale) / 2), cardY + (CARD_H * (1 - scale) / 2), CARD_W * scale, CARD_H * scale);
+          const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
+          ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
         }
       });
+
+      if (animCard) {
+        const { x, y, card } = animCard;
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof card.rank === 'number' ? card.rank : rankMap[card.rank];
+        const suit = suitMap[card.suit];
+        const cardImg = cardImages[`${rank}_${suit}`];
+        if (cardImg?.complete) {
+          const scale = 0.95;
+          ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+        }
+      }
 
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
