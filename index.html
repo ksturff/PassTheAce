@@ -397,8 +397,9 @@
 
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
-      const angleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
-      players.forEach((p, i) => {
+      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));  // Fixed 10-player map
+players.forEach((p) => {
+  const i = p.seatIndex; // 👈 Use fixed seat assignment
         const div = document.createElement('div');
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
