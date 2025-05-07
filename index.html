@@ -369,18 +369,15 @@
         }
       });
 
-      if (animCard) {
-        const { x, y, card } = animCard;
-        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof card.rank === 'number' ? card.rank : rankMap[card.rank];
-        const suit = suitMap[card.suit];
-        const cardImg = cardImages[`${rank}_${suit}`];
-        if (cardImg?.complete) {
-          const scale = 0.95;
-          ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-        }
-      }
+     if (animCard) {
+  const { x, y } = animCard;
+  const cardImg = cardImages['Back'];
+  if (cardImg?.complete) {
+    const scale = 1.0;
+    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+  }
+}
+
 
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
