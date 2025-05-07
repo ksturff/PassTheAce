@@ -409,7 +409,18 @@
     const cardImg = cardImages[show ? `${rank}_${suit}` : 'Back'];
 
     if (cardImg?.complete) {
-      ctx.drawImage(cardImg, cardX, cardY, CARD_W, CARD_H);
+      const isBack = cardImg === cardImages['Back'];
+const scale = isBack ? 1.0 : 0.95; // shrink face cards slightly
+const scaledW = CARD_W * scale;
+const scaledH = CARD_H * scale;
+ctx.drawImage(
+  cardImg,
+  cardX + (CARD_W - scaledW) / 2,
+  cardY + (CARD_H - scaledH) / 2,
+  scaledW,
+  scaledH
+);
+
     }
   });
 
