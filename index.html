@@ -261,48 +261,81 @@
 
       let frame = 0;
       const totalFrames = 20;
-      function animatePass() {
-        const t = frame / totalFrames;
-        const midX = startX + (endX - startX) * t;
-        const midY = startY + (endY - startY) * t;
-        drawTable(false, { x: midX, y: midY, card: current.card });
-        frame++;
-        if (frame <= totalFrames) {
-          requestAnimationFrame(animatePass);
-        } else {
-          [current.card, next.card] = [next.card, current.card];
-          document.getElementById("actionBtns").style.display = "none";
-          peekPlayerCard = false;
-          currentPlayer = (currentPlayer + 1) % players.length;
-          if (currentPlayer === dealerIndex) {
-            setTimeout(() => endRound(), 1000);
-          } else {
-            processTurn();
-          }
-        }
-      }
-      animatePass();
-    }
+      function animateCardPass(fromPlayer, toPlayer, callback) {
+  const startX = fromPlayer.cardX;
+  const startY = fromPlayer.cardY;
+  const endX = toPlayer.cardX;
+  const endY = toPlayer.cardY;
 
-    function aiTurn() {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
-      if (!current.card || !next.card) {
-        currentPlayer = (currentPlayer + 1) % players.length;
-        processTurn();
-        return;
-      }
-      let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
-      if (shouldPass) {
-        [current.card, next.card] = [next.card, current.card];
-      }
+  let frame = 0;
+  const totalFrames = 20;
+
+  function animate() {
+    const t = frame / totalFrames;
+    const midX = startX + (endX - startX) * t;
+    const midY = startY + (endY - startY) * t;
+    drawTable(false, { x: midX, y: midY, card: fromPlayer.card });
+    frame++;
+    if (frame <= totalFrames) {
+      requestAnimationFrame(animate);
+    } else {
+      [fromPlayer.card, toPlayer.card] = [toPlayer.card, fromPlayer.card];
+      callback();
+    }
+  }
+
+  animate();
+}
+
+function passCard() {
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+  if (!current.card || !next.card) return;
+  if (current.card.rank === "K" || next.card.rank === "K") return;
+
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+
+  animateCardPass(current, next, () => {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    if (currentPlayer === dealerIndex) {
+      setTimeout(() => endRound(), 1000);
+    } else {
+      processTurn();
+    }
+  });
+}
+
+function aiTurn() {
+  let current = players[currentPlayer];
+  let next = players[(currentPlayer + 1) % players.length];
+  if (!current.card || !next.card) {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    processTurn();
+    return;
+  }
+
+  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+
+  if (shouldPass) {
+    animateCardPass(current, next, () => {
       currentPlayer = (currentPlayer + 1) % players.length;
       if (currentPlayer === dealerIndex) {
         setTimeout(() => endRound(), 1000);
       } else {
         processTurn();
       }
+    });
+  } else {
+    currentPlayer = (currentPlayer + 1) % players.length;
+    if (currentPlayer === dealerIndex) {
+      setTimeout(() => endRound(), 1000);
+    } else {
+      processTurn();
     }
+  }
+}
+
 
     function processTurn() {
       if (currentPlayer >= players.length) currentPlayer = 0;
