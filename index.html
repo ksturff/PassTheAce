@@ -456,7 +456,7 @@ players.forEach((p) => {
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
         const avatarEl = div.querySelector('.avatar');
-        avatarEl.classList.toggle('active-glow', i === currentPlayer);
+        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
         container.appendChild(div);
       });
     }
