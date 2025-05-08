@@ -107,6 +107,21 @@
       return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
     }
 
+    function getNextActivePlayerIndex(startIndex) {
+  let index = (startIndex + 1) % players.length;
+  let looped = false;
+
+  while (players[index].chips <= 0) {
+    index = (index + 1) % players.length;
+    if (index === startIndex) {
+      looped = true;
+      break;
+    }
+  }
+
+  return looped ? null : index;
+}
+
     function createDeck() {
       let d = [];
       for (let s of ['S','H','D','C']) {
@@ -237,68 +252,84 @@
     }
 
     function passCard() {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
-      if (!current.card || !next.card) return;
-      if (current.card.rank === "K" || next.card.rank === "K") return;
+  let current = players[currentPlayer];
+  let nextIndex = getNextActivePlayerIndex(currentPlayer);
+  if (nextIndex === null) return; // no one to pass to
 
-      document.getElementById("actionBtns").style.display = "none";
-      peekPlayerCard = false;
+  let next = players[nextIndex];
 
-      animateCardPass(current, next, () => {
-        currentPlayer = (currentPlayer + 1) % players.length;
-        if (currentPlayer === dealerIndex) {
-          setTimeout(() => endRound(), 1000);
-        } else {
-          processTurn();
-        }
-      });
+  if (!current.card || !next.card) return;
+  if (current.card.rank === "K" || next.card.rank === "K") return;
+
+  document.getElementById("actionBtns").style.display = "none";
+  peekPlayerCard = false;
+
+  animateCardPass(current, next, () => {
+    currentPlayer = getNextActivePlayerIndex(currentPlayer);
+    if (currentPlayer === dealerIndex) {
+      setTimeout(() => endRound(), 1000);
+    } else {
+      processTurn();
     }
+  });
+}
+
 
     function aiTurn() {
-      let current = players[currentPlayer];
-      let next = players[(currentPlayer + 1) % players.length];
-      if (!current.card || !next.card) {
-        currentPlayer = (currentPlayer + 1) % players.length;
+  let current = players[currentPlayer];
+  let nextIndex = getNextActivePlayerIndex(currentPlayer);
+  if (nextIndex === null) return;
+
+  let next = players[nextIndex];
+  if (!current.card || !next.card) {
+    currentPlayer = getNextActivePlayerIndex(currentPlayer);
+    processTurn();
+    return;
+  }
+
+  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
+
+  if (shouldPass) {
+    animateCardPass(current, next, () => {
+      currentPlayer = getNextActivePlayerIndex(currentPlayer);
+      if (currentPlayer === dealerIndex) {
+        setTimeout(() => endRound(), 1000);
+      } else {
         processTurn();
-        return;
       }
-
-      let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
-
-      if (shouldPass) {
-        animateCardPass(current, next, () => {
-          currentPlayer = (currentPlayer + 1) % players.length;
-          if (currentPlayer === dealerIndex) {
-            setTimeout(() => endRound(), 1000);
-          } else {
-            processTurn();
-          }
-        });
-      } else {
-        currentPlayer = (currentPlayer + 1) % players.length;
-        if (currentPlayer === dealerIndex) {
-          setTimeout(() => endRound(), 1000);
-        } else {
-          processTurn();
-        }
-      }
+    });
+  } else {
+    currentPlayer = getNextActivePlayerIndex(currentPlayer);
+    if (currentPlayer === dealerIndex) {
+      setTimeout(() => endRound(), 1000);
+    } else {
+      processTurn();
     }
+  }
+}
+
     function processTurn() {
-      if (currentPlayer >= players.length) currentPlayer = 0;
-      if (players.length === 0) return;
-      const player = players[currentPlayer];
-      isHumanTurn = (player.id === 1);
-      peekPlayerCard = isHumanTurn;
-      updateTurnIndicator();
-      requestAnimationFrame(() => drawTable(false));
-      if (isHumanTurn) {
-        document.getElementById("actionBtns").style.display = "block";
-      } else {
-        document.getElementById("actionBtns").style.display = "none";
-        setTimeout(() => aiTurn(), 1000);
-      }
-    }
+  if (players.length === 0) return;
+
+  // Skip eliminated players
+  while (players[currentPlayer]?.eliminated) {
+    currentPlayer = (currentPlayer + 1) % players.length;
+  }
+
+  const player = players[currentPlayer];
+  isHumanTurn = (player.id === 1);
+  peekPlayerCard = isHumanTurn;
+  updateTurnIndicator();
+  requestAnimationFrame(() => drawTable(false));
+
+  if (isHumanTurn) {
+    document.getElementById("actionBtns").style.display = "block";
+  } else {
+    document.getElementById("actionBtns").style.display = "none";
+    setTimeout(() => aiTurn(), 1000);
+  }
+}
+
 
     function endRound() {
   drawTable(true);
