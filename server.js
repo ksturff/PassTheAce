@@ -22,15 +22,10 @@ io.on('connection', (socket) => {
     rooms[room].push({ id: socket.id, username });
 
     // Send welcome and updated player list
-    socket.emit('welcome', `Welcome ${username}!`);
-    io.to(room).emit('playerList', rooms[room]);
-  });
-
-  socket.on('startGame', (room) => {
+    socket.on('startGame', (room) => {
   const humanPlayers = rooms[room];
   if (!humanPlayers || humanPlayers.length === 0) return;
 
-  // Create a shuffled deck
   const deck = [];
   for (let s of ['S', 'H', 'D', 'C']) {
     for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
@@ -40,25 +35,48 @@ io.on('connection', (socket) => {
   const shuffledDeck = deck.sort(() => Math.random() - 0.5);
 
   const totalSeats = 10;
+  const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
+  const allPlayers = [];
 
-  // Add AI players to fill remaining seats
-  const aiPlayers = [];
-  const names = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
-  for (let i = humanPlayers.length; i < totalSeats; i++) {
-    aiPlayers.push({
-      id: `AI-${i + 1}`,
-      name: names[i % names.length],
-      card: shuffledDeck.pop(),
-      chips: 3
-    });
+  for (let i = 0; i < totalSeats; i++) {
+    if (i < humanPlayers.length) {
+      allPlayers.push({
+        id: i + 1,
+        name: humanPlayers[i].username,
+        isHuman: true,
+        card: shuffledDeck.pop(),
+        chips: 3,
+        seatIndex: i
+      });
+    } else {
+      allPlayers.push({
+        id: i + 1,
+        name: aiNames[i % aiNames.length],
+        isHuman: false,
+        card: shuffledDeck.pop(),
+        chips: 3,
+        seatIndex: i
+      });
+    }
   }
 
-  const fullPlayerList = [...humanPlayers.map((p, index) => ({
+  io.to(room).emit('gameStarted', allPlayers);
+});
+
+
+  const fullPlayerList = [
+  ...humanPlayers.map((p, index) => ({
     id: index + 1,
+    seatIndex: index,
     name: p.username,
     card: shuffledDeck.pop(),
     chips: 3
-  })), ...aiPlayers];
+  })),
+  ...aiPlayers.map((p, index) => ({
+    ...p,
+    seatIndex: humanPlayers.length + index
+  }))
+];
 
   io.to(room).emit('gameStarted', fullPlayerList);
 });
