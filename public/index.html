@@ -65,12 +65,14 @@
 </head>
 <body>
   <!-- Multiplayer Lobby -->
-  <div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
-    <h2 style="color:white;">Join Game</h2>
-    <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <input id="roomInput" type="text" placeholder="Room Code" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <button onclick="joinGame()">Join Game</button>
-  </div>
+<div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
+  <h2 style="color:white;">Join Game</h2>
+  <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
+<input id="roomInput" type="text" placeholder="Enter room code"
+  style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
+  <button onclick="joinGame()">Join Game</button>
+</div>
+
 
   <!-- Main UI (hidden at first) -->
   <div id="ui" style="display:none;">
@@ -486,37 +488,36 @@ players.forEach((p) => {
 <script>
   const socket = io();
   let myUsername = "";
+  let myRoom = "";
 
   function joinGame() {
-  const nameInput = document.getElementById("usernameInput");
-  const roomInput = document.getElementById("roomInput");
+    const nameInput = document.getElementById("usernameInput");
+    const roomInput = document.getElementById("roomInput");
 
-  const name = nameInput.value.trim();
-  const room = roomInput.value.trim();
+    const name = nameInput.value.trim();
+    const room = roomInput.value.trim();
 
-  if (!name) return alert("Please enter a name");
-  if (!room) return alert("Please enter a room code");
+    if (!name || !room) return alert("Enter your name and a room code");
 
-  myUsername = name;
-  myRoom = room;
+    myUsername = name;
+    myRoom = room;
 
-  socket.emit("joinRoom", { name, room });
-
-  document.getElementById("lobby").style.display = "none";
-  document.getElementById("ui").style.display = "block";
-}
+    socket.emit("join", { name, room });
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("ui").style.display = "block";
+  }
 
   socket.on("welcome", (msg) => {
     console.log("✅ Connected to server:", msg);
-    socket.on("playerList", (players) => {
-  const list = document.getElementById("playerList");
-  list.innerHTML = "";
-  players.forEach(p => {
-    const li = document.createElement("li");
-    li.textContent = p.name;
-    list.appendChild(li);
   });
-});
 
+  socket.on("playerList", (players) => {
+    const list = document.getElementById("playerList");
+    list.innerHTML = "";
+    players.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = p.name;
+      list.appendChild(li);
+    });
   });
 </script>

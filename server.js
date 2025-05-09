@@ -8,33 +8,28 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-const rooms = {};
+const rooms = {}; // Track players by room
 
 io.on('connection', (socket) => {
   console.log(`🟢 Player connected: ${socket.id}`);
 
-  socket.on("joinRoom", ({ name, room }) => {
+  socket.on('join', ({ name, room }) => {
     socket.join(room);
+    console.log(`👤 ${name} joined room: ${room}`);
 
-    if (!rooms[room]) {
-      rooms[room] = [];
-    }
-
+    // Add player to the room list
+    if (!rooms[room]) rooms[room] = [];
     rooms[room].push({ id: socket.id, name });
-    console.log(`👥 ${name} joined room ${room}`);
 
-    // Update player list for everyone in the room
-    io.to(room).emit("playerList", rooms[room]);
-
-    // Send welcome to the joining client
-    socket.emit("welcome", `Welcome to room ${room}, ${name}`);
+    // Broadcast updated player list to room
+    io.to(room).emit('playerList', rooms[room]);
   });
 
   socket.on('disconnect', () => {
-    // Remove player from all rooms they were in
+    // Remove player from all rooms
     for (const room in rooms) {
       rooms[room] = rooms[room].filter(p => p.id !== socket.id);
-      io.to(room).emit("playerList", rooms[room]);
+      io.to(room).emit('playerList', rooms[room]);
     }
     console.log(`🔴 Player disconnected: ${socket.id}`);
   });
