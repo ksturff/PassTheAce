@@ -8,7 +8,8 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-const rooms = {};
+const rooms = {}; // Tracks players per room
+const gameStarted = {}; // Tracks if the game has started for each room
 
 io.on('connection', (socket) => {
   console.log(`🟢 Player connected: ${socket.id}`);
@@ -25,11 +26,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('startGame', (room) => {
+    if (gameStarted[room]) return; // ✅ Prevent duplicate starts
     const humanPlayers = rooms[room];
-    if (!humanPlayers || humanPlayers.length < 2) {
-      socket.emit('errorMessage', 'At least 2 human players are required to start the game.');
-      return;
-    }
+    if (!humanPlayers || humanPlayers.length === 0) return;
+
+    gameStarted[room] = true; // ✅ Mark game as started
 
     const deck = [];
     for (let s of ['S', 'H', 'D', 'C']) {
@@ -77,6 +78,7 @@ io.on('connection', (socket) => {
       }
       if (rooms[room].length === 0) {
         delete rooms[room];
+        delete gameStarted[room]; // ✅ Reset game state if room is empty
       }
     }
   });
