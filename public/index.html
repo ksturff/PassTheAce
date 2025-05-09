@@ -449,11 +449,12 @@ const i = p.seatIndex ?? (p.id - 1);
   });
 
   socket.on("gameStarted", (state) => {
-    console.log("🎮 Game started:", state);
-    gameState = state;
-    players = state.players;
-    dealCards(); // existing function in your game to start the round
-  });
+  console.log("🎮 Game started:", state);
+  gameState = state;
+  players = state.players;
+  drawTable();  // ✅ Do NOT call dealCards()
+});
+
 
   socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
     gameState.players = updatedPlayers;
