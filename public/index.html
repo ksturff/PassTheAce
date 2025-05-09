@@ -483,41 +483,38 @@ players.forEach((p) => {
     });
   </script>
 
-  <!-- ✅ Load Socket.IO before multiplayer logic -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Multiplayer Socket Setup -->
+<script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
-  let myUsername = "";
-  let myRoom = "";
+  let myUsername = "", myRoom = "";
 
   function joinGame() {
-    const nameInput = document.getElementById("usernameInput");
-    const roomInput = document.getElementById("roomInput");
+    const name = document.getElementById("usernameInput").value.trim();
+    const room = document.getElementById("roomInput").value.trim();
 
-    const name = nameInput.value.trim();
-    const room = roomInput.value.trim();
-
-    if (!name || !room) return alert("Enter your name and a room code");
+    if (!name || !room) {
+      return alert("Please enter both a name and a room code.");
+    }
 
     myUsername = name;
     myRoom = room;
 
-    socket.emit("join", { name, room });
+    socket.emit("join", { username: name, room: room });
+
     document.getElementById("lobby").style.display = "none";
     document.getElementById("ui").style.display = "block";
   }
 
   socket.on("welcome", (msg) => {
-    console.log("✅ Connected to server:", msg);
+    console.log("✅", msg);
   });
 
   socket.on("playerList", (players) => {
+    const playerNames = players.map(p => p.username).join("<br>");
     const list = document.getElementById("playerList");
-    list.innerHTML = "";
-    players.forEach(p => {
-      const li = document.createElement("li");
-      li.textContent = p.name;
-      list.appendChild(li);
-    });
+    if (list) {
+      list.innerHTML = `<strong>Players in Room:</strong><br>${playerNames}`;
+    }
   });
 </script>
