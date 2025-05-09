@@ -37,6 +37,10 @@ io.on('connection', (socket) => {
     const roomData = rooms[room];
     if (!roomData || roomData.gameStarted) return;
 
+    if (roomData.players.length < 2) {
+      return socket.emit("errorMessage", "You need at least 2 human players to start.");
+    }
+
     const totalSeats = 10;
     const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
 
@@ -86,7 +90,11 @@ io.on('connection', (socket) => {
     };
 
     io.to(room).emit('gameStarted', roomData.gameState);
-    emitTurn(room);
+
+    // ✅ Delay start so clients load before turns begin
+    setTimeout(() => {
+      emitTurn(room);
+    }, 1500);
   });
 
   socket.on('passCard', ({ room }) => {
@@ -109,7 +117,7 @@ io.on('connection', (socket) => {
 
   socket.on('keepCard', ({ room }) => {
     const roomData = rooms[room];
-    if (!roomData || !roomData.gameStarted) return;
+    if (!roomData || roomData.gameStarted === false) return;
 
     const state = roomData.gameState;
     const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
@@ -137,8 +145,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // === Utility Functions ===
-
   function getNextActiveIndex(players, currentIndex) {
     const total = players.length;
     let next = (currentIndex + 1) % total;
@@ -154,10 +160,14 @@ io.on('connection', (socket) => {
     const state = roomData.gameState;
     const current = state.players[state.currentTurnIndex];
 
+    // ✅ Fix: prevent round from ending too early
     if (state.roundStartIndex === undefined) {
       state.roundStartIndex = state.currentTurnIndex;
-    } else if (state.currentTurnIndex === state.roundStartIndex) {
-      return endRound(room);
+    } else {
+      const active = state.players.filter(p => !p.eliminated);
+      if (active.length > 1 && state.currentTurnIndex === state.roundStartIndex) {
+        return endRound(room);
+      }
     }
 
     io.to(room).emit('turnUpdate', {
