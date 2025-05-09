@@ -6,36 +6,40 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static('public')); // serve your frontend
+app.use(express.static('public'));
 
-// 🔹 Keep track of connected players
-const players = [];
+const rooms = {};
 
 io.on('connection', (socket) => {
   console.log(`🟢 Player connected: ${socket.id}`);
 
-  socket.on('join', (name) => {
-    const player = { id: socket.id, name };
-    players.push(player);
+  socket.on("joinRoom", ({ name, room }) => {
+    socket.join(room);
 
-    // 🔄 Broadcast updated player list to all clients
-    io.emit('playerList', players);
-    console.log(`👤 ${name} joined the game.`);
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+
+    rooms[room].push({ id: socket.id, name });
+    console.log(`👥 ${name} joined room ${room}`);
+
+    // Update player list for everyone in the room
+    io.to(room).emit("playerList", rooms[room]);
+
+    // Send welcome to the joining client
+    socket.emit("welcome", `Welcome to room ${room}, ${name}`);
   });
 
   socket.on('disconnect', () => {
-    const index = players.findIndex(p => p.id === socket.id);
-    if (index !== -1) {
-      console.log(`🔴 ${players[index].name} disconnected`);
-      players.splice(index, 1);
-      io.emit('playerList', players); // update everyone
-    } else {
-      console.log(`🔴 Player disconnected: ${socket.id}`);
+    // Remove player from all rooms they were in
+    for (const room in rooms) {
+      rooms[room] = rooms[room].filter(p => p.id !== socket.id);
+      io.to(room).emit("playerList", rooms[room]);
     }
+    console.log(`🔴 Player disconnected: ${socket.id}`);
   });
 });
 
-// Use Render's assigned port or fall back to 3000 locally
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
