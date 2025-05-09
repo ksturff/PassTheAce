@@ -1,4 +1,4 @@
-// ✅ server.js (Updated with all fixes)
+// ✅ server.js (Multiplayer Game Logic Centralized)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -28,6 +28,11 @@ io.on('connection', (socket) => {
 
     socket.emit('welcome', `Welcome ${username}!`);
     io.to(room).emit('playerList', rooms[room].players);
+
+    // ✅ Sync late joiners if game already started
+    if (rooms[room].gameStarted) {
+      socket.emit('gameStarted', rooms[room].gameState);
+    }
   });
 
   socket.on('startGame', (room) => {

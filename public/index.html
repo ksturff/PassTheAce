@@ -64,249 +64,115 @@
   </style>
 </head>
 <body>
-  <!-- Multiplayer Lobby -->
-<div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
-  <h2 style="color:white;">Join Game</h2>
-  <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-<input id="roomInput" type="text" placeholder="Enter room code"
-  style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-  <button onclick="joinGame()">Join Game</button>
-</div>
-
-
-  <!-- Main UI (hidden at first) -->
-  <div id="ui" style="display:none;">
-
-    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
-    <div id="actionBtns" style="display:none;">
-      <button onclick="keepCard()">Keep</button>
-      <button onclick="passCard()">Pass</button>
-    </div>
-  </div>
-  <div id="turnIndicator"></div>
-  <div id="endOverlay">
-    <div id="winMessage">Player X Wins!</div>
-    <button onclick="restartGame()">Play Again</button>
-  </div>
   <div id="playerContainer"></div>
-  <div id="players" style="position:absolute; top:10px; left:10px; z-index:100; font-size:14px; background:#222; padding:10px; border-radius:8px; box-shadow: 0 0 10px #0ff;">
-  <strong>Players:</strong>
-  <ul id="playerList" style="list-style:none; padding-left: 0; margin-top: 5px;"></ul>
-</div>
 
+  <!-- Multiplayer Socket Setup -->
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const canvas = document.createElement('canvas');
+    const socket = io();
+    let myUsername = "";
+    let myRoom = "";
+    let myTurn = false;
+    let gameState = {};
+    let players = [];
+
+    function joinGame() {
+      const name = document.getElementById("usernameInput").value.trim();
+      const room = document.getElementById("roomInput").value.trim();
+      if (!name || !room) return alert("Please enter both a name and a room code.");
+      myUsername = name;
+      myRoom = room;
+      socket.emit("join", { username: name, room });
+      document.getElementById("lobby").style.display = "none";
+      document.getElementById("ui").style.display = "block";
+      document.getElementById("startBtn").style.display = "block";
+    }
+
+    function startGame() { socket.emit("startGame", myRoom); }
+    function passCard() { if (myTurn) socket.emit("passCard", { room: myRoom }); }
+    function keepCard() { if (myTurn) socket.emit("keepCard", { room: myRoom }); }
+
+    socket.on("gameStarted", (state) => {
+      gameState = state;
+      players = state.players;
+      drawTable();
+    });
+
+    socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
+      gameState.players = updatedPlayers;
+      players = updatedPlayers;
+      myTurn = (socket.id === currentPlayerId);
+      drawTable();
+      document.getElementById("actionBtns").style.display = myTurn ? "block" : "none";
+    });
+
+    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+      gameState.players = updatedPlayers;
+      players = updatedPlayers;
+      myTurn = false;
+      drawTable();
+      alert("\uD83D\uDCA5 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
+    });
+
+    socket.on("playerList", (players) => {
+      const listEl = document.getElementById("playerList");
+      listEl.innerHTML = "";
+      players.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.username;
+        listEl.appendChild(li);
+      });
+    });
+  </script>
+
+  <!-- Full Table and Asset Loader -->
+  <script>
+    const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 600;
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
     canvas.style.position = 'absolute';
     canvas.style.left = '50%';
     canvas.style.top = '50%';
     canvas.style.transform = 'translate(-50%, -50%)';
-    document.body.insertBefore(canvas, document.getElementById('playerContainer'));
-    const ctx = canvas.getContext('2d');
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
 
+    const CENTER_X = canvas.width / 2;
+    const CENTER_Y = canvas.height / 2;
+    const CARD_W = 40;
+    const CARD_H = 55;
+    const X_RADIUS = 360;
+    const Y_RADIUS = 210;
+
+    let eliminatedPlayers = [];
+    let peekPlayerCard = true;
+    const cardImages = {};
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
-    const CARD_W = 40, CARD_H = 55;
-    const CENTER_X = 512, CENTER_Y = 300;
-    let X_RADIUS = 360, Y_RADIUS = 210;
-    let players = [], dealerIndex = null, currentPlayer = 0, deck = [], dealerCard = null;
-    let isHumanTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
-    let gameRunning = false;
-    let eliminatedPlayers = []; // 🆕 Track spectators
-
-
-    function getCardValue(card) {
-      if (!card) return 99;
-      if (typeof card.rank === 'number') return card.rank;
-      return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
-    }
-
-    function getNextActivePlayerIndex(startIndex) {
-  let index = (startIndex + 1) % players.length;
-  let looped = false;
-
-  while (players[index].chips <= 0) {
-    index = (index + 1) % players.length;
-    if (index === startIndex) {
-      looped = true;
-      break;
-    }
-  }
-
-  return looped ? null : index;
-}
-
-    function createDeck() {
-      let d = [];
-      for (let s of ['S','H','D','C']) {
-        for (let r of [2,3,4,5,6,7,8,9,10,'J','Q','K','A']) {
-          d.push({suit: s, rank: r});
-        }
-      }
-      return d.sort(() => Math.random() - 0.5);
-    }
 
     function preloadAssets() {
-      window.cardImages = {};
       const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-      const loadPromises = [];
-
-      for (let s of suits) {
-        for (let r of ranks) {
+      const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'jack', 'queen', 'king', 'ace'];
+      const promises = [];
+      suits.forEach(suit => {
+        ranks.forEach(rank => {
           const img = new Image();
-          const src = `./assets/${r}_of_${s}.png`;
-          img.src = src;
-          cardImages[`${r}_${s}`] = img;
-          loadPromises.push(new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }));
-        }
-      }
-
+          const key = `${rank}_${suit}`;
+          img.src = `./assets/${rank}_of_${suit}.png`;
+          cardImages[key] = img;
+          promises.push(new Promise(res => { img.onload = res; img.onerror = res; }));
+        });
+      });
       const back = new Image();
       back.src = './assets/Back.png';
       cardImages['Back'] = back;
-      loadPromises.push(new Promise((resolve) => {
-        back.onload = resolve;
-        back.onerror = resolve;
-      }));
-
-      return Promise.all(loadPromises);
+      promises.push(new Promise(res => { back.onload = res; back.onerror = res; }));
+      return Promise.all(promises);
     }
-
-    function updateTurnIndicator() {
-      document.getElementById("turnIndicator").innerText = `Player ${players[currentPlayer]?.id}'s Turn`;
-    }
-
-    function restartGame() {
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-      dealerIndex = null;
-      startGame();
-    }
-
-    function startGame() {
-  socket.emit("startGame", roomCode);
-}
-
-
-    function dealCards() {
-      if (deck.length < players.length + 1) deck = createDeck();
-      players.forEach(p => p.card = null);
-      const sample = players.map(p => ({ ...p, card: deck.pop() }));
-      let maxVal = Math.max(...sample.map(p => getCardValue(p.card)));
-      let topCandidates = sample.filter(p => getCardValue(p.card) === maxVal);
-      dealerIndex = players.findIndex(p => p.id === topCandidates[0].id);
-      startingPlayerIndex = (dealerIndex + 1) % players.length;
-      currentPlayer = startingPlayerIndex;
-      sample.forEach((p, i) => players[i].card = p.card);
-      revealCardsSequentially();
-    }
-
-    function revealCardsSequentially(index = 0) {
-      if (index >= players.length) {
-        processTurn();
-        return;
-      }
-      drawTable(false);
-      setTimeout(() => revealCardsSequentially(index + 1), 300);
-    }
-
-  
-
-    // ⬇️ Replacing passCard() and aiTurn() next
-    function animateCardPass(fromPlayer, toPlayer, callback) {
-      const startX = fromPlayer.cardX;
-      const startY = fromPlayer.cardY;
-      const endX = toPlayer.cardX;
-      const endY = toPlayer.cardY;
-
-      let frame = 0;
-      const totalFrames = 20;
-
-      function animate() {
-        const t = frame / totalFrames;
-        const midX = startX + (endX - startX) * t;
-        const midY = startY + (endY - startY) * t;
-        drawTable(false, { x: midX, y: midY, card: fromPlayer.card });
-        frame++;
-        if (frame <= totalFrames) {
-          requestAnimationFrame(animate);
-        } else {
-          [fromPlayer.card, toPlayer.card] = [toPlayer.card, fromPlayer.card];
-          callback();
-        }
-      }
-
-      animate();
-    }
-
-
-    function aiTurn() {
-  let current = players[currentPlayer];
-  let nextIndex = getNextActivePlayerIndex(currentPlayer);
-  if (nextIndex === null) return;
-
-  let next = players[nextIndex];
-  if (!current.card || !next.card) {
-    currentPlayer = getNextActivePlayerIndex(currentPlayer);
-    processTurn();
-    return;
-  }
-
-  let shouldPass = getCardValue(current.card) < 8 && next.card.rank !== "K";
-
-  if (shouldPass) {
-    animateCardPass(current, next, () => {
-      currentPlayer = getNextActivePlayerIndex(currentPlayer);
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
-    });
-  } else {
-    currentPlayer = getNextActivePlayerIndex(currentPlayer);
-    if (currentPlayer === dealerIndex) {
-      setTimeout(() => endRound(), 1000);
-    } else {
-      processTurn();
-    }
-  }
-}
-
-    function processTurn() {
-  if (players.length === 0) return;
-
-  // Skip eliminated players
-  while (players[currentPlayer]?.eliminated) {
-    currentPlayer = (currentPlayer + 1) % players.length;
-  }
-
-  const player = players[currentPlayer];
-  isHumanTurn = (player.id === socket.id);
-  peekPlayerCard = isHumanTurn;
-  updateTurnIndicator();
-  requestAnimationFrame(() => drawTable(false));
-
-  if (isHumanTurn) {
-    document.getElementById("actionBtns").style.display = "block";
-  } else {
-    document.getElementById("actionBtns").style.display = "none";
-    setTimeout(() => aiTurn(), 1000);
-  }
-}
-
 
     function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-
       const cardOffsets = [
         { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
         { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
@@ -317,7 +183,6 @@
         { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
         { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
       ];
-
       const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
       [...players, ...eliminatedPlayers].forEach((p, i) => {
         const angle = cardAngleMap[i] * (Math.PI / 180);
@@ -325,9 +190,7 @@
         const offset = cardOffsets[i];
         p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
         p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
-
         if (!p.card || animCard?.card === p.card || p.eliminated) return;
-
         const show = showCards || (p.id === socket.id && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
@@ -339,22 +202,19 @@
           ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
         }
       });
-
-     if (animCard) {
-  const { x, y } = animCard;
-  const cardImg = cardImages['Back'];
-  if (cardImg?.complete) {
-    const scale = 1.0;
-    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-  }
-}
-
-
+      if (animCard) {
+        const { x, y } = animCard;
+        const cardImg = cardImages['Back'];
+        if (cardImg?.complete) {
+          const scale = 1.0;
+          ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+        }
+      }
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
-      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));  // Fixed 10-player map
-players.forEach((p) => {
-const i = p.seatIndex ?? (p.id - 1);
+      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+      players.forEach((p) => {
+        const i = p.seatIndex ?? (p.id - 1);
         const div = document.createElement('div');
         div.className = 'player-ui';
         div.id = `player-ui-${p.id}`;
@@ -376,109 +236,16 @@ const i = p.seatIndex ?? (p.id - 1);
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)';
         const avatarEl = div.querySelector('.avatar');
-        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+        avatarEl.classList.toggle('active-glow', i === gameState.currentTurnIndex && p.chips > 0);
         container.appendChild(div);
       });
     }
 
-       preloadAssets().then(() => {
+    preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
+      drawTable();
     });
   </script>
+</body>
+</html>
 
-  <!-- Multiplayer Socket Setup -->
-<!-- ✅ Load Socket.IO before this script -->
-<!-- ✅ Load Socket.IO -->
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  let myUsername = "";
-  let myRoom = "";
-  let myTurn = false;
-  let gameState = {};
-
-  function joinGame() {
-    const name = document.getElementById("usernameInput").value.trim();
-    const room = document.getElementById("roomInput").value.trim();
-    if (!name || !room) {
-      return alert("Please enter both a name and a room code.");
-    }
-
-    myUsername = name;
-    myRoom = room;
-
-    socket.emit("join", { username: name, room });
-
-    document.getElementById("lobby").style.display = "none";
-    document.getElementById("ui").style.display = "block";
-    document.getElementById("endOverlay").style.display = "none";
-    document.getElementById("startBtn").style.display = "block";
-  }
-
-  function startGame() {
-    socket.emit("startGame", myRoom);
-  }
-
-  function passCard() {
-    if (!myTurn) return;
-    socket.emit("passCard", { room: myRoom });
-  }
-
-  function keepCard() {
-    if (!myTurn) return;
-    socket.emit("keepCard", { room: myRoom });
-  }
-
-  function endRound() {
-    socket.emit("endRound", myRoom);
-  }
-
-  socket.on("welcome", (msg) => {
-    console.log("✅", msg);
-  });
-
-  socket.on("playerList", (players) => {
-    console.log("📋 Current Players:", players);
-    const listEl = document.getElementById("playerList");
-    listEl.innerHTML = "";
-    players.forEach(p => {
-      const li = document.createElement("li");
-      li.innerText = p.username;
-      listEl.appendChild(li);
-    });
-  });
-
-  socket.on("gameStarted", (state) => {
-  console.log("🎮 Game started:", state);
-  gameState = state;
-  players = state.players;
-  drawTable();  // ✅ Do NOT call dealCards()
-});
-
-
-  socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
-    gameState.players = updatedPlayers;
-    players = updatedPlayers;
-    myTurn = (socket.id === currentPlayerId);
-    updateTurnIndicator();
-    drawTable();
-
-    if (myTurn) {
-      document.getElementById("actionBtns").style.display = "block";
-    } else {
-      document.getElementById("actionBtns").style.display = "none";
-    }
-  });
-
-  socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-    gameState.players = updatedPlayers;
-    players = updatedPlayers;
-    myTurn = false;
-    drawTable();
-    alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
-  });
-
-  socket.on("errorMessage", (msg) => {
-    alert(msg);
-  });
-</script>
