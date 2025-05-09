@@ -289,7 +289,7 @@
   }
 
   const player = players[currentPlayer];
-  isHumanTurn = (player.id === 1);
+  isHumanTurn = (player.id === socket.id);
   peekPlayerCard = isHumanTurn;
   updateTurnIndicator();
   requestAnimationFrame(() => drawTable(false));

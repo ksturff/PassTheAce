@@ -1,3 +1,4 @@
+// ✅ server.js (Updated with all fixes)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -37,7 +38,6 @@ io.on('connection', (socket) => {
     const totalSeats = 10;
     const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
 
-    // Create and shuffle deck
     const deck = [];
     for (let s of ['S', 'H', 'D', 'C']) {
       for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
@@ -99,13 +99,11 @@ io.on('connection', (socket) => {
     const state = roomData.gameState;
     const currentPlayer = state.players[state.currentTurnIndex];
 
-    // Find next player (not eliminated)
     let nextIndex = (state.currentTurnIndex + 1) % state.players.length;
     while (state.players[nextIndex].eliminated) {
       nextIndex = (nextIndex + 1) % state.players.length;
     }
 
-    // Swap cards
     const temp = currentPlayer.card;
     currentPlayer.card = state.players[nextIndex].card;
     state.players[nextIndex].card = temp;
@@ -120,7 +118,6 @@ io.on('connection', (socket) => {
 
     const state = roomData.gameState;
 
-    // Advance turn without swapping
     let nextIndex = (state.currentTurnIndex + 1) % state.players.length;
     while (state.players[nextIndex].eliminated) {
       nextIndex = (nextIndex + 1) % state.players.length;
@@ -135,7 +132,6 @@ io.on('connection', (socket) => {
     if (!roomData || !roomData.gameStarted) return;
 
     const state = roomData.gameState;
-    // Determine lowest card (simplified to numerical comparison)
     const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
     let lowest = Infinity;
     let losers = [];
@@ -157,11 +153,10 @@ io.on('connection', (socket) => {
       if (p.chips <= 0) p.eliminated = true;
     });
 
-    // Redeal new cards to remaining players
     const activePlayers = state.players.filter(p => !p.eliminated);
     activePlayers.forEach(p => p.card = state.deck.pop());
 
-    state.currentTurnIndex = activePlayers[0].seatIndex;
+    state.currentTurnIndex = state.players.findIndex(p => !p.eliminated);
     io.to(room).emit('roundEnded', {
       updatedPlayers: state.players,
       losers
@@ -189,4 +184,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
-
