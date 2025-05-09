@@ -24,10 +24,12 @@ io.on('connection', (socket) => {
     io.to(room).emit('playerList', rooms[room]);
   });
 
-  // ✅ Move this OUTSIDE of the 'join' handler
   socket.on('startGame', (room) => {
     const humanPlayers = rooms[room];
-    if (!humanPlayers || humanPlayers.length === 0) return;
+    if (!humanPlayers || humanPlayers.length < 2) {
+      socket.emit('errorMessage', 'At least 2 human players are required to start the game.');
+      return;
+    }
 
     const deck = [];
     for (let s of ['S', 'H', 'D', 'C']) {

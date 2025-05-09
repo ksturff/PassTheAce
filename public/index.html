@@ -474,32 +474,30 @@ const i = p.seatIndex ?? (p.id - 1);
 <!-- ✅ Load Socket.IO before this script -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
- const socket = io();
-let myUsername = "";
-let myRoom = "";
-players = []; // ✅ This is where we track all players in the game
-
+  const socket = io();
+  let myUsername = "";
+  let myRoom = "";
+  players = []; // ✅ This is where we track all players in the game
 
   function joinGame() {
-  const name = document.getElementById("usernameInput").value.trim();
-  const room = document.getElementById("roomInput").value.trim();
-  if (!name || !room) {
-    return alert("Please enter both a name and a room code.");
+    const name = document.getElementById("usernameInput").value.trim();
+    const room = document.getElementById("roomInput").value.trim();
+    if (!name || !room) {
+      return alert("Please enter both a name and a room code.");
+    }
+
+    myUsername = name;
+    myRoom = room;
+
+    // Emit join event to the server
+    socket.emit("join", { username: name, room });
+
+    // 🧼 Reset the screen/UI
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("ui").style.display = "block";
+    document.getElementById("endOverlay").style.display = "none"; // Hide win screen
+    document.getElementById("startBtn").style.display = "block";  // Ensure Start Game button is visible
   }
-
-  myUsername = name;
-  myRoom = room;
-
-  // Emit join event to the server
-  socket.emit("join", { username: name, room });
-
-  // 🧼 Reset the screen/UI
-  document.getElementById("lobby").style.display = "none";
-  document.getElementById("ui").style.display = "block";
-  document.getElementById("endOverlay").style.display = "none"; // Hide win screen
-  document.getElementById("startBtn").style.display = "block";  // Ensure Start Game button is visible
-}
-
 
   socket.on("welcome", (msg) => {
     console.log("✅", msg);
@@ -516,8 +514,12 @@ players = []; // ✅ This is where we track all players in the game
 
   socket.on("gameStarted", (playerCards) => {
     console.log("🎲 Cards dealt:", playerCards);
-    // Replace your internal `players` with the received player data
     players = playerCards;
     dealCards(); // Or your actual function to trigger the round
+  });
+
+  // ✅ Add this new listener at the bottom:
+  socket.on("errorMessage", (msg) => {
+    alert(msg);
   });
 </script>
