@@ -1,4 +1,4 @@
-// ✅ server.js (Multiplayer Game Logic Centralized)
+// ✅ server.js (Fixed Multiplayer Game Logic)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -29,7 +29,7 @@ io.on('connection', (socket) => {
     socket.emit('welcome', `Welcome ${username}!`);
     io.to(room).emit('playerList', rooms[room].players);
 
-    // ✅ Sync late joiners if game already started
+    // If the game already started, sync late joiner
     if (rooms[room].gameStarted) {
       socket.emit('gameStarted', rooms[room].gameState);
     }
@@ -43,6 +43,7 @@ io.on('connection', (socket) => {
     const totalSeats = 10;
     const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
 
+    // Shuffle deck
     const deck = [];
     for (let s of ['S', 'H', 'D', 'C']) {
       for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
@@ -51,6 +52,7 @@ io.on('connection', (socket) => {
     }
     const shuffledDeck = deck.sort(() => Math.random() - 0.5);
 
+    // Build full player list
     const fullPlayerList = [];
     for (let i = 0; i < totalSeats; i++) {
       if (i < humanPlayers.length) {
@@ -88,12 +90,12 @@ io.on('connection', (socket) => {
   });
 
   function emitTurn(room) {
-    const roomData = rooms[room];
-    const { currentTurnIndex, players } = roomData.gameState;
-    const currentPlayer = players[currentTurnIndex];
+    const state = rooms[room]?.gameState;
+    if (!state) return;
+    const currentPlayer = state.players[state.currentTurnIndex];
     io.to(room).emit('turnUpdate', {
       currentPlayerId: currentPlayer.id,
-      players
+      players: state.players
     });
   }
 
@@ -104,11 +106,10 @@ io.on('connection', (socket) => {
     const state = roomData.gameState;
     const currentPlayer = state.players[state.currentTurnIndex];
 
-    let nextIndex = (state.currentTurnIndex + 1) % state.players.length;
-    while (state.players[nextIndex].eliminated) {
-      nextIndex = (nextIndex + 1) % state.players.length;
-    }
+    let nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
+    if (nextIndex === -1) return;
 
+    // Swap cards
     const temp = currentPlayer.card;
     currentPlayer.card = state.players[nextIndex].card;
     state.players[nextIndex].card = temp;
@@ -122,11 +123,8 @@ io.on('connection', (socket) => {
     if (!roomData || !roomData.gameStarted) return;
 
     const state = roomData.gameState;
-
-    let nextIndex = (state.currentTurnIndex + 1) % state.players.length;
-    while (state.players[nextIndex].eliminated) {
-      nextIndex = (nextIndex + 1) % state.players.length;
-    }
+    const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
+    if (nextIndex === -1) return;
 
     state.currentTurnIndex = nextIndex;
     emitTurn(room);
@@ -159,7 +157,19 @@ io.on('connection', (socket) => {
     });
 
     const activePlayers = state.players.filter(p => !p.eliminated);
-    activePlayers.forEach(p => p.card = state.deck.pop());
+
+    // Game over check
+    if (activePlayers.length === 1) {
+      io.to(room).emit('gameOver', { winner: activePlayers[0] });
+      return;
+    }
+
+    // Deal new cards
+    activePlayers.forEach(p => {
+      const newCard = state.deck.pop();
+      if (!newCard) return;
+      p.card = newCard;
+    });
 
     state.currentTurnIndex = state.players.findIndex(p => !p.eliminated);
     io.to(room).emit('roundEnded', {
@@ -173,9 +183,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`🔴 Player disconnected: ${socket.id}`);
     for (const room in rooms) {
-      const playerIndex = rooms[room].players.findIndex(p => p.id === socket.id);
-      if (playerIndex !== -1) {
-        rooms[room].players.splice(playerIndex, 1);
+      const index = rooms[room].players.findIndex(p => p.id === socket.id);
+      if (index !== -1) {
+        rooms[room].players.splice(index, 1);
         io.to(room).emit('playerList', rooms[room].players);
       }
       if (rooms[room].players.length === 0) {
@@ -183,9 +193,20 @@ io.on('connection', (socket) => {
       }
     }
   });
+
+  function getNextActiveIndex(players, currentIndex) {
+    const total = players.length;
+    let next = (currentIndex + 1) % total;
+    for (let i = 0; i < total; i++) {
+      if (!players[next].eliminated) return next;
+      next = (next + 1) % total;
+    }
+    return -1;
+  }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
+
