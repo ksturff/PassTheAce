@@ -26,6 +26,31 @@ io.on('connection', (socket) => {
     io.to(room).emit('playerList', rooms[room]);
   });
 
+  socket.on('startGame', (room) => {
+    const players = rooms[room];
+    if (!players || players.length === 0) return;
+
+    // Create a shuffled deck
+    const deck = [];
+    for (let s of ['S', 'H', 'D', 'C']) {
+      for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
+        deck.push({ suit: s, rank: r });
+      }
+    }
+    const shuffledDeck = deck.sort(() => Math.random() - 0.5);
+
+    // Assign 1 card to each player
+    const playerCards = players.map((p, index) => ({
+      name: p.username,
+      id: index + 1,
+      card: shuffledDeck.pop(),
+      chips: 3
+    }));
+
+    // Send the cards and players to all clients in the room
+    io.to(room).emit('gameStarted', playerCards);
+  });
+
   socket.on('disconnect', () => {
     console.log(`🔴 Player disconnected: ${socket.id}`);
 

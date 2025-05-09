@@ -191,22 +191,9 @@
     }
 
     function startGame() {
-      document.getElementById("startBtn").style.display = 'none';
-      deck = createDeck();
-      const total = 10;
-      const offset = 5;
-      players = Array.from({ length: total }, (_, i) => {
-        const trueIndex = (i + total - offset) % total;
-        return {
-          id: trueIndex + 1,
-          chips: 3,
-          card: null,
-          seatIndex: i
-        };
-      });
-      dealCards();
-      gameRunning = true;
-    }
+  socket.emit("startGame", roomCode);
+}
+
 
     function dealCards() {
       if (deck.length < players.length + 1) deck = createDeck();
@@ -484,17 +471,18 @@ players.forEach((p) => {
   </script>
 
   <!-- Multiplayer Socket Setup -->
+<!-- ✅ Load Socket.IO before this script -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
-  let myUsername = "", myRoom = "";
+  let myUsername = "";
+  let myRoom = "";
 
   function joinGame() {
     const name = document.getElementById("usernameInput").value.trim();
     const room = document.getElementById("roomInput").value.trim();
-
     if (!name || !room) {
-      return alert("Please enter both a name and a room code.");
+      return alert("Enter both username and room name.");
     }
 
     myUsername = name;
@@ -511,10 +499,18 @@ players.forEach((p) => {
   });
 
   socket.on("playerList", (players) => {
-    const playerNames = players.map(p => p.username).join("<br>");
-    const list = document.getElementById("playerList");
-    if (list) {
-      list.innerHTML = `<strong>Players in Room:</strong><br>${playerNames}`;
-    }
+    console.log("📋 Current Players:", players);
+    // You can optionally update UI with the list of players here
+  });
+
+  function startGame() {
+    socket.emit("startGame", myRoom);
+  }
+
+  socket.on("gameStarted", (playerCards) => {
+    console.log("🎲 Cards dealt:", playerCards);
+    // Replace your internal `players` with the received player data
+    players = playerCards;
+    dealCards(); // Or your actual function to trigger the round
   });
 </script>
