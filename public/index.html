@@ -474,9 +474,11 @@ players.forEach((p) => {
 <!-- ✅ Load Socket.IO before this script -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket = io();
-  let myUsername = "";
-  let myRoom = "";
+ const socket = io();
+let myUsername = "";
+let myRoom = "";
+players = []; // ✅ This is where we track all players in the game
+
 
   function joinGame() {
     const name = document.getElementById("usernameInput").value.trim();

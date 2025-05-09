@@ -27,29 +27,42 @@ io.on('connection', (socket) => {
   });
 
   socket.on('startGame', (room) => {
-    const players = rooms[room];
-    if (!players || players.length === 0) return;
+  const humanPlayers = rooms[room];
+  if (!humanPlayers || humanPlayers.length === 0) return;
 
-    // Create a shuffled deck
-    const deck = [];
-    for (let s of ['S', 'H', 'D', 'C']) {
-      for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
-        deck.push({ suit: s, rank: r });
-      }
+  // Create a shuffled deck
+  const deck = [];
+  for (let s of ['S', 'H', 'D', 'C']) {
+    for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
+      deck.push({ suit: s, rank: r });
     }
-    const shuffledDeck = deck.sort(() => Math.random() - 0.5);
+  }
+  const shuffledDeck = deck.sort(() => Math.random() - 0.5);
 
-    // Assign 1 card to each player
-    const playerCards = players.map((p, index) => ({
-      name: p.username,
-      id: index + 1,
+  const totalSeats = 10;
+
+  // Add AI players to fill remaining seats
+  const aiPlayers = [];
+  const names = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
+  for (let i = humanPlayers.length; i < totalSeats; i++) {
+    aiPlayers.push({
+      id: `AI-${i + 1}`,
+      name: names[i % names.length],
       card: shuffledDeck.pop(),
       chips: 3
-    }));
+    });
+  }
 
-    // Send the cards and players to all clients in the room
-    io.to(room).emit('gameStarted', playerCards);
-  });
+  const fullPlayerList = [...humanPlayers.map((p, index) => ({
+    id: index + 1,
+    name: p.username,
+    card: shuffledDeck.pop(),
+    chips: 3
+  })), ...aiPlayers];
+
+  io.to(room).emit('gameStarted', fullPlayerList);
+});
+
 
   socket.on('disconnect', () => {
     console.log(`🔴 Player disconnected: ${socket.id}`);
