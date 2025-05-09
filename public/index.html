@@ -217,16 +217,7 @@
       setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
 
-    function keepCard() {
-      document.getElementById("actionBtns").style.display = "none";
-      peekPlayerCard = false;
-      currentPlayer = (currentPlayer + 1) % players.length;
-      if (currentPlayer === dealerIndex) {
-        setTimeout(() => endRound(), 1000);
-      } else {
-        processTurn();
-      }
-    }
+  
 
     // ⬇️ Replacing passCard() and aiTurn() next
     function animateCardPass(fromPlayer, toPlayer, callback) {
@@ -254,29 +245,6 @@
 
       animate();
     }
-
-    function passCard() {
-  let current = players[currentPlayer];
-  let nextIndex = getNextActivePlayerIndex(currentPlayer);
-  if (nextIndex === null) return; // no one to pass to
-
-  let next = players[nextIndex];
-
-  if (!current.card || !next.card) return;
-  if (current.card.rank === "K" || next.card.rank === "K") return;
-
-  document.getElementById("actionBtns").style.display = "none";
-  peekPlayerCard = false;
-
-  animateCardPass(current, next, () => {
-    currentPlayer = getNextActivePlayerIndex(currentPlayer);
-    if (currentPlayer === dealerIndex) {
-      setTimeout(() => endRound(), 1000);
-    } else {
-      processTurn();
-    }
-  });
-}
 
 
     function aiTurn() {
@@ -334,58 +302,6 @@
   }
 }
 
-
-    function endRound() {
-  drawTable(true);
-  setTimeout(() => {
-    const minValue = Math.min(...players.map(p => getCardValue(p.card)));
-    players.forEach(p => {
-      if (getCardValue(p.card) === minValue) p.chips--;
-    });
-
-    const eliminated = players.filter(p => p.chips <= 0);
-    eliminated.forEach(p => {
-      if (p.id === 1) {
-        const spectate = confirm("You're out of chips! Would you like to spectate?");
-        if (spectate) {
-          eliminatedPlayers.push({ ...p, chips: 0, card: null });
-        }
-        const el = document.getElementById(`player-ui-${p.id}`);
-        if (el) el.remove();
-      } else {
-        const el = document.getElementById(`player-ui-${p.id}`);
-        if (el) el.remove();
-      }
-    });
-
-    players.forEach(p => {
-  if (p.chips <= 0) {
-    p.eliminated = true;
-  }
-});
-    if (players.length === 1) {
-      document.getElementById("winMessage").innerText = `🏆 Player ${players[0].id} Wins!`;
-      document.getElementById("endOverlay").style.display = "flex";
-      document.getElementById("actionBtns").style.display = "none";
-      gameRunning = false;
-      return;
-    }
-
-    const losers = players.filter(p => getCardValue(p.card) === minValue);
-    if (losers.length > 0) {
-      const firstLoser = losers[0];
-      const loserIndex = players.findIndex(p => p.id === firstLoser.id);
-      startingPlayerIndex = (loserIndex + 1) % players.length;
-    }
-
-    if (dealerIndex >= players.length) dealerIndex = 0;
-    if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
-    currentPlayer = startingPlayerIndex;
-    deck = createDeck();
-    players.forEach(p => p.card = null);
-    setTimeout(dealCards, 1000);
-  }, 1500);
-}
 
     function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -472,12 +388,14 @@ const i = p.seatIndex ?? (p.id - 1);
 
   <!-- Multiplayer Socket Setup -->
 <!-- ✅ Load Socket.IO before this script -->
+<!-- ✅ Load Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
   let myUsername = "";
   let myRoom = "";
-  players = []; // ✅ This is where we track all players in the game
+  let myTurn = false;
+  let gameState = {};
 
   function joinGame() {
     const name = document.getElementById("usernameInput").value.trim();
@@ -489,14 +407,30 @@ const i = p.seatIndex ?? (p.id - 1);
     myUsername = name;
     myRoom = room;
 
-    // Emit join event to the server
     socket.emit("join", { username: name, room });
 
-    // 🧼 Reset the screen/UI
     document.getElementById("lobby").style.display = "none";
     document.getElementById("ui").style.display = "block";
-    document.getElementById("endOverlay").style.display = "none"; // Hide win screen
-    document.getElementById("startBtn").style.display = "block";  // Ensure Start Game button is visible
+    document.getElementById("endOverlay").style.display = "none";
+    document.getElementById("startBtn").style.display = "block";
+  }
+
+  function startGame() {
+    socket.emit("startGame", myRoom);
+  }
+
+  function passCard() {
+    if (!myTurn) return;
+    socket.emit("passCard", { room: myRoom });
+  }
+
+  function keepCard() {
+    if (!myTurn) return;
+    socket.emit("keepCard", { room: myRoom });
+  }
+
+  function endRound() {
+    socket.emit("endRound", myRoom);
   }
 
   socket.on("welcome", (msg) => {
@@ -505,20 +439,44 @@ const i = p.seatIndex ?? (p.id - 1);
 
   socket.on("playerList", (players) => {
     console.log("📋 Current Players:", players);
-    // You can optionally update UI with the list of players here
+    const listEl = document.getElementById("playerList");
+    listEl.innerHTML = "";
+    players.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = p.username;
+      listEl.appendChild(li);
+    });
   });
 
-  function startGame() {
-    socket.emit("startGame", myRoom);
-  }
-
-  socket.on("gameStarted", (playerCards) => {
-    console.log("🎲 Cards dealt:", playerCards);
-    players = playerCards;
-    dealCards(); // Or your actual function to trigger the round
+  socket.on("gameStarted", (state) => {
+    console.log("🎮 Game started:", state);
+    gameState = state;
+    players = state.players;
+    dealCards(); // existing function in your game to start the round
   });
 
-  // ✅ Add this new listener at the bottom:
+  socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
+    gameState.players = updatedPlayers;
+    players = updatedPlayers;
+    myTurn = (socket.id === currentPlayerId);
+    updateTurnIndicator();
+    drawTable();
+
+    if (myTurn) {
+      document.getElementById("actionBtns").style.display = "block";
+    } else {
+      document.getElementById("actionBtns").style.display = "none";
+    }
+  });
+
+  socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+    gameState.players = updatedPlayers;
+    players = updatedPlayers;
+    myTurn = false;
+    drawTable();
+    alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
+  });
+
   socket.on("errorMessage", (msg) => {
     alert(msg);
   });
