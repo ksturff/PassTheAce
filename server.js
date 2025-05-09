@@ -36,68 +36,60 @@ io.on('connection', (socket) => {
   });
 
   socket.on('startGame', (room) => {
-    const roomData = rooms[room];
-    if (!roomData || roomData.gameStarted) return;
+  const roomData = rooms[room];
+  if (!roomData || roomData.gameStarted) return;
 
-    const humanPlayers = roomData.players;
-    const totalSeats = 10;
-    const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
+  const totalSeats = 10;
+  const aiNames = ["Zeta", "Omega", "Nova", "Botley", "Slick", "Echo", "Mimic", "Zero"];
 
-    // Shuffle deck
-    const deck = [];
-    for (let s of ['S', 'H', 'D', 'C']) {
-      for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
-        deck.push({ suit: s, rank: r });
-      }
+  // 🧍 Get all current players and label them as human with proper name
+  const humanPlayers = roomData.players.map((p, i) => ({
+    id: p.id,
+    name: p.username, // ✅ not `username:`, we need to assign to `name`
+    isHuman: true,
+    chips: 3,
+    eliminated: false,
+    seatIndex: i
+  }));
+
+  // 🎴 Build full 52-card deck
+  const deck = [];
+  for (let s of ['S', 'H', 'D', 'C']) {
+    for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
+      deck.push({ suit: s, rank: r });
     }
-    const shuffledDeck = deck.sort(() => Math.random() - 0.5);
+  }
+  const shuffledDeck = deck.sort(() => Math.random() - 0.5);
 
-    // Build full player list
-    const fullPlayerList = [];
-    for (let i = 0; i < totalSeats; i++) {
-      if (i < humanPlayers.length) {
-        fullPlayerList.push({
-          id: humanPlayers[i].id,
-          name: humanPlayers[i].username,
-          isHuman: true,
-          card: shuffledDeck.pop(),
-          chips: 3,
-          seatIndex: i,
-          eliminated: false
-        });
-      } else {
-        fullPlayerList.push({
-          id: `bot_${i}`,
-          name: aiNames[i % aiNames.length],
-          isHuman: false,
-          card: shuffledDeck.pop(),
-          chips: 3,
-          seatIndex: i,
-          eliminated: false
-        });
-      }
-    }
-
-    roomData.gameStarted = true;
-    roomData.gameState = {
-      players: fullPlayerList,
-      currentTurnIndex: 0,
-      deck: shuffledDeck
-    };
-
-    io.to(room).emit('gameStarted', roomData.gameState);
-    emitTurn(room);
-  });
-
-  function emitTurn(room) {
-    const state = rooms[room]?.gameState;
-    if (!state) return;
-    const currentPlayer = state.players[state.currentTurnIndex];
-    io.to(room).emit('turnUpdate', {
-      currentPlayerId: currentPlayer.id,
-      players: state.players
+  // 👥 Add AI players to fill out remaining seats
+  const fullPlayerList = [...humanPlayers];
+  for (let i = humanPlayers.length; i < totalSeats; i++) {
+    fullPlayerList.push({
+      id: `bot_${i}`,
+      name: aiNames[i % aiNames.length],
+      isHuman: false,
+      chips: 3,
+      eliminated: false,
+      seatIndex: i
     });
   }
+
+  // 🃏 Deal initial cards
+  fullPlayerList.forEach(p => {
+    p.card = shuffledDeck.pop();
+  });
+
+  // ✅ Update and broadcast state
+  roomData.gameStarted = true;
+  roomData.gameState = {
+    players: fullPlayerList,
+    currentTurnIndex: 0,
+    deck: shuffledDeck
+  };
+
+  io.to(room).emit('gameStarted', roomData.gameState);
+  emitTurn(room);
+});
 
   socket.on('passCard', ({ room }) => {
     const roomData = rooms[room];
