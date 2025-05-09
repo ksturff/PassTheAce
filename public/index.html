@@ -481,20 +481,25 @@ players = []; // ✅ This is where we track all players in the game
 
 
   function joinGame() {
-    const name = document.getElementById("usernameInput").value.trim();
-    const room = document.getElementById("roomInput").value.trim();
-    if (!name || !room) {
-      return alert("Enter both username and room name.");
-    }
-
-    myUsername = name;
-    myRoom = room;
-
-    socket.emit("join", { username: name, room: room });
-
-    document.getElementById("lobby").style.display = "none";
-    document.getElementById("ui").style.display = "block";
+  const name = document.getElementById("usernameInput").value.trim();
+  const room = document.getElementById("roomInput").value.trim();
+  if (!name || !room) {
+    return alert("Please enter both a name and a room code.");
   }
+
+  myUsername = name;
+  myRoom = room;
+
+  // Emit join event to the server
+  socket.emit("join", { username: name, room });
+
+  // 🧼 Reset the screen/UI
+  document.getElementById("lobby").style.display = "none";
+  document.getElementById("ui").style.display = "block";
+  document.getElementById("endOverlay").style.display = "none"; // Hide win screen
+  document.getElementById("startBtn").style.display = "block";  // Ensure Start Game button is visible
+}
+
 
   socket.on("welcome", (msg) => {
     console.log("✅", msg);
