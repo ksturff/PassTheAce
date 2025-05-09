@@ -328,7 +328,7 @@
 
         if (!p.card || animCard?.card === p.card || p.eliminated) return;
 
-        const show = showCards || (p.id === 1 && peekPlayerCard) || (p.card && p.card.rank === 'K');
+        const show = showCards || (p.id === socket.id && peekPlayerCard) || (p.card && p.card.rank === 'K');
         const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
         const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
         const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
