@@ -477,27 +477,24 @@ players.forEach((p) => {
 
   <!-- ✅ Load Socket.IO before multiplayer logic -->
   <script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let myUsername = "";
 
-  <script>
-    const socket = io();
-    let myUsername = "";
+  function joinGame() {
+    const input = document.getElementById("usernameInput");
+    const name = input.value.trim();
+    if (!name) return alert("Please enter a name");
 
-    function joinGame() {
-      const input = document.getElementById("usernameInput");
-      const name = input.value.trim();
-      if (!name) return alert("Please enter a name");
+    myUsername = name;
+    socket.emit("join", name);
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("ui").style.display = "block";
 
-      myUsername = name;
-      socket.emit("join", name);
-      document.getElementById("lobby").style.display = "none";
-      document.getElementById("ui").style.display = "block";
-    }
+    startGame(); // ✅ This line starts the game after joining
+  }
 
-    socket.on("welcome", (msg) => {
-      console.log("✅ Connected to server:", msg);
-    });
-  </script>
-</body>
-</html>
-
-
+  socket.on("welcome", (msg) => {
+    console.log("✅ Connected to server:", msg);
+  });
+</script>
