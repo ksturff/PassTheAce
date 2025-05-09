@@ -222,30 +222,38 @@ window.cardImages = cardImages;
 
     // ⬇️ Replacing passCard() and aiTurn() next
     function animateCardPass(fromPlayer, toPlayer, callback) {
-      const startX = fromPlayer.cardX;
-      const startY = fromPlayer.cardY;
-      const endX = toPlayer.cardX;
-      const endY = toPlayer.cardY;
+  const startX = fromPlayer.cardX;
+  const startY = fromPlayer.cardY;
+  const endX = toPlayer.cardX;
+  const endY = toPlayer.cardY;
+  const card = fromPlayer.card;
 
-      let frame = 0;
-      const totalFrames = 20;
+  const duration = 300; // in milliseconds
+  const startTime = performance.now();
 
-      function animate() {
-        const t = frame / totalFrames;
-        const midX = startX + (endX - startX) * t;
-        const midY = startY + (endY - startY) * t;
-        drawTable(false, { x: midX, y: midY, card: fromPlayer.card });
-        frame++;
-        if (frame <= totalFrames) {
-          requestAnimationFrame(animate);
-        } else {
-          [fromPlayer.card, toPlayer.card] = [toPlayer.card, fromPlayer.card];
-          callback();
-        }
-      }
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / duration);
+    const ease = t < 0.5
+      ? 2 * t * t       // ease-in
+      : -1 + (4 - 2 * t) * t;  // ease-out
 
-      animate();
+    const midX = startX + (endX - startX) * ease;
+    const midY = startY + (endY - startY) * ease;
+
+    drawTable(false, { x: midX, y: midY, card });
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      [fromPlayer.card, toPlayer.card] = [toPlayer.card, fromPlayer.card];
+      drawTable(); // final redraw
+      if (callback) callback();
     }
+  }
+
+  requestAnimationFrame(animate);
+}
 
 
     function aiTurn() {
@@ -305,82 +313,86 @@ window.cardImages = cardImages;
 
 
     function drawTable(showCards = false, animCard = null) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (backgroundImage.complete) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 
-      const cardOffsets = [
-        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-      ];
-      const hudOffsets = [
-        { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-        { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-        { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-      ];
+  const cardOffsets = [
+    { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+    { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+    { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+  ];
+  const hudOffsets = [
+    { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+    { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+    { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+  ];
 
-      const cardAngleMap = players.map((_, i, arr) => -90 + (i * 360 / arr.length));
-      [...players, ...eliminatedPlayers].forEach((p, i) => {
-        const angle = cardAngleMap[i] * (Math.PI / 180);
-        const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
-        const offset = cardOffsets[i];
-        p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
-        p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
+  const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+  const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
 
-        if (!p.card || animCard?.card === p.card || p.eliminated) return;
+  // 🔄 Draw cards
+  players.forEach((p) => {
+    const i = p.seatIndex ?? 0;
+    const angle = angleMap[i] * (Math.PI / 180);
+    const offset = cardOffsets[i];
+    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
 
-        const show = showCards || (p.id === socket.id && peekPlayerCard) || (p.card && p.card.rank === 'K');
-        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        const cardImg = cardImages[show ? `${rank}_${suit}` : 'Back'];
-        if (cardImg?.complete) {
-          const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
-          ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-        }
-      });
+    if (!p.card || animCard?.card === p.card || p.eliminated) return;
 
-     if (animCard) {
-  const { x, y } = animCard;
-  const cardImg = cardImages['Back'];
-  if (cardImg?.complete) {
-    const scale = 1.0;
-    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-  }
-}
-
-
-      const container = document.getElementById('playerContainer');
-      container.innerHTML = '';
-      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));  // Fixed 10-player map
-players.forEach((p) => {
-const i = p.seatIndex ?? (p.id - 1);
-        const div = document.createElement('div');
-        div.className = 'player-ui';
-        div.id = `player-ui-${p.id}`;
-        div.innerHTML = `
-          <div class="hud">
-            <div class="name">Player ${p.id}</div>
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="chips">
-              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-              ${p.chips}
-            </div>
-          </div>`;
-        const angle = angleMap[i] * (Math.PI / 180);
-        const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
-        const hudOffset = hudOffsets[i];
-        const x = CENTER_X + Math.cos(angle) * outerX + hudOffset.x;
-        const y = CENTER_Y + Math.sin(angle) * outerY + hudOffset.y;
-        div.style.left = `${x}px`;
-        div.style.top = `${y}px`;
-        div.style.transform = 'translate(-50%, -50%)';
-        const avatarEl = div.querySelector('.avatar');
-        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-        container.appendChild(div);
-      });
+    const show = showCards || (p.id === socket.id && peekPlayerCard) || p.card.rank === 'K';
+    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+    const suit = suitMap[p.card.suit];
+    const cardImg = cardImages[show ? `${rank}_${suit}` : 'Back'];
+    if (cardImg?.complete) {
+      const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
+      ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
     }
+  });
+
+  // 🃏 Draw animated card (if any)
+  if (animCard) {
+    const { x, y } = animCard;
+    const cardImg = cardImages['Back'];
+    if (cardImg?.complete) {
+      ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+    }
+  }
+
+  // 🧑 Draw HUD
+  const container = document.getElementById('playerContainer');
+  container.innerHTML = '';
+  players.forEach((p) => {
+    const i = p.seatIndex ?? 0;
+    const angle = angleMap[i] * (Math.PI / 180);
+    const offset = hudOffsets[i];
+    const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
+    const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
+    const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
+
+    const div = document.createElement('div');
+    div.className = 'player-ui';
+    div.id = `player-ui-${p.id}`;
+    div.innerHTML = `
+      <div class="hud">
+        <div class="name">${p.name}</div>
+        <img class="avatar" src="./assets/avatar.png" />
+        <div class="chips">
+          <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+          ${p.chips}
+        </div>
+      </div>
+    `;
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
+    const avatarEl = div.querySelector('.avatar');
+    avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+    container.appendChild(div);
+  });
+}
 
        preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
@@ -393,6 +405,7 @@ const i = p.seatIndex ?? (p.id - 1);
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
+  let mySocketId = "";
   let myUsername = "";
   let myRoom = "";
   let myTurn = false;
@@ -435,8 +448,10 @@ const i = p.seatIndex ?? (p.id - 1);
   }
 
   socket.on("welcome", (msg) => {
-    console.log("✅", msg);
-  });
+  console.log("✅", msg);
+  mySocketId = socket.id; // ✅ Step 2: store your socket ID for use in drawTable
+});
+
 
   socket.on("playerList", (players) => {
     console.log("📋 Current Players:", players);
