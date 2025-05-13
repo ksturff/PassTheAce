@@ -295,10 +295,12 @@ socket.emit("join", { username: myUsername, room: myRoom });
   });
 
   // Draw animated passing card
-  if (animCard && animCard.progress < 1) {
-    const from = players[animCard.fromIndex];
-    const to = players[animCard.toIndex];
+  // 🔁 Animate passing card (if active)
+if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+  const from = players[animCard.fromIndex];
+  const to = players[animCard.toIndex];
 
+  if (from && to && from.cardX != null && to.cardX != null) {
     const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
     const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
 
@@ -307,6 +309,19 @@ socket.emit("join", { username: myUsername, room: myRoom });
       ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
     }
   }
+
+  // 🔄 Progress animation
+  const now = performance.now();
+  const elapsed = now - animStartTime;
+  animCard.progress = Math.min(elapsed / 500, 1); // 0.5s
+
+  if (animCard.progress < 1) {
+    requestAnimationFrame(() => drawTable(false, animCard));
+  } else {
+    animCard = null;
+  }
+}
+
 
   // Draw player HUD
   const container = document.getElementById('playerContainer');
@@ -436,9 +451,12 @@ socket.emit("join", { username: myUsername, room: myRoom });
 });
 
 socket.on('cardPassed', ({ fromIndex, toIndex }) => {
+  console.log("Animating pass:", fromIndex, "→", toIndex); // Optional debug
   animCard = { fromIndex, toIndex, progress: 0 };
   animStartTime = performance.now();
+  drawTable(false, animCard); // 🔥 Kick off animation loop
 });
+
 
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
