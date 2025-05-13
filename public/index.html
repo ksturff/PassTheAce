@@ -393,24 +393,26 @@ socket.emit("join", { username: myUsername, room: myRoom });
     });
 
     socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
-      gameState.players = updatedPlayers;
-      players = updatedPlayers;
-      myTurn = (socket.id === currentPlayerId);
-      
-      // Update turn indicator and button state
-      updateTurnIndicator();
-      drawTable();
-      
-      const actionBtns = document.getElementById("actionBtns");
-      const buttons = document.querySelectorAll("#actionBtns button");
-      if (myTurn) {
-        actionBtns.style.display = "block";
-        buttons.forEach(btn => btn.disabled = false);
-      } else {
-        actionBtns.style.display = "none";
-        buttons.forEach(btn => btn.disabled = true);
-      }
-    });
+  gameState.players = updatedPlayers;
+  players = updatedPlayers;
+  myTurn = (socket.id === currentPlayerId);
+  peekPlayerCard = myTurn; // ✅ This line ensures you can see your card
+
+  // Update turn indicator and button state
+  updateTurnIndicator();
+  drawTable();
+
+  const actionBtns = document.getElementById("actionBtns");
+  const buttons = document.querySelectorAll("#actionBtns button");
+  if (myTurn) {
+    actionBtns.style.display = "block";
+    buttons.forEach(btn => btn.disabled = false);
+  } else {
+    actionBtns.style.display = "none";
+    buttons.forEach(btn => btn.disabled = true);
+  }
+});
+
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
       gameState.players = updatedPlayers;
