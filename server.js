@@ -142,7 +142,7 @@ io.on('connection', (socket) => {
       currentTurnIndex: startingIndex,
       roundStartIndex: startingIndex,
       deck: shuffledDeck,
-      dealerIndex,
+      dealerIndex: dealerIndex,
       turnCount: 0
     };
 
