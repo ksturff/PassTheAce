@@ -302,6 +302,8 @@ io.on('connection', (socket) => {
     });
 
     state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
+    log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
+log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
     state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
     state.roundStartIndex = state.currentTurnIndex;
     state.turnCount = 0;

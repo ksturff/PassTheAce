@@ -280,7 +280,11 @@ socket.emit("join", { username: myUsername, room: myRoom });
     p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
     p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
 
-    if (!p.card || animCard?.card === p.card || p.eliminated) return;
+    if (!p.card || p.eliminated) return;
+
+// Skip drawing card only for the player passing the card (fromIndex)
+if (animCard && i === animCard.fromIndex && animCard.progress < 1) return;
+
 
     const show = showCards || (p.id === socket.id && peekPlayerCard) || p.card.rank === 'K';
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
@@ -460,12 +464,18 @@ socket.on('cardPassed', ({ fromIndex, toIndex }) => {
 
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-      gameState.players = updatedPlayers;
-      players = updatedPlayers;
-      myTurn = false;
-      drawTable();
-      alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
-    });
+  gameState.players = updatedPlayers;
+  players = updatedPlayers;
+  myTurn = false;
+
+  // ✅ Clear any leftover animation before drawing
+  animCard = null;
+
+  drawTable(false, animCard); // ✅ Explicitly pass animCard
+
+  alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
+});
+
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
