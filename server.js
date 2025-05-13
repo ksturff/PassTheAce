@@ -8,9 +8,15 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Serve lobby.html as default
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/lobby.html');
+});
+
+// Serve static assets AFTER the custom route
 app.use(express.static('public'));
 
-const rooms = {}; // { roomCode: { players: [], gameStarted: false, gameState: {} } }
+const rooms = {}; // ...
 const roomsMetadata = {}; // { roomCode: { status, seatsTaken, maxSeats, isPrivate } }
 
 function log(type, message) {
