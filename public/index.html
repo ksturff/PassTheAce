@@ -327,7 +327,7 @@ socket.emit("join", { username: myUsername, room: myRoom });
         div.style.top = `${y}px`;
         div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
         const avatarEl = div.querySelector('.avatar');
-        avatarEl.classList.toggle('active-glow', p.id === currentPlayerId && p.chips > 0);
+        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
          container.appendChild(div);
       });
     }
