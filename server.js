@@ -278,8 +278,12 @@ io.on('connection', (socket) => {
   }
 });
 
+// ✅ Serve the lobby.html file at the root URL
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/lobby.html');
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   log('BOOT', `✅ Server running on port ${PORT}`);
 });
-
