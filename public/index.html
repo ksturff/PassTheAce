@@ -282,8 +282,9 @@ socket.emit("join", { username: myUsername, room: myRoom });
 
     if (!p.card || p.eliminated) return;
 
-// Skip drawing card only for the player passing the card (fromIndex)
-if (animCard && i === animCard.fromIndex && animCard.progress < 1) return;
+// Skip drawing card for both FROM and TO players during the pass
+if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
+
 
 
     const show = showCards || (p.id === socket.id && peekPlayerCard) || p.card.rank === 'K';
