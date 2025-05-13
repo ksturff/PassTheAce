@@ -8,16 +8,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve lobby.html as default
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/lobby.html');
 });
 
-// Serve static assets AFTER the custom route
 app.use(express.static('public'));
 
-const rooms = {}; // ...
-const roomsMetadata = {}; // { roomCode: { status, seatsTaken, maxSeats, isPrivate } }
+const rooms = {};
+const roomsMetadata = {};
 
 function log(type, message) {
   const timestamp = new Date().toISOString();
@@ -85,7 +83,6 @@ io.on('connection', (socket) => {
   socket.on('startGame', (room) => {
     const roomData = rooms[room];
     if (!roomData || roomData.gameStarted) return;
-
     if (roomData.players.length < 2) {
       return socket.emit("errorMessage", "You need at least 2 human players to start.");
     }
@@ -129,7 +126,14 @@ io.on('connection', (socket) => {
       log('DEAL', `Dealt ${p.card.rank}${p.card.suit} to ${p.name}`);
     });
 
-    const dealerIndex = Math.floor(Math.random() * fullPlayerList.length);
+    const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
+
+    const highestValue = Math.max(...fullPlayerList.map(p => ranks[p.card.rank]));
+    const dealer = fullPlayerList
+      .filter(p => ranks[p.card.rank] === highestValue)
+      .reduce((a, b) => a.seatIndex < b.seatIndex ? a : b);
+    const dealerIndex = dealer.seatIndex;
+
     const startingIndex = getNextActiveIndex(fullPlayerList, dealerIndex);
 
     roomData.gameStarted = true;
@@ -148,17 +152,27 @@ io.on('connection', (socket) => {
   });
 
   socket.on('passCard', ({ room }) => {
-    const state = rooms[room]?.gameState;
-    if (!state) return;
-    const current = state.players[state.currentTurnIndex];
-    if (current.id !== socket.id) return;
-    const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
-    if (nextIndex === -1) return;
-    [current.card, state.players[nextIndex].card] = [state.players[nextIndex].card, current.card];
-    log('ACTION', `${current.name} passed card to ${state.players[nextIndex].name}`);
-    state.currentTurnIndex = nextIndex;
-    emitTurn(room);
+  const state = rooms[room]?.gameState;
+  if (!state) return;
+  const current = state.players[state.currentTurnIndex];
+  if (current.id !== socket.id) return;
+
+  const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
+  if (nextIndex === -1) return;
+
+  [current.card, state.players[nextIndex].card] = [state.players[nextIndex].card, current.card];
+  log('ACTION', `${current.name} passed card to ${state.players[nextIndex].name}`);
+
+  // 🔥 EMIT CARD PASS ANIMATION
+  io.to(room).emit('cardPassed', {
+    fromIndex: state.currentTurnIndex,
+    toIndex: nextIndex
   });
+
+  state.currentTurnIndex = nextIndex;
+  emitTurn(room);
+});
+
 
   socket.on('keepCard', ({ room }) => {
     const state = rooms[room]?.gameState;
@@ -271,6 +285,7 @@ io.on('connection', (socket) => {
       }
     });
 
+    state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
     state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
     state.roundStartIndex = state.currentTurnIndex;
     state.turnCount = 0;
@@ -282,11 +297,6 @@ io.on('connection', (socket) => {
 
     emitTurn(room);
   }
-});
-
-// ✅ Serve the lobby.html file at the root URL
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/lobby.html');
 });
 
 const PORT = process.env.PORT || 3000;
