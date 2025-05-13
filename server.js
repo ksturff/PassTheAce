@@ -201,9 +201,12 @@ io.on('connection', (socket) => {
     const current = state.players[state.currentTurnIndex];
 
     if (state.turnCount > 0 && state.currentTurnIndex === state.roundStartIndex) {
-      const active = state.players.filter(p => !p.eliminated);
-      if (active.length > 1) return endRound(room);
-    }
+  const active = state.players.filter(p => !p.eliminated);
+  if (active.length > 1) {
+    setTimeout(() => endRound(room), 600); // ⏳ Give time for animation
+    return;
+  }
+}
 
     io.to(room).emit('turnUpdate', {
       currentPlayerId: current.id,
