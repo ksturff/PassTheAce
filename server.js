@@ -222,28 +222,41 @@ io.on('connection', (socket) => {
   }
 
   function handleAIMove(room, player) {
-    const state = rooms[room].gameState;
-    const current = state.players[state.currentTurnIndex];
-    if (player.id !== current.id) return;
+  const state = rooms[room].gameState;
+  const current = state.players[state.currentTurnIndex];
+  if (player.id !== current.id) return;
 
-    const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
-    if (nextIndex === -1) return;
+  const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
+  if (nextIndex === -1) return;
 
-    const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
-    const myVal = ranks[player.card.rank];
-    const nextVal = ranks[state.players[nextIndex].card.rank];
-    const shouldPass = myVal < 8 && nextVal !== 13;
+  const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
+  const myVal = ranks[player.card.rank];
+  const nextVal = ranks[state.players[nextIndex].card.rank];
+  const shouldPass = myVal < 8 && nextVal !== 13;
 
-    if (shouldPass) {
-      [player.card, state.players[nextIndex].card] = [state.players[nextIndex].card, player.card];
-      log('AI', `${player.name} passed to ${state.players[nextIndex].name}`);
-    } else {
-      log('AI', `${player.name} kept their card`);
-    }
+  if (shouldPass) {
+    [player.card, state.players[nextIndex].card] = [state.players[nextIndex].card, player.card];
+    log('AI', `${player.name} passed to ${state.players[nextIndex].name}`);
 
-    state.currentTurnIndex = nextIndex;
-    emitTurn(room);
+    io.to(room).emit('cardPassed', {
+      fromIndex: state.currentTurnIndex,
+      toIndex: nextIndex
+    });
+
+    setTimeout(() => {
+      state.currentTurnIndex = nextIndex;
+      emitTurn(room);
+    }, 600); // 🔄 Wait for animation to complete
+  } else {
+    log('AI', `${player.name} kept their card`);
+
+    setTimeout(() => {
+      state.currentTurnIndex = nextIndex;
+      emitTurn(room);
+    }, 400); // Optional delay to prevent instant flicker
   }
+}
+
 
   function endRound(room) {
     const state = rooms[room].gameState;
