@@ -309,11 +309,14 @@ log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`)
     state.turnCount = 0;
 
     io.to(room).emit('roundEnded', {
-      updatedPlayers: state.players,
-      losers
-    });
+  updatedPlayers: state.players,
+  losers
+});
 
-    emitTurn(room);
+// ✅ Wait for 4.5 seconds before starting next round
+setTimeout(() => {
+  emitTurn(room);
+}, 4500);
   }
 });
 
