@@ -186,6 +186,7 @@
     let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false, eliminatedPlayers = [], gameState = {};
     let animCard = null, animStartTime = null;
+    let showAllCards = false;
     let mySocketId = "", myUsername = "", myRoom = "";
     const cardImages = {};
 
@@ -299,7 +300,7 @@
     const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
     const suit = suitMap[p.card.suit];
     const key = `${rank}_of_${suit}`;
-    const show = showCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+    const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
     const cardImg = cardImages[show ? key : 'Back'];
 
     if (cardImg?.complete) {
@@ -421,13 +422,22 @@
     });
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-      gameState.players = updatedPlayers;
-      players = updatedPlayers;
-      myTurn = false;
-      animCard = null;
-      drawTable(false, animCard);
-      alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
-    });
+  gameState.players = updatedPlayers;
+  players = updatedPlayers;
+  myTurn = false;
+  animCard = null;
+
+  showAllCards = true; // 👁️ Flip everyone's cards face-up
+  drawTable(false, animCard);
+
+  setTimeout(() => {
+    showAllCards = false; // 🔁 Reset for next round
+    drawTable(); // Redraw with normal visibility
+  }, 3000);
+
+  alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
+});
+
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
