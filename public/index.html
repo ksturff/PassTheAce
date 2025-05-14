@@ -251,18 +251,23 @@
     }
 
     function passCard() {
-      if (!myTurn) return;
-      myTurn = false;
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("passCard", { room: myRoom });
-    }
+  if (!myTurn) return;
+  myTurn = false;
+  peekPlayerCard = false;  // 👈 Hide card immediately
+  drawTable();             // 👈 Optional: redraw now
+  document.getElementById("actionBtns").style.display = "none";
+  socket.emit("passCard", { room: myRoom });
+}
 
-    function keepCard() {
-      if (!myTurn) return;
-      myTurn = false;
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("keepCard", { room: myRoom });
-    }
+function keepCard() {
+  if (!myTurn) return;
+  myTurn = false;
+  peekPlayerCard = false;  // 👈 Hide card immediately
+  drawTable();             // 👈 Optional: redraw now
+  document.getElementById("actionBtns").style.display = "none";
+  socket.emit("keepCard", { room: myRoom });
+}
+
 
     function drawTable(showCards = false, animCard = null) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
