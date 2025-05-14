@@ -170,7 +170,7 @@ io.on('connection', (socket) => {
   });
 
   state.currentTurnIndex = nextIndex;
-  emitTurn(room);
+ setTimeout(() => emitTurn(room), 6000); // ⏳ Delay start of next round
 });
 
 
