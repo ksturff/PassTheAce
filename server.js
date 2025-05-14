@@ -264,17 +264,15 @@ io.on('connection', (socket) => {
     let lowest = Infinity;
     let losers = [];
 
-    state.players.forEach(p => {
-      if (!p.eliminated) {
-        const value = ranks[p.card.rank];
-        if (value < lowest) {
-          lowest = value;
-          losers = [p];
-        } else if (value === lowest) {
-          losers.push(p);
-        }
-      }
-    });
+    console.log("🔎 ROUND END CARDS:");
+state.players.forEach(p => {
+  const value = ranks[p.card.rank];
+  console.log(`${p.name}: ${p.card.rank}${p.card.suit} | Value: ${value} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
+});
+
+console.log(`❌ Lowest Value: ${lowest}`);
+console.log(`💥 Losers: ${losers.map(p => p.name).join(", ")}`);
+
 
     losers.forEach(p => {
       p.chips--;

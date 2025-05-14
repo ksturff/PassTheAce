@@ -426,24 +426,23 @@ function keepCard() {
       drawTable(false, animCard);
     });
 
-    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-  gameState.players = updatedPlayers;
-  players = updatedPlayers;
-  myTurn = false;
-  peekPlayerCard = false;    // ✅ Prevent leftover peeking
-  animCard = null;
+        socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+      gameState.players = updatedPlayers;
+      players = updatedPlayers;
+      myTurn = false;
+      peekPlayerCard = false;
+      animCard = null;
 
-  showAllCards = true;       // 👁️ Show everyone's cards
-  drawTable(false, animCard);
+      showAllCards = true;
+      drawTable(false, animCard);
 
-  setTimeout(() => {
-    showAllCards = false;    // 🔁 Reset for next round
-    drawTable();
-  }, 4000);
+      setTimeout(() => {
+        showAllCards = false;
+        drawTable();
+      }, 4000);
 
-  alert("💥 Round ended! Lost a chip: " + losers.map(p => p.name).join(", "));
-});
-
+      alert(`💥 Round ended! Lost a chip: ${losers.map(p => `${p.name} (${p.card.rank}${p.card.suit})`).join(", ")}`);
+    });
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
