@@ -190,32 +190,34 @@
     const cardImages = {};
 
     function preloadAssets() {
-      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-      const loadPromises = [];
+  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+  const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
+  const loadPromises = [];
 
-      for (let s of suits) {
-        for (let r of ranks) {
-          const img = new Image();
-          img.src = `./assets/${r}_of_${s}.png`;
-          cardImages[`${r}_${s}`] = img;
-          loadPromises.push(new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }));
-        }
-      }
-
-      const back = new Image();
-      back.src = './assets/Back.png';
-      cardImages['Back'] = back;
+  for (let s of suits) {
+    for (let r of ranks) {
+      const img = new Image();
+      const key = `${r}_of_${s}`;
+      img.src = `./assets/${key}.png`;
+      cardImages[key] = img;
       loadPromises.push(new Promise(resolve => {
-        back.onload = resolve;
-        back.onerror = resolve;
+        img.onload = resolve;
+        img.onerror = resolve;
       }));
-
-      return Promise.all(loadPromises);
     }
+  }
+
+  const back = new Image();
+  back.src = './assets/Back.png';
+  cardImages['Back'] = back;
+  loadPromises.push(new Promise(resolve => {
+    back.onload = resolve;
+    back.onerror = resolve;
+  }));
+
+  return Promise.all(loadPromises);
+}
+
 
     function updateTurnIndicator() {
       const player = players.find(p => p.id === gameState.currentPlayerId);
