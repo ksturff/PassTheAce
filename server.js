@@ -200,13 +200,15 @@ io.on('connection', (socket) => {
     const state = rooms[room].gameState;
     const current = state.players[state.currentTurnIndex];
 
-    if (state.turnCount > 0 && state.currentTurnIndex === state.roundStartIndex) {
+    if (state.currentTurnIndex === state.dealerIndex) {
   const active = state.players.filter(p => !p.eliminated);
   if (active.length > 1) {
-    setTimeout(() => endRound(room), 600); // ⏳ Give time for animation
+    log('ROUND', `✅ Dealer ${state.players[state.dealerIndex].name} just acted. Ending round.`);
+    setTimeout(() => endRound(room), 1500); // ⏳ Allow time for animation/sync
     return;
   }
 }
+
 
     io.to(room).emit('turnUpdate', {
       currentPlayerId: current.id,
