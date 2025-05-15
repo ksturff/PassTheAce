@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
     });
 
     state.currentTurnIndex = nextIndex;
-    setTimeout(() => emitTurn(room), 7500);
+    setTimeout(() => emitTurn(room), 6000);
   });
 
   socket.on('keepCard', ({ room }) => {
@@ -254,34 +254,37 @@ function handleAIMove(room, player) {
 }
 
 function endRound(room) {
-  const state = rooms[room].gameState;
   const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
-  let lowest = Infinity;
-  let losers = [];
+let lowest = Infinity;
+let losers = [];
 
-  console.log("🔎 ROUND END CARDS:");
-  state.players.forEach(p => {
-    const value = ranks[p.card?.rank];
-    const summary = value !== undefined ? `Value: ${value}` : `❗ Invalid rank: ${p.card?.rank}`;
-    console.log(`${p.name}: ${p.card?.rank}${p.card?.suit} | ${summary} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
+console.log("🔎 ROUND END CARDS:");
+state.players.forEach(p => {
+  const value = ranks[p.card?.rank];
+  const summary = value !== undefined ? `Value: ${value}` : `❗ Invalid rank: ${p.card?.rank}`;
+  console.log(`${p.name}: ${p.card?.rank}${p.card?.suit} | ${summary} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
+});
 
-    if (!p.eliminated && value !== undefined) {
-      if (value < lowest) {
-        lowest = value;
-        losers = [p];
-      } else if (value === lowest) {
-        losers.push(p);
-      }
+// 🧠 Calculate lowest value AFTER logging
+state.players.forEach(p => {
+  const value = ranks[p.card?.rank];
+  if (!p.eliminated && value !== undefined) {
+    if (value < lowest) {
+      lowest = value;
+      losers = [p];
+    } else if (value === lowest) {
+      losers.push(p);
     }
-  });
-
-  if (lowest === Infinity || losers.length === 0) {
-    log('WARN', 'No valid lowest card found — skipping chip loss');
-    return;
   }
+});
 
-  log(`❌ Lowest Value: ${lowest}`);
-  log(`💥 Losers: ${losers.map(p => p.name).join(", ")}`);
+console.log(`❌ Lowest Value: ${lowest}`);
+console.log("💥 Final Losers and Their Cards:");
+losers.forEach(p => {
+  const value = ranks[p.card?.rank];
+  console.log(`❌ ${p.name} - ${p.card?.rank}${p.card?.suit} (Value: ${value})`);
+});
+
 
   losers.forEach(p => {
     p.chips--;
@@ -316,17 +319,10 @@ function endRound(room) {
   log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
   log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
 
- // ⏳ Snapshot loser cards before dealing new ones
-const losersSnapshot = losers.map(p => ({
-  name: p.name,
-  card: { rank: p.card.rank, suit: p.card.suit }
-}));
-
-io.to(room).emit('roundEnded', {
-  updatedPlayers: state.players,
-  losers: losersSnapshot
-});
-
+  io.to(room).emit('roundEnded', {
+    updatedPlayers: state.players,
+    losers
+  });
 
   setTimeout(() => {
     emitTurn(room);
