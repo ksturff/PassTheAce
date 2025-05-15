@@ -315,11 +315,17 @@ function endRound(room) {
 
   log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
   log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+const roundSnapshot = state.players.map(p => ({
+  name: p.name,
+  card: p.card,
+  chips: p.chips
+}));
 
-  io.to(room).emit('roundEnded', {
-    updatedPlayers: state.players,
-    losers
-  });
+io.to(room).emit('roundEnded', {
+  updatedPlayers: roundSnapshot,
+  losers
+});
+
 
   setTimeout(() => {
     emitTurn(room);

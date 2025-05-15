@@ -442,8 +442,13 @@ function keepCard() {
       }, 6500);
 
 const alertMessage = `💥 Round ended! Lost a chip: ` + losers
-  .map(p => `${p.name} (${p.card.rank}${p.card.suit})`)
+  .map(loser => {
+    const snapshot = updatedPlayers.find(p => p.name === loser.name);
+    if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+    return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+  })
   .join(", ");
+
 alert(alertMessage);
     });
 
