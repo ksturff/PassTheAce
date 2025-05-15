@@ -300,36 +300,42 @@ function endRound(room) {
     return;
   }
 
-  activePlayers.forEach(p => {
-    const newCard = state.deck.pop();
-    if (newCard) {
-      p.card = newCard;
-      log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
-    }
-  });
-
-  state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
-  state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
-  state.roundStartIndex = state.currentTurnIndex;
-  state.turnCount = 0;
-
-  log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
-  log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+  // ✅ SNAPSHOT BEFORE dealing new cards
 const roundSnapshot = state.players.map(p => ({
   name: p.name,
   card: p.card,
   chips: p.chips
 }));
 
+// ✅ EMIT the roundEnd event FIRST — players still have their current card
 io.to(room).emit('roundEnded', {
   updatedPlayers: roundSnapshot,
   losers
 });
 
+// ✅ Now deal cards for the next round
+activePlayers.forEach(p => {
+  const newCard = state.deck.pop();
+  if (newCard) {
+    p.card = newCard;
+    log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
+  }
+});
 
-  setTimeout(() => {
-    emitTurn(room);
-  }, 4500);
+// ✅ Advance turn and dealer AFTER everything is frozen and sent
+state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
+state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
+state.roundStartIndex = state.currentTurnIndex;
+state.turnCount = 0;
+
+log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
+log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+
+// Start new turn after brief delay
+setTimeout(() => {
+  emitTurn(room);
+}, 4500);
+
 }
 
 const PORT = process.env.PORT || 3000;
