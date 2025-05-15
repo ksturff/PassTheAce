@@ -439,9 +439,12 @@ function keepCard() {
       setTimeout(() => {
         showAllCards = false;
         drawTable();
-      }, 4000);
+      }, 6500);
 
-      alert(`💥 Round ended! Lost a chip: ${losers.map(p => `${p.name} (${p.card.rank}${p.card.suit})`).join(", ")}`);
+const alertMessage = `💥 Round ended! Lost a chip: ` + losers
+  .map(p => `${p.name} (${p.card.rank}${p.card.suit})`)
+  .join(", ");
+alert(alertMessage);
     });
 
     socket.on("errorMessage", (msg) => {
