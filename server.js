@@ -127,13 +127,9 @@ io.on('connection', (socket) => {
     });
 
     const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
-
     const highestValue = Math.max(...fullPlayerList.map(p => ranks[p.card.rank]));
-    const dealer = fullPlayerList
-      .filter(p => ranks[p.card.rank] === highestValue)
-      .reduce((a, b) => a.seatIndex < b.seatIndex ? a : b);
+    const dealer = fullPlayerList.filter(p => ranks[p.card.rank] === highestValue).reduce((a, b) => a.seatIndex < b.seatIndex ? a : b);
     const dealerIndex = dealer.seatIndex;
-
     const startingIndex = getNextActiveIndex(fullPlayerList, dealerIndex);
 
     roomData.gameStarted = true;
@@ -152,27 +148,25 @@ io.on('connection', (socket) => {
   });
 
   socket.on('passCard', ({ room }) => {
-  const state = rooms[room]?.gameState;
-  if (!state) return;
-  const current = state.players[state.currentTurnIndex];
-  if (current.id !== socket.id) return;
+    const state = rooms[room]?.gameState;
+    if (!state) return;
+    const current = state.players[state.currentTurnIndex];
+    if (current.id !== socket.id) return;
 
-  const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
-  if (nextIndex === -1) return;
+    const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
+    if (nextIndex === -1) return;
 
-  [current.card, state.players[nextIndex].card] = [state.players[nextIndex].card, current.card];
-  log('ACTION', `${current.name} passed card to ${state.players[nextIndex].name}`);
+    [current.card, state.players[nextIndex].card] = [state.players[nextIndex].card, current.card];
+    log('ACTION', `${current.name} passed card to ${state.players[nextIndex].name}`);
 
-  // 🔥 EMIT CARD PASS ANIMATION
-  io.to(room).emit('cardPassed', {
-    fromIndex: state.currentTurnIndex,
-    toIndex: nextIndex
+    io.to(room).emit('cardPassed', {
+      fromIndex: state.currentTurnIndex,
+      toIndex: nextIndex
+    });
+
+    state.currentTurnIndex = nextIndex;
+    setTimeout(() => emitTurn(room), 6000);
   });
-
-  state.currentTurnIndex = nextIndex;
- setTimeout(() => emitTurn(room), 6000); // ⏳ Delay start of next round
-});
-
 
   socket.on('keepCard', ({ room }) => {
     const state = rooms[room]?.gameState;
@@ -185,45 +179,45 @@ io.on('connection', (socket) => {
     state.currentTurnIndex = nextIndex;
     emitTurn(room);
   });
+});
 
-  function getNextActiveIndex(players, currentIndex) {
-    const total = players.length;
-    let next = (currentIndex + 1) % total;
-    for (let i = 0; i < total; i++) {
-      if (!players[next].eliminated) return next;
-      next = (next + 1) % total;
+function getNextActiveIndex(players, currentIndex) {
+  const total = players.length;
+  let next = (currentIndex + 1) % total;
+  for (let i = 0; i < total; i++) {
+    if (!players[next].eliminated) return next;
+    next = (next + 1) % total;
+  }
+  return -1;
+}
+
+function emitTurn(room) {
+  const state = rooms[room].gameState;
+  const current = state.players[state.currentTurnIndex];
+
+  if (state.currentTurnIndex === state.dealerIndex) {
+    const active = state.players.filter(p => !p.eliminated);
+    if (active.length > 1) {
+      log('ROUND', `✅ Dealer ${state.players[state.dealerIndex].name} just acted. Ending round.`);
+      setTimeout(() => endRound(room), 1500);
+      return;
     }
-    return -1;
   }
 
-  function emitTurn(room) {
-    const state = rooms[room].gameState;
-    const current = state.players[state.currentTurnIndex];
+  io.to(room).emit('turnUpdate', {
+    currentPlayerId: current.id,
+    players: state.players
+  });
 
-    if (state.currentTurnIndex === state.dealerIndex) {
-  const active = state.players.filter(p => !p.eliminated);
-  if (active.length > 1) {
-    log('ROUND', `✅ Dealer ${state.players[state.dealerIndex].name} just acted. Ending round.`);
-    setTimeout(() => endRound(room), 1500); // ⏳ Allow time for animation/sync
-    return;
+  log('TURN', `Now it's ${current.name}'s turn`);
+  state.turnCount++;
+
+  if (!current.isHuman && !current.eliminated) {
+    setTimeout(() => handleAIMove(room, current), 1200);
   }
 }
 
-
-    io.to(room).emit('turnUpdate', {
-      currentPlayerId: current.id,
-      players: state.players
-    });
-
-    log('TURN', `Now it's ${current.name}'s turn`);
-    state.turnCount++;
-
-    if (!current.isHuman && !current.eliminated) {
-      setTimeout(() => handleAIMove(room, current), 1200);
-    }
-  }
-
-  function handleAIMove(room, player) {
+function handleAIMove(room, player) {
   const state = rooms[room].gameState;
   const current = state.players[state.currentTurnIndex];
   if (player.id !== current.id) return;
@@ -248,77 +242,89 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       state.currentTurnIndex = nextIndex;
       emitTurn(room);
-    }, 600); // 🔄 Wait for animation to complete
+    }, 600);
   } else {
     log('AI', `${player.name} kept their card`);
 
     setTimeout(() => {
       state.currentTurnIndex = nextIndex;
       emitTurn(room);
-    }, 400); // Optional delay to prevent instant flicker
+    }, 400);
   }
 }
 
+function endRound(room) {
+  const state = rooms[room].gameState;
+  const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
+  let lowest = Infinity;
+  let losers = [];
 
-  function endRound(room) {
-    const state = rooms[room].gameState;
-    const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
-    let lowest = Infinity;
-    let losers = [];
+  console.log("🔎 ROUND END CARDS:");
+  state.players.forEach(p => {
+    const value = ranks[p.card?.rank];
+    const summary = value !== undefined ? `Value: ${value}` : `❗ Invalid rank: ${p.card?.rank}`;
+    console.log(`${p.name}: ${p.card?.rank}${p.card?.suit} | ${summary} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
 
-    console.log("🔎 ROUND END CARDS:");
-state.players.forEach(p => {
-  const value = ranks[p.card.rank];
-  console.log(`${p.name}: ${p.card.rank}${p.card.suit} | Value: ${value} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
-});
-
-console.log(`❌ Lowest Value: ${lowest}`);
-console.log(`💥 Losers: ${losers.map(p => p.name).join(", ")}`);
-
-
-    losers.forEach(p => {
-      p.chips--;
-      if (p.chips <= 0) {
-        p.eliminated = true;
-        log('ELIMINATED', `${p.name} is out of the game`);
-      } else {
-        log('PENALTY', `${p.name} lost a chip (${p.chips} left)`);
+    if (!p.eliminated && value !== undefined) {
+      if (value < lowest) {
+        lowest = value;
+        losers = [p];
+      } else if (value === lowest) {
+        losers.push(p);
       }
-    });
-
-    const activePlayers = state.players.filter(p => !p.eliminated);
-    if (activePlayers.length === 1) {
-      log('GAME', `🏆 Winner: ${activePlayers[0].name}`);
-      io.to(room).emit('gameOver', { winner: activePlayers[0] });
-      return;
     }
+  });
 
-    activePlayers.forEach(p => {
-      const newCard = state.deck.pop();
-      if (newCard) {
-        p.card = newCard;
-        log('DEAL', `New card to ${p.name}: ${p.card.rank}${p.card.suit}`);
-      }
-    });
-
-    state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
-    log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
-log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
-    state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
-    state.roundStartIndex = state.currentTurnIndex;
-    state.turnCount = 0;
-
-    io.to(room).emit('roundEnded', {
-  updatedPlayers: state.players,
-  losers
-});
-
-// ✅ Wait for 4.5 seconds before starting next round
-setTimeout(() => {
-  emitTurn(room);
-}, 4500);
+  if (lowest === Infinity || losers.length === 0) {
+    log('WARN', 'No valid lowest card found — skipping chip loss');
+    return;
   }
-});
+
+  log(`❌ Lowest Value: ${lowest}`);
+  log(`💥 Losers: ${losers.map(p => p.name).join(", ")}`);
+
+  losers.forEach(p => {
+    p.chips--;
+    if (p.chips <= 0) {
+      p.eliminated = true;
+      log('ELIMINATED', `${p.name} is out of the game`);
+    } else {
+      log('PENALTY', `${p.name} lost a chip (${p.chips} left)`);
+    }
+  });
+
+  const activePlayers = state.players.filter(p => !p.eliminated);
+  if (activePlayers.length === 1) {
+    log('GAME', `🏆 Winner: ${activePlayers[0].name}`);
+    io.to(room).emit('gameOver', { winner: activePlayers[0] });
+    return;
+  }
+
+  activePlayers.forEach(p => {
+    const newCard = state.deck.pop();
+    if (newCard) {
+      p.card = newCard;
+      log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
+    }
+  });
+
+  state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
+  state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
+  state.roundStartIndex = state.currentTurnIndex;
+  state.turnCount = 0;
+
+  log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
+  log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+
+  io.to(room).emit('roundEnded', {
+    updatedPlayers: state.players,
+    losers
+  });
+
+  setTimeout(() => {
+    emitTurn(room);
+  }, 4500);
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
