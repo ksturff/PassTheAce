@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
     });
 
     state.currentTurnIndex = nextIndex;
-    setTimeout(() => emitTurn(room), 6000);
+    setTimeout(() => emitTurn(room), 7500);
   });
 
   socket.on('keepCard', ({ room }) => {
