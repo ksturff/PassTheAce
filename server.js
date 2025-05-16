@@ -179,6 +179,19 @@ io.on('connection', (socket) => {
     state.currentTurnIndex = nextIndex;
     emitTurn(room);
   });
+
+  socket.on('disconnect', () => {
+    log('DISCONNECT', `🔴 Player disconnected: ${socket.id}`);
+    for (const room in rooms) {
+      const playerIndex = rooms[room].players.findIndex(p => p.id === socket.id);
+      if (playerIndex !== -1) {
+        rooms[room].players.splice(playerIndex, 1);
+        roomsMetadata[room].seatsTaken--;
+        io.to(room).emit('playerList', rooms[room].players);
+        break;
+      }
+    }
+  });
 });
 
 function getNextActiveIndex(players, currentIndex) {
@@ -195,6 +208,8 @@ function emitTurn(room) {
   const state = rooms[room].gameState;
   const current = state.players[state.currentTurnIndex];
   const activePlayers = state.players.filter(p => !p.eliminated);
+
+  if (!current || current.eliminated) return;
 
   if (state.turnCount >= activePlayers.length) {
     log('ROUND', `✅ All players acted. Ending round.`);
@@ -221,7 +236,7 @@ function handleAIMove(room, player) {
   if (player.id !== current.id) return;
 
   const nextIndex = getNextActiveIndex(state.players, state.currentTurnIndex);
-  if (nextIndex === -1) return;
+  if (nextIndex === -1 || !player.card || !state.players[nextIndex].card) return;
 
   const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 1 };
   const myVal = ranks[player.card.rank];
@@ -304,33 +319,47 @@ function endRound(room) {
     return;
   }
 
+  if (state.deck.length < activePlayers.length) {
+    const newDeck = [];
+    for (let s of ['S', 'H', 'D', 'C']) {
+      for (let r of [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A']) {
+        newDeck.push({ suit: s, rank: r });
+      }
+    }
+    state.deck = newDeck.sort(() => Math.random() - 0.5);
+    log('DECK', '♻️ Deck reshuffled');
+  }
+
   io.to(room).emit('roundEnded', {
     updatedPlayers: roundSnapshot,
     losers
   });
 
-  activePlayers.forEach(p => {
-    const newCard = state.deck.pop();
-    if (newCard) {
-      p.card = newCard;
-      log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
-    }
-  });
-
-  state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
-  state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
-  state.roundStartIndex = state.currentTurnIndex;
-  state.turnCount = 0;
-
-  log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
-  log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
-
+  // 🕒 ⏳ Delay everything until AFTER face-up time
   setTimeout(() => {
-    emitTurn(room);
-  }, 4500);
-}
+    activePlayers.forEach(p => {
+      const newCard = state.deck.pop();
+      if (newCard) {
+        p.card = newCard;
+        log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
+      }
+    });
 
-const PORT = process.env.PORT || 3000;
+    state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
+    state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
+    state.roundStartIndex = state.currentTurnIndex;
+    state.turnCount = 0;
+
+    log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
+    log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+
+    emitTurn(room);
+  }, 7000); // ⏱ Delay to match client flip timeout
+} // ✅ CLOSE the endRound function here
+
+// ✅ START of server setup
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
   log('BOOT', `✅ Server running on port ${PORT}`);
 });
+
