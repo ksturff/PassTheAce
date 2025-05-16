@@ -427,30 +427,39 @@ function keepCard() {
     });
 
         socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-      gameState.players = updatedPlayers;
-      players = updatedPlayers;
-      myTurn = false;
-      peekPlayerCard = false;
-      animCard = null;
+  console.log("📣 Round ended!", updatedPlayers, losers);
 
-      showAllCards = true;
-      drawTable(false, animCard);
+  // Save current state safely
+  gameState.players = updatedPlayers;
+  players = updatedPlayers.map(p => ({ ...p })); // avoid pointer side effects
+  myTurn = false;
+  peekPlayerCard = false;
+  animCard = null;
 
-      setTimeout(() => {
-        showAllCards = false;
-        drawTable();
-      }, 6500);
+  // ✅ Show face-up cards
+  showAllCards = true;
+  drawTable(false, animCard);
 
-const alertMessage = `💥 Round ended! Lost a chip: ` + losers
-  .map(loser => {
-    const snapshot = updatedPlayers.find(p => p.name === loser.name);
-    if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
-    return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
-  })
-  .join(", ");
+  // ❌ Prevent redraws during this timeout
+  let frozenPlayers = [...players]; // snapshot
 
-alert(alertMessage);
-    });
+  // 🕒 Hide cards after delay, then redraw only if nothing changed
+  setTimeout(() => {
+    showAllCards = false;
+    players = frozenPlayers;
+    drawTable();
+  }, 6500);
+
+  // ✅ Optional alert message
+  const alertMessage = `💥 Round ended! Lost a chip: ` + losers
+    .map(loser => {
+      const snapshot = updatedPlayers.find(p => p.name === loser.name);
+      if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+      return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+    })
+    .join(", ");
+  alert(alertMessage);
+});
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
