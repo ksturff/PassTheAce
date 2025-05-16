@@ -195,10 +195,13 @@ function emitTurn(room) {
   const state = rooms[room].gameState;
   const current = state.players[state.currentTurnIndex];
 
-  if (state.currentTurnIndex === state.dealerIndex) {
+  // ✅ Only end the round if dealer has acted at least once
+  const dealerActed = state.turnCount > 0 && current.id === state.players[state.dealerIndex].id;
+
+  if (dealerActed) {
     const active = state.players.filter(p => !p.eliminated);
     if (active.length > 1) {
-      log('ROUND', `✅ Dealer ${state.players[state.dealerIndex].name} just acted. Ending round.`);
+      log('ROUND', `✅ Dealer ${current.name} just acted. Ending round.`);
       setTimeout(() => endRound(room), 1500);
       return;
     }
@@ -216,6 +219,7 @@ function emitTurn(room) {
     setTimeout(() => handleAIMove(room, current), 1200);
   }
 }
+
 
 function handleAIMove(room, player) {
   const state = rooms[room].gameState;
