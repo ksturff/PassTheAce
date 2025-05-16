@@ -260,6 +260,12 @@ function endRound(room) {
   let losers = [];
 
   console.log("🔎 ROUND END CARDS:");
+  const roundSnapshot = state.players.map(p => ({
+  name: p.name,
+  card: { ...p.card },
+  chips: p.chips
+}));
+
   state.players.forEach(p => {
     const value = ranks[p.card?.rank];
     const summary = value !== undefined ? `Value: ${value}` : `❗ Invalid rank: ${p.card?.rank}`;
@@ -301,11 +307,11 @@ function endRound(room) {
   }
 
   // ✅ SNAPSHOT BEFORE dealing new cards
-const roundSnapshot = state.players.map(p => ({
-  name: p.name,
-  card: p.card,
-  chips: p.chips
-}));
+io.to(room).emit('roundEnded', {
+  updatedPlayers: roundSnapshot,
+  losers
+});
+
 
 // ✅ EMIT the roundEnd event FIRST — players still have their current card
 io.to(room).emit('roundEnded', {
