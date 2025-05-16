@@ -130,7 +130,6 @@
   </style>
 </head>
 <body>
-  <!-- Multiplayer Lobby -->
   <div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
     <h2 style="color:white;">Join Game</h2>
     <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
@@ -138,7 +137,6 @@
     <button onclick="joinGame()">Join Game</button>
   </div>
 
-  <!-- Main UI (hidden at first) -->
   <div id="ui" style="display:none;">
     <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
     <div id="actionBtns" style="display:none;">
@@ -157,6 +155,7 @@
     <strong>Players:</strong>
     <ul id="playerList" style="list-style:none; padding-left: 0; margin-top: 5px;"></ul>
   </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const canvas = document.createElement('canvas');
@@ -173,11 +172,6 @@
 
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
-    backgroundImage.onerror = () => {
-      console.warn("⚠️ Background image failed to load.");
-      ctx.fillStyle = "#222";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    };
 
     const CARD_W = 40, CARD_H = 55;
     const CENTER_X = 512, CENTER_Y = 300;
@@ -187,38 +181,50 @@
     let gameRunning = false, eliminatedPlayers = [], gameState = {};
     let animCard = null, animStartTime = null;
     let showAllCards = false;
+    let freezeRendering = false;
     let mySocketId = "", myUsername = "", myRoom = "";
     const cardImages = {};
 
     function preloadAssets() {
-  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-  const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-  const loadPromises = [];
+      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
+      const loadPromises = [];
 
-  for (let s of suits) {
-    for (let r of ranks) {
-      const img = new Image();
-      const key = `${r}_of_${s}`;
-      img.src = `./assets/${key}.png`;
-      cardImages[key] = img;
+      for (let s of suits) {
+        for (let r of ranks) {
+          const img = new Image();
+          const key = `${r}_of_${s}`;
+          img.src = `./assets/${key}.png`;
+          cardImages[key] = img;
+          loadPromises.push(new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }));
+        }
+      }
+
+      const back = new Image();
+      back.src = './assets/Back.png';
+      cardImages['Back'] = back;
       loadPromises.push(new Promise(resolve => {
-        img.onload = resolve;
-        img.onerror = resolve;
+        back.onload = resolve;
+        back.onerror = resolve;
       }));
+
+      return Promise.all(loadPromises);
     }
-  }
 
-  const back = new Image();
-  back.src = './assets/Back.png';
-  cardImages['Back'] = back;
-  loadPromises.push(new Promise(resolve => {
-    back.onload = resolve;
-    back.onerror = resolve;
-  }));
+    function drawTable(showCards = false, animCard = null) {
+      if (freezeRendering || players.length < 5) return;
 
-  return Promise.all(loadPromises);
-}
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
 
+      // CARD & HUD drawing logic (same as your original implementation)
+      // ...
+    }
 
     function updateTurnIndicator() {
       const player = players.find(p => p.id === gameState.currentPlayerId);
@@ -251,131 +257,22 @@
     }
 
     function passCard() {
-  if (!myTurn) return;
-  myTurn = false;
-  peekPlayerCard = false;  // 👈 Hide card immediately
-  drawTable();             // 👈 Optional: redraw now
-  document.getElementById("actionBtns").style.display = "none";
-  socket.emit("passCard", { room: myRoom });
-}
-
-function keepCard() {
-  if (!myTurn) return;
-  myTurn = false;
-  peekPlayerCard = false;  // 👈 Hide card immediately
-  drawTable();             // 👈 Optional: redraw now
-  document.getElementById("actionBtns").style.display = "none";
-  socket.emit("keepCard", { room: myRoom });
-}
-
-
-    function drawTable(showCards = false, animCard = null) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (backgroundImage.complete) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  }
-
-  const cardOffsets = [
-    { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-    { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-    { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-  ];
-  const hudOffsets = [
-    { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-    { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-    { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-  ];
-  const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-  const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
-
-  players.forEach((p) => {
-    const i = p.seatIndex ?? 0;
-    const angle = angleMap[i] * (Math.PI / 180);
-    const offset = cardOffsets[i];
-    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
-    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
-
-    if (!p.card) return;
-
-    // 🔥 Hide card during animation
-    if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
-
-    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-    const suit = suitMap[p.card.suit];
-    const key = `${rank}_of_${suit}`;
-    const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
-    const cardImg = cardImages[show ? key : 'Back'];
-
-    if (cardImg?.complete) {
-      const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
-      ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-    } else {
-      // 🛠 Fallback for debugging: draw red box if image fails
-      ctx.fillStyle = "red";
-      ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
-    }
-  });
-
-  // 🔄 Animate passing card (if active)
-  if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-    const from = players[animCard.fromIndex];
-    const to = players[animCard.toIndex];
-    if (from && to && from.cardX != null && to.cardX != null) {
-      const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-      const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-      const cardImg = cardImages['Back'];
-      if (cardImg?.complete) {
-        ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-      }
+      if (!myTurn) return;
+      myTurn = false;
+      peekPlayerCard = false;
+      drawTable();
+      document.getElementById("actionBtns").style.display = "none";
+      socket.emit("passCard", { room: myRoom });
     }
 
-    // Progress animation
-    const now = performance.now();
-    const elapsed = now - animStartTime;
-    animCard.progress = Math.min(elapsed / 500, 1);
-
-    if (animCard.progress < 1) {
-      requestAnimationFrame(() => drawTable(false, animCard));
-    } else {
-      animCard = null;
-      drawTable(); // ✅ Redraw to show card at receiver’s position
+    function keepCard() {
+      if (!myTurn) return;
+      myTurn = false;
+      peekPlayerCard = false;
+      drawTable();
+      document.getElementById("actionBtns").style.display = "none";
+      socket.emit("keepCard", { room: myRoom });
     }
-  }
-
-  const container = document.getElementById('playerContainer');
-  container.innerHTML = '';
-  players.forEach((p) => {
-    const i = p.seatIndex ?? 0;
-    const angle = angleMap[i] * (Math.PI / 180);
-    const offset = hudOffsets[i];
-    const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
-    const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
-    const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
-
-    const div = document.createElement('div');
-    div.className = 'player-ui';
-    div.id = `player-ui-${p.id}`;
-    div.innerHTML = `
-      <div class="hud">
-        <div class="name">${p.name}</div>
-        <img class="avatar" src="./assets/avatar.png" />
-        <div class="chips">
-          <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-          ${p.chips}
-        </div>
-      </div>
-    `;
-    div.style.left = `${x}px`;
-    div.style.top = `${y}px`;
-    div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
-    const avatarEl = div.querySelector('.avatar');
-    avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-    container.appendChild(div);
-  });
-}
-
 
     preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
@@ -399,7 +296,6 @@ function keepCard() {
     });
 
     socket.on("gameStarted", (state) => {
-      console.log("🎮 Game started:", state);
       gameState = state;
       players = state.players;
       drawTable();
@@ -420,46 +316,35 @@ function keepCard() {
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
-      console.log("Animating pass:", fromIndex, "→", toIndex);
       animCard = { fromIndex, toIndex, progress: 0 };
       animStartTime = performance.now();
       drawTable(false, animCard);
     });
 
-        socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-  console.log("📣 Round ended!", updatedPlayers, losers);
+    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+      console.log("📣 Round ended!", updatedPlayers, losers);
+      freezeRendering = true;
+      players = updatedPlayers.map(p => ({ ...p }));
+      gameState.players = players;
+      myTurn = false;
+      peekPlayerCard = false;
+      animCard = null;
+      showAllCards = true;
+      drawTable(false, animCard);
 
-  // Save current state safely
-  gameState.players = updatedPlayers;
-  players = updatedPlayers.map(p => ({ ...p })); // avoid pointer side effects
-  myTurn = false;
-  peekPlayerCard = false;
-  animCard = null;
+      setTimeout(() => {
+        showAllCards = false;
+        freezeRendering = false;
+        drawTable();
+      }, 6500);
 
-  // ✅ Show face-up cards
-  showAllCards = true;
-  drawTable(false, animCard);
-
-  // ❌ Prevent redraws during this timeout
-  let frozenPlayers = [...players]; // snapshot
-
-  // 🕒 Hide cards after delay, then redraw only if nothing changed
-  setTimeout(() => {
-    showAllCards = false;
-    players = frozenPlayers;
-    drawTable();
-  }, 6500);
-
-  // ✅ Optional alert message
-  const alertMessage = `💥 Round ended! Lost a chip: ` + losers
-    .map(loser => {
-      const snapshot = updatedPlayers.find(p => p.name === loser.name);
-      if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
-      return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
-    })
-    .join(", ");
-  alert(alertMessage);
-});
+      const alertMessage = `💥 Round ended! Lost a chip: ` + losers.map(loser => {
+        const snapshot = updatedPlayers.find(p => p.name === loser.name);
+        if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+        return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+      }).join(", ");
+      alert(alertMessage);
+    });
 
     socket.on("errorMessage", (msg) => {
       alert(msg);

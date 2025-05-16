@@ -29,6 +29,8 @@ function updateLobby() {
   io.emit('lobbyUpdate', visibleRooms);
 }
 
+let freezeRendering = false; // ❄️ added global freeze flag
+
 io.on('connection', (socket) => {
   log('CONNECT', `🟢 Player connected: ${socket.id}`);
 
@@ -281,7 +283,7 @@ function endRound(room) {
 
   state.players.forEach(p => {
     const value = ranks[p.card?.rank];
-    const summary = value !== undefined ? `Value: ${value}` : `❗ Invalid rank: ${p.card?.rank}`;
+    const summary = value !== undefined ? `Value: ${value}` : `❗️ Invalid rank: ${p.card?.rank}`;
     console.log(`${p.name}: ${p.card?.rank}${p.card?.suit} | ${summary} | Chips: ${p.chips} | Eliminated: ${p.eliminated}`);
 
     if (!p.eliminated && value !== undefined) {
@@ -335,7 +337,6 @@ function endRound(room) {
     losers
   });
 
-  // 🕒 ⏳ Delay everything until AFTER face-up time
   setTimeout(() => {
     activePlayers.forEach(p => {
       const newCard = state.deck.pop();
@@ -354,12 +355,10 @@ function endRound(room) {
     log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
 
     emitTurn(room);
-  }, 7000); // ⏱ Delay to match client flip timeout
-} // ✅ CLOSE the endRound function here
+  }, 7000);
+}
 
-// ✅ START of server setup
 const PORT = process.env.PORT;
 server.listen(PORT, () => {
   log('BOOT', `✅ Server running on port ${PORT}`);
 });
-
