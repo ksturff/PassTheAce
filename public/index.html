@@ -274,110 +274,87 @@
 </script>
 <script>
   function drawTable(showCards = false, animCard = null) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (backgroundImage.complete) {
-      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-    }
+  if (freezeRendering || players.length < 5) return;
 
-    const cardOffsets = [
-      { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-      { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-      { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-    ];
-    const hudOffsets = [
-      { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-      { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-      { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-    ];
-    const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-    const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
-
-    players.forEach((p) => {
-      const i = p.seatIndex ?? 0;
-      const angle = angleMap[i] * (Math.PI / 180);
-      const offset = cardOffsets[i];
-      p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
-      p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
-
-      if (!p.card) return;
-      if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
-
-      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-      const suit = suitMap[p.card.suit];
-      const key = `${rank}_of_${suit}`;
-      const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
-      const cardImg = cardImages[show ? key : 'Back'];
-
-      if (cardImg?.complete) {
-        const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
-        ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-      } else {
-        ctx.fillStyle = "red";
-        ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
-      }
-    });
-
-    // Animate card movement
-    if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-      const from = players[animCard.fromIndex];
-      const to = players[animCard.toIndex];
-      if (from && to && from.cardX != null && to.cardX != null) {
-        const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-        const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-        const cardImg = cardImages['Back'];
-        if (cardImg?.complete) {
-          ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-        }
-      }
-
-      const now = performance.now();
-      const elapsed = now - animStartTime;
-      animCard.progress = Math.min(elapsed / 500, 1);
-
-      if (animCard.progress < 1) {
-        requestAnimationFrame(() => drawTable(false, animCard));
-        return;
-      } else {
-        animCard = null;
-        drawTable();
-        return;
-      }
-    }
-
-    // Draw HUD
-    const container = document.getElementById('playerContainer');
-    container.innerHTML = '';
-    players.forEach((p) => {
-      const i = p.seatIndex ?? 0;
-      const angle = angleMap[i] * (Math.PI / 180);
-      const offset = hudOffsets[i];
-      const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
-      const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
-      const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
-
-      const div = document.createElement('div');
-      div.className = 'player-ui';
-      div.id = `player-ui-${p.id}`;
-      div.innerHTML = `
-        <div class="hud">
-          <div class="name">${p.name}</div>
-          <img class="avatar" src="./assets/avatar.png" />
-          <div class="chips">
-            <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-            ${p.chips}
-          </div>
-        </div>
-      `;
-      div.style.left = `${x}px`;
-      div.style.top = `${y}px`;
-      div.style.transform = `translate(-50%, -50%)${(i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '')}`;
-      const avatarEl = div.querySelector('.avatar');
-      avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-      container.appendChild(div);
-    });
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (backgroundImage.complete) {
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   }
+
+  const cardOffsets = [
+    { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+    { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+    { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+  ];
+  const hudOffsets = [
+    { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+    { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+    { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+  ];
+  const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+  const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
+
+  players.forEach((p) => {
+    if (p.chips <= 0 || !p.card) return; // 🛑 skip eliminated players
+
+    const i = p.seatIndex ?? 0;
+    const angle = angleMap[i] * (Math.PI / 180);
+    const offset = cardOffsets[i];
+    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
+
+    if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
+
+    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+    const suit = suitMap[p.card.suit];
+    const key = `${rank}_of_${suit}`;
+    const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+    const cardImg = cardImages[show ? key : 'Back'];
+
+    if (cardImg?.complete) {
+      const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
+      ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+    } else {
+      ctx.fillStyle = "red";
+      ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
+    }
+  });
+
+  // HUDs
+  const container = document.getElementById('playerContainer');
+  container.innerHTML = '';
+  players.forEach((p) => {
+    const i = p.seatIndex ?? 0;
+    const angle = angleMap[i] * (Math.PI / 180);
+    const offset = hudOffsets[i];
+    const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
+    const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
+    const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
+
+    const div = document.createElement('div');
+    div.className = 'player-ui';
+    div.id = `player-ui-${p.id}`;
+    div.innerHTML = `
+      <div class="hud">
+        <div class="name">${p.name}</div>
+        <img class="avatar" src="./assets/avatar.png" />
+        <div class="chips">
+          <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+          ${p.chips}
+        </div>
+      </div>
+    `;
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
+    const avatarEl = div.querySelector('.avatar');
+    avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+    container.appendChild(div);
+  });
+}
+
 </script>
 <script>
   const socket = io();
