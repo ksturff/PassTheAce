@@ -397,11 +397,15 @@
 
 
     socket.on("gameStarted", (state) => {
-      console.log("🎮 Game started:", state);
-      gameState = state;
-      players = state.players;
-      drawTable();
-    });
+  console.log("🎮 Game started:", state);
+  gameState = state;
+  players = state.players;
+
+  preloadAssets().then(() => {
+    drawTable();
+  });
+});
+
 
     socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
       gameState.players = updatedPlayers;
