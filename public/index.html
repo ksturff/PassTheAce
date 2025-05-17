@@ -179,10 +179,8 @@
     };
 
     const CARD_W = 40, CARD_H = 55;
-    const CENTER_X = canvas.width / 2;
-const CENTER_Y = canvas.height / 2;
-let X_RADIUS = canvas.width / 2.8;
-let Y_RADIUS = canvas.height / 2.5;
+    const CENTER_X = 512, CENTER_Y = 300;
+    let X_RADIUS = 360, Y_RADIUS = 210;
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
     let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false, eliminatedPlayers = [], gameState = {};
@@ -369,36 +367,16 @@ let Y_RADIUS = canvas.height / 2.5;
   });
 }
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  drawTable(); // Re-draw everything for new size
-}
-
-window.addEventListener('resize', resizeCanvas);
-window.addEventListener('load', resizeCanvas);
-
-
-    preloadAssets().then(() => {
-      document.getElementById("startBtn").disabled = false;
-    });
-
-    const socket = io();
-    socket.on("welcome", (msg) => {
-      console.log("✅", msg);
-      mySocketId = socket.id;
-    });
 
     socket.on("playerList", (playersList) => {
-  const listEl = document.getElementById("playerList");
-  listEl.innerHTML = "";
-  playersList.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p.name || "Unnamed Player";
-    listEl.appendChild(li);
-  });
-});
-
+      const listEl = document.getElementById("playerList");
+      listEl.innerHTML = "";
+      playersList.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.name;
+        listEl.appendChild(li);
+      });
+    });
 
     socket.on("gameStarted", (state) => {
       console.log("🎮 Game started:", state);
