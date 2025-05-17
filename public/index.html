@@ -179,8 +179,10 @@
     };
 
     const CARD_W = 40, CARD_H = 55;
-    const CENTER_X = 512, CENTER_Y = 300;
-    let X_RADIUS = 360, Y_RADIUS = 210;
+    const CENTER_X = canvas.width / 2;
+const CENTER_Y = canvas.height / 2;
+let X_RADIUS = canvas.width / 2.8;
+let Y_RADIUS = canvas.height / 2.5;
     let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
     let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false, eliminatedPlayers = [], gameState = {};
@@ -368,13 +370,11 @@
 }
 
 function resizeCanvas() {
-  const aspectRatio = 1024 / 600;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const scale = Math.min(width / 1024, height / 600);
-
-  canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  drawTable(); // Re-draw everything for new size
 }
+
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('load', resizeCanvas);
 
