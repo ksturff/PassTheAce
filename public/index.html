@@ -158,7 +158,7 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    
+
      const socket = io();
 
     const canvas = document.createElement('canvas');
@@ -372,14 +372,26 @@
 
 
     socket.on("playerList", (playersList) => {
-      const listEl = document.getElementById("playerList");
-      listEl.innerHTML = "";
-      playersList.forEach(p => {
-        const li = document.createElement("li");
-        li.innerText = p.name;
-        listEl.appendChild(li);
-      });
-    });
+  const listEl = document.getElementById("playerList");
+  listEl.innerHTML = "";
+  playersList.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = p.name;
+    listEl.appendChild(li);
+  });
+
+  // ✅ Count human players (non-bots)
+  const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
+
+  // ✅ Enable start button if there are at least 2 humans
+  const startBtn = document.getElementById("startBtn");
+  if (humanCount >= 2) {
+    startBtn.disabled = false;
+  } else {
+    startBtn.disabled = true;
+  }
+});
+
 
     socket.on("gameStarted", (state) => {
       console.log("🎮 Game started:", state);
