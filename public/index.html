@@ -6,36 +6,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
     body {
-      margin: 0; 
-      background: #111; 
-      overflow: hidden; 
-      color: white; 
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      color: white;
       font-family: 'Orbitron', sans-serif;
     }
     canvas {
       display: block;
     }
     #ui {
-      position: absolute; 
-      bottom: 40px; 
-      right: 40px; 
-      text-align: right; 
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      text-align: right;
       z-index: 10;
     }
     button {
-      margin: 5px; 
-      padding: 12px 25px; 
+      margin: 5px;
+      padding: 12px 25px;
       font-size: 18px;
-      background: linear-gradient(45deg, #444, #888); 
+      background: linear-gradient(45deg, #444, #888);
       color: #fff;
-      border: none; 
-      border-radius: 10px; 
+      border: none;
+      border-radius: 10px;
       cursor: pointer;
-      box-shadow: 0 0 10px #00f7ff; 
+      box-shadow: 0 0 10px #00f7ff;
       transition: 0.3s;
     }
     button:hover {
-      background: linear-gradient(45deg, #666, #aaa); 
+      background: linear-gradient(45deg, #666, #aaa);
       box-shadow: 0 0 20px #00f7ff;
     }
     button:disabled {
@@ -44,73 +44,73 @@
       box-shadow: none;
     }
     #turnIndicator {
-      position: absolute; 
-      top: 60px; 
+      position: absolute;
+      top: 60px;
       width: 100%;
-      text-align: center; 
-      font-size: 20px; 
-      color: #0ff; 
+      text-align: center;
+      font-size: 20px;
+      color: #0ff;
       text-shadow: 0 0 5px #0ff;
     }
     #endOverlay {
-      display: none; 
-      position: absolute; 
-      top: 0; 
+      display: none;
+      position: absolute;
+      top: 0;
       left: 0;
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0,0,0,0.85);
-      color: white; 
-      font-size: 32px; 
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      font-size: 32px;
       display: flex;
-      align-items: center; 
+      align-items: center;
       justify-content: center;
-      flex-direction: column; 
+      flex-direction: column;
       z-index: 20;
     }
     #endOverlay button {
-      font-size: 22px; 
+      font-size: 22px;
       margin-top: 20px;
-      background: #28a745; 
+      background: #28a745;
       box-shadow: 0 0 15px #28a745;
     }
     #playerContainer {
-      position: absolute; 
-      top: 0; 
+      position: absolute;
+      top: 0;
       left: 0;
-      width: 100%; 
-      height: 100%; 
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
     .player-ui {
-      position: absolute; 
+      position: absolute;
       display: flex;
-      align-items: center; 
+      align-items: center;
       gap: 8px;
-      color: white; 
+      color: white;
       font-family: 'Orbitron', sans-serif;
       pointer-events: none;
     }
     .hud {
-      display: flex; 
+      display: flex;
       flex-direction: column;
-      align-items: center; 
-      pointer-events: none; 
+      align-items: center;
+      pointer-events: none;
       gap: 3px;
     }
     .hud .name {
-      background: #000; 
-      color: white; 
+      background: #000;
+      color: white;
       font-size: 10px;
-      padding: 2px 8px; 
-      border-radius: 20px; 
+      padding: 2px 8px;
+      border-radius: 20px;
       text-align: center;
     }
     .hud .avatar {
-      width: 42px; 
-      height: 42px; 
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      border: 2px solid white; 
+      border: 2px solid white;
       box-shadow: 0 0 4px #000;
     }
     .hud .avatar.active-glow {
@@ -118,237 +118,350 @@
       border-color: #0ff;
     }
     .hud .chips {
-      font-size: 10px; 
-      color: gold; 
+      font-size: 10px;
+      color: gold;
       background: none;
-      padding: 1px 4px; 
+      padding: 1px 4px;
       border-radius: 10px;
-      display: flex; 
-      align-items: center; 
+      display: flex;
+      align-items: center;
       gap: 2px;
     }
   </style>
 </head>
 <body>
-  <div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
-    <h2 style="color:white;">Join Game</h2>
-    <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <input id="roomInput" type="text" placeholder="Enter room code" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <button onclick="joinGame()">Join Game</button>
+<!-- Multiplayer Lobby -->
+<div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
+  <h2 style="color:white;">Join Game</h2>
+  <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
+  <input id="roomInput" type="text" placeholder="Enter room code" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
+  <button onclick="joinGame()">Join Game</button>
+</div>
+
+<!-- Main UI (hidden at first) -->
+<div id="ui" style="display:none;">
+  <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
+  <div id="actionBtns" style="display:none;">
+    <button id="keepBtn" onclick="keepCard()">Keep</button>
+    <button id="passBtn" onclick="passCard()">Pass</button>
   </div>
+</div>
 
-  <div id="ui" style="display:none;">
-    <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
-    <div id="actionBtns" style="display:none;">
-      <button id="keepBtn" onclick="keepCard()">Keep</button>
-      <button id="passBtn" onclick="passCard()">Pass</button>
-    </div>
-  </div>
+<div id="turnIndicator"></div>
+<div id="endOverlay">
+  <div id="winMessage">Player X Wins!</div>
+  <button onclick="restartGame()">Play Again</button>
+</div>
+<div id="playerContainer"></div>
+<div id="players" style="position:absolute; top:10px; left:10px; z-index:100; font-size:14px; background:#222; padding:10px; border-radius:8px; box-shadow: 0 0 10px #0ff;">
+  <strong>Players:</strong>
+  <ul id="playerList" style="list-style:none; padding-left: 0; margin-top: 5px;"></ul>
+</div>
 
-  <div id="turnIndicator"></div>
-  <div id="endOverlay">
-    <div id="winMessage">Player X Wins!</div>
-    <button onclick="restartGame()">Play Again</button>
-  </div>
-  <div id="playerContainer"></div>
-  <div id="players" style="position:absolute; top:10px; left:10px; z-index:100; font-size:14px; background:#222; padding:10px; border-radius:8px; box-shadow: 0 0 10px #0ff;">
-    <strong>Players:</strong>
-    <ul id="playerList" style="list-style:none; padding-left: 0; margin-top: 5px;"></ul>
-  </div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 600;
+  canvas.style.display = 'block';
+  canvas.style.margin = '0 auto';
+  canvas.style.position = 'absolute';
+  canvas.style.left = '50%';
+  canvas.style.top = '50%';
+  canvas.style.transform = 'translate(-50%, -50%)';
+  document.body.insertBefore(canvas, document.getElementById('playerContainer'));
+  const ctx = canvas.getContext('2d');
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 600;
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
-    canvas.style.position = 'absolute';
-    canvas.style.left = '50%';
-    canvas.style.top = '50%';
-    canvas.style.transform = 'translate(-50%, -50%)';
-    document.body.insertBefore(canvas, document.getElementById('playerContainer'));
-    const ctx = canvas.getContext('2d');
+  const backgroundImage = new Image();
+  backgroundImage.src = './assets/background.png';
+  backgroundImage.onerror = () => {
+    console.warn("⚠️ Background image failed to load.");
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
 
-    const backgroundImage = new Image();
-    backgroundImage.src = './assets/background.png';
+  const CARD_W = 40, CARD_H = 55;
+  const CENTER_X = 512, CENTER_Y = 300;
+  let X_RADIUS = 360, Y_RADIUS = 210;
+  let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
+  let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
+  let gameRunning = false, eliminatedPlayers = [], gameState = {};
+  let animCard = null, animStartTime = null;
+  let showAllCards = false;
+  let mySocketId = "", myUsername = "", myRoom = "";
+  const cardImages = {};
 
-    const CARD_W = 40, CARD_H = 55;
-    const CENTER_X = 512, CENTER_Y = 300;
-    let X_RADIUS = 360, Y_RADIUS = 210;
-    let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
-    let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
-    let gameRunning = false, eliminatedPlayers = [], gameState = {};
-    let animCard = null, animStartTime = null;
-    let showAllCards = false;
-    let freezeRendering = false;
-    let mySocketId = "", myUsername = "", myRoom = "";
-    const cardImages = {};
+  function preloadAssets() {
+    const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+    const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'jack', 'queen', 'king', 'ace'];
+    const loadPromises = [];
 
-    function preloadAssets() {
-      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-      const loadPromises = [];
+    for (let s of suits) {
+      for (let r of ranks) {
+        const img = new Image();
+        const key = `${r}_of_${s}`;
+        img.src = `./assets/${key}.png`;
+        cardImages[key] = img;
+        loadPromises.push(new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        }));
+      }
+    }
 
-      for (let s of suits) {
-        for (let r of ranks) {
-          const img = new Image();
-          const key = `${r}_of_${s}`;
-          img.src = `./assets/${key}.png`;
-          cardImages[key] = img;
-          loadPromises.push(new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }));
+    const back = new Image();
+    back.src = './assets/Back.png';
+    cardImages['Back'] = back;
+    loadPromises.push(new Promise(resolve => {
+      back.onload = resolve;
+      back.onerror = resolve;
+    }));
+
+    return Promise.all(loadPromises);
+  }
+</script>
+<script>
+  function updateTurnIndicator() {
+    const player = players.find(p => p.id === gameState.currentPlayerId);
+    document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
+  }
+
+  function restartGame() {
+    document.getElementById("endOverlay").style.display = "none";
+    document.getElementById("startBtn").style.display = "block";
+    dealerIndex = null;
+    startGame();
+  }
+
+  function joinGame() {
+    const name = document.getElementById("usernameInput").value.trim();
+    const room = document.getElementById("roomInput").value.trim();
+    if (!name || !room) {
+      alert("Please enter both a name and a room code.");
+      return;
+    }
+
+    myUsername = name;
+    myRoom = room;
+    socket.emit("join", { username: name, room });
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("ui").style.display = "block";
+    document.getElementById("endOverlay").style.display = "none";
+    document.getElementById("startBtn").style.display = "block";
+  }
+
+  function startGame() {
+    socket.emit("startGame", myRoom);
+  }
+
+  function passCard() {
+    if (!myTurn) return;
+    myTurn = false;
+    peekPlayerCard = false;
+    drawTable();
+    document.getElementById("actionBtns").style.display = "none";
+    socket.emit("passCard", { room: myRoom });
+  }
+
+  function keepCard() {
+    if (!myTurn) return;
+    myTurn = false;
+    peekPlayerCard = false;
+    drawTable();
+    document.getElementById("actionBtns").style.display = "none";
+    socket.emit("keepCard", { room: myRoom });
+  }
+</script>
+<script>
+  function drawTable(showCards = false, animCard = null) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (backgroundImage.complete) {
+      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    const cardOffsets = [
+      { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+      { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+      { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+    ];
+    const hudOffsets = [
+      { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+      { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+      { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+    ];
+    const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+    const radiusX = X_RADIUS - 100, radiusY = Y_RADIUS - 50;
+
+    players.forEach((p) => {
+      const i = p.seatIndex ?? 0;
+      const angle = angleMap[i] * (Math.PI / 180);
+      const offset = cardOffsets[i];
+      p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+      p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
+
+      if (!p.card) return;
+      if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
+
+      const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+      const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+      const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+      const suit = suitMap[p.card.suit];
+      const key = `${rank}_of_${suit}`;
+      const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+      const cardImg = cardImages[show ? key : 'Back'];
+
+      if (cardImg?.complete) {
+        const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
+        ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+      } else {
+        ctx.fillStyle = "red";
+        ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
+      }
+    });
+
+    // Animate card movement
+    if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+      const from = players[animCard.fromIndex];
+      const to = players[animCard.toIndex];
+      if (from && to && from.cardX != null && to.cardX != null) {
+        const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
+        const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
+        const cardImg = cardImages['Back'];
+        if (cardImg?.complete) {
+          ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
         }
       }
 
-      const back = new Image();
-      back.src = './assets/Back.png';
-      cardImages['Back'] = back;
-      loadPromises.push(new Promise(resolve => {
-        back.onload = resolve;
-        back.onerror = resolve;
-      }));
+      const now = performance.now();
+      const elapsed = now - animStartTime;
+      animCard.progress = Math.min(elapsed / 500, 1);
 
-      return Promise.all(loadPromises);
-    }
-
-    function drawTable(showCards = false, animCard = null) {
-      if (freezeRendering || players.length < 5) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (backgroundImage.complete) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      }
-
-      // CARD & HUD drawing logic (same as your original implementation)
-      // ...
-    }
-
-    function updateTurnIndicator() {
-      const player = players.find(p => p.id === gameState.currentPlayerId);
-      document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
-    }
-
-    function restartGame() {
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-      dealerIndex = null;
-      startGame();
-    }
-
-    function joinGame() {
-      const name = document.getElementById("usernameInput").value.trim();
-      const room = document.getElementById("roomInput").value.trim();
-      if (!name || !room) return alert("Please enter both a name and a room code.");
-
-      myUsername = name;
-      myRoom = room;
-      socket.emit("join", { username: name, room });
-      document.getElementById("lobby").style.display = "none";
-      document.getElementById("ui").style.display = "block";
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-    }
-
-    function startGame() {
-      socket.emit("startGame", myRoom);
-    }
-
-    function passCard() {
-      if (!myTurn) return;
-      myTurn = false;
-      peekPlayerCard = false;
-      drawTable();
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("passCard", { room: myRoom });
-    }
-
-    function keepCard() {
-      if (!myTurn) return;
-      myTurn = false;
-      peekPlayerCard = false;
-      drawTable();
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("keepCard", { room: myRoom });
-    }
-
-    preloadAssets().then(() => {
-      document.getElementById("startBtn").disabled = false;
-    });
-
-    const socket = io();
-
-    socket.on("welcome", (msg) => {
-      console.log("✅", msg);
-      mySocketId = socket.id;
-    });
-
-    socket.on("playerList", (playersList) => {
-      const listEl = document.getElementById("playerList");
-      listEl.innerHTML = "";
-      playersList.forEach(p => {
-        const li = document.createElement("li");
-        li.innerText = p.name;
-        listEl.appendChild(li);
-      });
-    });
-
-    socket.on("gameStarted", (state) => {
-      gameState = state;
-      players = state.players;
-      drawTable();
-    });
-
-    socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
-      gameState.players = updatedPlayers;
-      gameState.currentPlayerId = currentPlayerId;
-      players = updatedPlayers;
-      myTurn = (socket.id === currentPlayerId);
-      peekPlayerCard = myTurn;
-      updateTurnIndicator();
-      drawTable();
-      const actionBtns = document.getElementById("actionBtns");
-      const buttons = document.querySelectorAll("#actionBtns button");
-      actionBtns.style.display = myTurn ? "block" : "none";
-      buttons.forEach(btn => btn.disabled = !myTurn);
-    });
-
-    socket.on("cardPassed", ({ fromIndex, toIndex }) => {
-      animCard = { fromIndex, toIndex, progress: 0 };
-      animStartTime = performance.now();
-      drawTable(false, animCard);
-    });
-
-    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-      console.log("📣 Round ended!", updatedPlayers, losers);
-      freezeRendering = true;
-      players = updatedPlayers.map(p => ({ ...p }));
-      gameState.players = players;
-      myTurn = false;
-      peekPlayerCard = false;
-      animCard = null;
-      showAllCards = true;
-      drawTable(false, animCard);
-
-      setTimeout(() => {
-        showAllCards = false;
-        freezeRendering = false;
+      if (animCard.progress < 1) {
+        requestAnimationFrame(() => drawTable(false, animCard));
+        return;
+      } else {
+        animCard = null;
         drawTable();
-      }, 6500);
+        return;
+      }
+    }
 
-      const alertMessage = `💥 Round ended! Lost a chip: ` + losers.map(loser => {
-        const snapshot = updatedPlayers.find(p => p.name === loser.name);
-        if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
-        return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
-      }).join(", ");
-      alert(alertMessage);
-    });
+    // Draw HUD
+    const container = document.getElementById('playerContainer');
+    container.innerHTML = '';
+    players.forEach((p) => {
+      const i = p.seatIndex ?? 0;
+      const angle = angleMap[i] * (Math.PI / 180);
+      const offset = hudOffsets[i];
+      const outerX = X_RADIUS + 30, outerY = Y_RADIUS + 30;
+      const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
+      const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
 
-    socket.on("errorMessage", (msg) => {
-      alert(msg);
+      const div = document.createElement('div');
+      div.className = 'player-ui';
+      div.id = `player-ui-${p.id}`;
+      div.innerHTML = `
+        <div class="hud">
+          <div class="name">${p.name}</div>
+          <img class="avatar" src="./assets/avatar.png" />
+          <div class="chips">
+            <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+            ${p.chips}
+          </div>
+        </div>
+      `;
+      div.style.left = `${x}px`;
+      div.style.top = `${y}px`;
+      div.style.transform = `translate(-50%, -50%)${(i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '')}`;
+      const avatarEl = div.querySelector('.avatar');
+      avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+      container.appendChild(div);
     });
-  </script>
+  }
+</script>
+<script>
+  const socket = io();
+
+  preloadAssets().then(() => {
+    document.getElementById("startBtn").disabled = false;
+  });
+
+  socket.on("welcome", (msg) => {
+    console.log("✅", msg);
+    mySocketId = socket.id;
+  });
+
+  socket.on("playerList", (playersList) => {
+    const listEl = document.getElementById("playerList");
+    listEl.innerHTML = "";
+    playersList.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = p.name;
+      listEl.appendChild(li);
+    });
+  });
+
+  socket.on("gameStarted", (state) => {
+    console.log("🎮 Game started:", state);
+    gameState = state;
+    players = state.players;
+    drawTable();
+  });
+
+  socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
+    gameState.players = updatedPlayers;
+    gameState.currentPlayerId = currentPlayerId;
+    players = updatedPlayers;
+    myTurn = (socket.id === currentPlayerId);
+    peekPlayerCard = myTurn;
+    updateTurnIndicator();
+    drawTable();
+    const actionBtns = document.getElementById("actionBtns");
+    const buttons = document.querySelectorAll("#actionBtns button");
+    actionBtns.style.display = myTurn ? "block" : "none";
+    buttons.forEach(btn => btn.disabled = !myTurn);
+  });
+
+  socket.on("cardPassed", ({ fromIndex, toIndex }) => {
+    console.log("Animating pass:", fromIndex, "→", toIndex);
+    animCard = { fromIndex, toIndex, progress: 0 };
+    animStartTime = performance.now();
+    drawTable(false, animCard);
+  });
+
+  socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+    console.log("📣 Round ended!", updatedPlayers, losers);
+
+    // Snapshot state
+    gameState.players = updatedPlayers;
+    players = updatedPlayers.map(p => ({ ...p }));
+    myTurn = false;
+    peekPlayerCard = false;
+    animCard = null;
+
+    // Show all cards temporarily
+    showAllCards = true;
+    drawTable(false, animCard);
+
+    // Freeze display for a short moment
+    let frozenPlayers = [...players];
+    setTimeout(() => {
+      showAllCards = false;
+      players = frozenPlayers;
+      drawTable();
+    }, 6500);
+
+    const alertMessage = `💥 Round ended! Lost a chip: ` + losers.map(loser => {
+      const snapshot = updatedPlayers.find(p => p.name === loser.name);
+      if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+      return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+    }).join(", ");
+    alert(alertMessage);
+  });
+
+  socket.on("errorMessage", (msg) => {
+    alert(msg);
+  });
+</script>
 </body>
 </html>
