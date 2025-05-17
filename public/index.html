@@ -192,33 +192,35 @@
     let mySocketId = "", myUsername = "", myRoom = "";
     const cardImages = {};
     function preloadAssets() {
-      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-      const ranks = [2,3,4,5,6,7,8,9,10,'jack','queen','king','ace'];
-      const loadPromises = [];
+  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+  const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'jack', 'queen', 'king', 'ace'];
+  const loadPromises = [];
 
-      for (let s of suits) {
-        for (let r of ranks) {
-          const img = new Image();
-          const key = `${r}_of_${s}`;
-          img.src = `./assets/${key}.png`;
-          cardImages[key] = img;
-          loadPromises.push(new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }));
-        }
-      }
-
-      const back = new Image();
-      back.src = './assets/back.png';
-      cardImages['back'] = back;
+  for (let s of suits) {
+    for (let r of ranks) {
+      const img = new Image();
+      const key = `${r}_of_${s}`;
+      img.src = `./assets/${key}.png`;
+      cardImages[key] = img;
       loadPromises.push(new Promise(resolve => {
-        back.onload = resolve;
-        back.onerror = resolve;
+        img.onload = resolve;
+        img.onerror = resolve;
       }));
-
-      return Promise.all(loadPromises);
     }
+  }
+
+  // ✅ Add the card back
+  const back = new Image();
+  back.src = './assets/back.png';
+  cardImages['back'] = back;
+  loadPromises.push(new Promise(resolve => {
+    back.onload = resolve;
+    back.onerror = resolve;
+  }));
+
+  return Promise.all(loadPromises);
+}
+
 
     function updateTurnIndicator() {
       const player = players.find(p => p.id === gameState.currentPlayerId);
@@ -298,21 +300,16 @@
     if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
 
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+    const suit = suitMap[p.card.suit];
+    const key = `${rank}_of_${suit}`; // ✅ FIXED: Backticks added
 
-let rank = p.card.rank;
-let suit = p.card.suit;
-
-if (typeof rank === 'string' && rankMap[rank]) rank = rankMap[rank];
-if (suitMap[suit]) suit = suitMap[suit];
-
-const key = `${String(rank).toLowerCase()}_of_${suit.toLowerCase()}`;
-const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
-const cardImg = cardImages[show ? key : 'back'] || cardImages['back'];
-
+    const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+    const cardImg = cardImages[show ? key : 'back'];
 
     if (cardImg?.complete) {
-      const scale = cardImg === cardImages['Back'] ? 1.0 : 0.95;
+      const scale = cardImg === cardImages['back'] ? 1.0 : 0.95;
       ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
     } else {
       ctx.fillStyle = "red";
@@ -326,7 +323,7 @@ const cardImg = cardImages[show ? key : 'back'] || cardImages['back'];
     if (from && to && from.cardX != null && to.cardX != null) {
       const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
       const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-      const cardImg = cardImages['Back'];
+      const cardImg = cardImages['back'];
       if (cardImg?.complete) {
         ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
       }
