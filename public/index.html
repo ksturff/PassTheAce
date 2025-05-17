@@ -367,6 +367,17 @@
   });
 }
 
+function resizeCanvas() {
+  const aspectRatio = 1024 / 600;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const scale = Math.min(width / 1024, height / 600);
+
+  canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
+
 
     preloadAssets().then(() => {
       document.getElementById("startBtn").disabled = false;
@@ -379,14 +390,15 @@
     });
 
     socket.on("playerList", (playersList) => {
-      const listEl = document.getElementById("playerList");
-      listEl.innerHTML = "";
-      playersList.forEach(p => {
-        const li = document.createElement("li");
-        li.innerText = p.name;
-        listEl.appendChild(li);
-      });
-    });
+  const listEl = document.getElementById("playerList");
+  listEl.innerHTML = "";
+  playersList.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = p.name || "Unnamed Player";
+    listEl.appendChild(li);
+  });
+});
+
 
     socket.on("gameStarted", (state) => {
       console.log("🎮 Game started:", state);
