@@ -160,6 +160,10 @@
   <script>
 
      const socket = io();
+     socket.on("connect", () => {
+  mySocketId = socket.id;
+});
+
 
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
