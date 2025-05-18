@@ -359,8 +359,11 @@
     const offset = hudOffsets[i];
     const outerX = X_RADIUS + 30;
     const outerY = Y_RADIUS + 30;
-    const x = CENTER_X + Math.cos(angle) * outerX + offset.x * scaleX;
-    const y = CENTER_Y + Math.sin(angle) * outerY + offset.y * scaleY;
+    const scaleX = canvas.width / 1024;
+const scaleY = canvas.height / 600;
+const x = (p.cardX + offset.x) * scaleX;
+const y = (p.cardY + offset.y) * scaleY;
+
 
     const div = document.createElement('div');
     div.className = 'player-ui';
