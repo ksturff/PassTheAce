@@ -379,10 +379,16 @@ resizeGame();
     const i = p.seatIndex ?? 0;
     const angle = angleMap[i] * (Math.PI / 180);
     const offset = hudOffsets[i];
-    const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-    const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-    const x = baseX + offset.x * scaleX;
-    const y = baseY + offset.y * scaleY;
+const outerX = X_RADIUS + 30;
+const outerY = Y_RADIUS + 30;
+const scaleX = canvas.width / 1024;
+const scaleY = canvas.height / 600;
+
+const baseX = CENTER_X + Math.cos(angle) * outerX;
+const baseY = CENTER_Y + Math.sin(angle) * outerY;
+const x = baseX + offset.x * scaleX;
+const y = baseY + offset.y * scaleY;
+
 
     const div = document.createElement('div');
     div.className = 'player-ui';
