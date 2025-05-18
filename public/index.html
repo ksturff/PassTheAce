@@ -165,17 +165,39 @@
 });
 
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 600;
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
-    canvas.style.position = 'absolute';
-    canvas.style.left = '50%';
-    canvas.style.top = '50%';
-    canvas.style.transform = 'translate(-50%, -50%)';
-    document.body.insertBefore(canvas, document.getElementById('playerContainer'));
-    const ctx = canvas.getContext('2d');
+    // Create wrapper for responsive scaling
+const wrapper = document.createElement('div');
+wrapper.style.position = 'absolute';
+wrapper.style.left = '50%';
+wrapper.style.top = '50%';
+wrapper.style.transform = 'translate(-50%, -50%)';
+wrapper.style.width = '1024px';
+wrapper.style.height = '600px';
+wrapper.style.overflow = 'hidden';
+wrapper.style.zIndex = '1';
+
+// Create canvas
+const canvas = document.createElement('canvas');
+canvas.width = 1024;
+canvas.height = 600;
+canvas.style.display = 'block';
+canvas.style.width = '100%';
+canvas.style.height = '100%';
+
+wrapper.appendChild(canvas);
+document.body.appendChild(wrapper);
+
+const ctx = canvas.getContext('2d');
+
+function resizeGame() {
+  const scaleX = window.innerWidth / 1024;
+  const scaleY = window.innerHeight / 600;
+  const scale = Math.min(scaleX, scaleY);
+  wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+window.addEventListener('resize', resizeGame);
+resizeGame();
+
 
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
