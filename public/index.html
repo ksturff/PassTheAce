@@ -303,8 +303,8 @@
     const i = p.seatIndex ?? 0;
     const angle = angleMap[i] * (Math.PI / 180);
     const offset = cardOffsets[i];
-    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
-    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
+    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
 
     if (!p.card) return;
     if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) return;
@@ -357,16 +357,10 @@
     const i = p.seatIndex ?? 0;
     const angle = angleMap[i] * (Math.PI / 180);
     const offset = hudOffsets[i];
-    const outerX = X_RADIUS + 30;
-    const outerY = Y_RADIUS + 30;
-    const scaleX = canvas.width / 1024;
-const scaleY = canvas.height / 600;
-const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-const x = baseX + offset.x;
-const y = baseY + offset.y;
-
-
+    const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
+    const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
+    const x = baseX + offset.x * scaleX;
+    const y = baseY + offset.y * scaleY;
 
     const div = document.createElement('div');
     div.className = 'player-ui';
@@ -389,6 +383,7 @@ const y = baseY + offset.y;
     container.appendChild(div);
   });
 }
+
 
 
     socket.on("playerList", (playersList) => {
