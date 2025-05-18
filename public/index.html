@@ -185,7 +185,11 @@ canvas.style.width = '100%';
 canvas.style.height = '100%';
 
 wrapper.appendChild(canvas);
+// Move playerContainer inside the wrapper
+const hudContainer = document.getElementById("playerContainer");
+wrapper.appendChild(hudContainer);
 document.body.appendChild(wrapper);
+
 
 const ctx = canvas.getContext('2d');
 
