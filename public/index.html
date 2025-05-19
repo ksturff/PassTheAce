@@ -184,6 +184,16 @@ socket.on("playerList", (playersList) => {
   }
 });
 
+socket.on("gameStarted", (state) => {
+  console.log("🎮 Game started:", state);
+  gameState = state;
+  players = state.players;
+
+  preloadAssets().then(() => {
+    drawTable();
+  });
+});
+
 
     // Create wrapper for responsive scaling
 const wrapper = document.createElement('div');
@@ -452,17 +462,6 @@ players.forEach((p) => {
   const avatarEl = div.querySelector('.avatar');
   avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
   container.appendChild(div);
-});
-
-
-  socket.on("gameStarted", (state) => {
-  console.log("🎮 Game started:", state);
-  gameState = state;
-  players = state.players;
-
-  preloadAssets().then(() => {
-    drawTable();
-  });
 });
 
 
