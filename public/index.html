@@ -160,6 +160,7 @@
   <script>
 
      const socket = io();
+     socket.emit("requestLobbyState");
      socket.on("connect", () => {
   mySocketId = socket.id;
 });
