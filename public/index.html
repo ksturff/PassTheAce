@@ -273,6 +273,7 @@ resizeGame();
       myUsername = name;
       myRoom = room;
       socket.emit("join", { username: name, room });
+      socket.emit("requestLobbyState");
       document.getElementById("lobby").style.display = "none";
       document.getElementById("ui").style.display = "block";
       document.getElementById("endOverlay").style.display = "none";
