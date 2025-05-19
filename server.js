@@ -338,25 +338,25 @@ function endRound(room) {
   });
 
   setTimeout(() => {
-    activePlayers.forEach(p => {
-      const newCard = state.deck.pop();
-      if (newCard) {
-        p.card = newCard;
-        log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
-      }
-    });
+  activePlayers.forEach(p => {
+    const newCard = state.deck.pop();
+    if (newCard) {
+      p.card = newCard;
+      log('DEAL', `New card to ${p.name}: ${newCard.rank}${newCard.suit}`);
+    }
+  });
 
-    state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
-    state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
-    state.roundStartIndex = state.currentTurnIndex;
-    state.turnCount = 0;
+  state.dealerIndex = getNextActiveIndex(state.players, state.dealerIndex);
+  state.currentTurnIndex = getNextActiveIndex(state.players, state.dealerIndex);
+  state.roundStartIndex = state.currentTurnIndex;
+  state.turnCount = 0; // ✅ RESET TURN COUNT
 
-    log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
-    log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
+  log('DEALER', `New dealer: ${state.players[state.dealerIndex].name} (seat ${state.dealerIndex})`);
+  log('TURN START', `First to act: ${state.players[state.currentTurnIndex].name}`);
 
-    emitTurn(room);
-  }, 7000);
-}
+  emitTurn(room);
+}, 7000);
+} 
 
 const PORT = process.env.PORT;
 server.listen(PORT, () => {
