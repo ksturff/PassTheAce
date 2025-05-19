@@ -434,7 +434,7 @@ players.forEach((p) => {
 });
 
 
-    socket.on("playerList", (playersList) => {
+   socket.on("playerList", (playersList) => {
   const listEl = document.getElementById("playerList");
   listEl.innerHTML = "";
   playersList.forEach(p => {
@@ -446,12 +446,10 @@ players.forEach((p) => {
   // ✅ Count human players (non-bots)
   const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
 
-  // ✅ Enable start button if there are at least 2 humans
+  // ✅ Enable the Start Game button only if 2+ humans
   const startBtn = document.getElementById("startBtn");
-  if (humanCount >= 2) {
-    startBtn.disabled = false;
-  } else {
-    startBtn.disabled = true;
+  if (startBtn) {
+    startBtn.disabled = humanCount < 2;
   }
 });
 
