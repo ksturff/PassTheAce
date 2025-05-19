@@ -165,6 +165,25 @@
   mySocketId = socket.id;
 });
 
+socket.on("playerList", (playersList) => {
+  const listEl = document.getElementById("playerList");
+  listEl.innerHTML = "";
+  playersList.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = p.name;
+    listEl.appendChild(li);
+  });
+
+  // ✅ Count human players (non-bots)
+  const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
+
+  // ✅ Enable the Start Game button only if 2+ humans
+  const startBtn = document.getElementById("startBtn");
+  if (startBtn) {
+    startBtn.disabled = humanCount < 2;
+  }
+});
+
 
     // Create wrapper for responsive scaling
 const wrapper = document.createElement('div');
@@ -436,27 +455,7 @@ players.forEach((p) => {
 });
 
 
-   socket.on("playerList", (playersList) => {
-  const listEl = document.getElementById("playerList");
-  listEl.innerHTML = "";
-  playersList.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p.name;
-    listEl.appendChild(li);
-  });
-
-  // ✅ Count human players (non-bots)
-  const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
-
-  // ✅ Enable the Start Game button only if 2+ humans
-  const startBtn = document.getElementById("startBtn");
-  if (startBtn) {
-    startBtn.disabled = humanCount < 2;
-  }
-});
-
-
-    socket.on("gameStarted", (state) => {
+  socket.on("gameStarted", (state) => {
   console.log("🎮 Game started:", state);
   gameState = state;
   players = state.players;
