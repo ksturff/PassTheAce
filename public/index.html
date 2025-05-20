@@ -387,29 +387,34 @@ resizeGame();
   });
 
   // Card animation pass
-  if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-    const from = players[animCard.fromIndex];
-    const to = players[animCard.toIndex];
-    if (from && to && from.cardX != null && to.cardX != null) {
-      const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-      const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-      const cardImg = cardImages['back'];
-      if (cardImg?.complete) {
-        ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-      }
-    }
+  // ✅ Animation Fix - Prevent runaway frame loop
+if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+  const from = players[animCard.fromIndex];
+  const to = players[animCard.toIndex];
 
-    const now = performance.now();
-    const elapsed = now - animStartTime;
-    animCard.progress = Math.min(elapsed / 500, 1);
-
-    if (animCard.progress < 1) {
-      requestAnimationFrame(() => drawTable(false, animCard));
-    } else {
-      animCard = null;
-      drawTable();
+  if (from && to && from.cardX != null && to.cardX != null) {
+    const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
+    const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
+    const cardImg = cardImages['back'];
+    if (cardImg?.complete) {
+      ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
     }
   }
+
+  const now = performance.now();
+  const elapsed = now - animStartTime;
+  animCard.progress = Math.min(elapsed / 500, 1);
+
+  if (animCard.progress < 1) {
+    requestAnimationFrame(() => drawTable(false, animCard));
+    return; // ✅ Prevent fall-through execution
+  } else {
+    animCard = null;
+    drawTable();
+    return;
+  }
+}
+
 
   // Render HUD
   // Render HUD
