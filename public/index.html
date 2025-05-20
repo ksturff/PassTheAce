@@ -410,13 +410,15 @@ if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
 
   if (animCard.progress < 1) {
   requestAnimationFrame(() => drawTable(false, animCard));
-  return; // ✅ Prevent fall-through execution
-} else {
-  animCard = null;
-  requestAnimationFrame(() => drawTable(false, null));
-  return;
+  return; // ✅ Keep looping until complete
 }
+
+// ✅ Animation is done — stop loop and clear animCard
+animCard = null;
+requestAnimationFrame(() => drawTable(false, null));
+return;
 }
+
 
 
   // Render HUD
