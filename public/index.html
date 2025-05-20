@@ -406,13 +406,13 @@ if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
   animCard.progress = Math.min(elapsed / 500, 1);
 
   if (animCard.progress < 1) {
-    requestAnimationFrame(() => drawTable(false, animCard));
-    return; // ✅ Prevent fall-through execution
-  } else {
-    animCard = null;
-    drawTable();
-    return;
-  }
+  requestAnimationFrame(() => drawTable(false, animCard));
+  return; // ✅ Prevent fall-through execution
+} else {
+  animCard = null;
+  requestAnimationFrame(() => drawTable(false, null));
+  return;
+}
 }
 
 
