@@ -491,7 +491,14 @@ players.forEach((p) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
       gameState.players = updatedPlayers;
-      players = updatedPlayers.map(p => ({ ...p }));
+players.forEach((p, i) => {
+  const updated = updatedPlayers[i];
+  if (updated) {
+    p.card = updated.card;
+    p.chips = updated.chips;
+    p.eliminated = updated.eliminated; // ✅ Make sure the HUD knows who's out
+  }
+});
       myTurn = false;
       peekPlayerCard = false;
       animCard = null;
