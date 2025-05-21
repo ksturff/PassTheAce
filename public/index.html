@@ -395,6 +395,8 @@ if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === anim
 if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
   const from = players[animCard.fromIndex];
   const to = players[animCard.toIndex];
+  if (animationInProgress) return;
+
 
   if (from && to && from.cardX != null && to.cardX != null) {
     const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
@@ -485,6 +487,7 @@ players.forEach((p) => {
 });
 
 
+
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
@@ -537,6 +540,7 @@ players.forEach((p) => {
     drawTable();
   }
 }
+
 
   </script>
 </body>
