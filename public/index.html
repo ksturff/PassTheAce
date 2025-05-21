@@ -248,6 +248,7 @@ resizeGame();
     let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
     let gameRunning = false, eliminatedPlayers = [], gameState = {};
     let animCard = null, animStartTime = null;
+    let animationInProgress = false;
     let showAllCards = false;
     let mySocketId = "", myUsername = "", myRoom = "";
     const cardImages = {};
@@ -403,20 +404,6 @@ if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
       ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
     }
   }
-
-  const now = performance.now();
-  const elapsed = now - animStartTime;
-  animCard.progress = Math.min(elapsed / 500, 1);
-
-  if (animCard.progress < 1) {
-  requestAnimationFrame(() => drawTable(false, animCard));
-  return; // ✅ Keep looping until complete
-}
-
-// ✅ Animation is done — stop loop and clear animCard
-animCard = null;
-requestAnimationFrame(() => drawTable(false, null));
-return;
 }
 
 
@@ -490,11 +477,14 @@ players.forEach((p) => {
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
-      console.log("Animating pass:", fromIndex, "→", toIndex);
-      animCard = { fromIndex, toIndex, progress: 0 };
-      animStartTime = performance.now();
-      drawTable(false, animCard);
-    });
+  console.log("Animating pass:", fromIndex, "→", toIndex);
+  animCard = { fromIndex, toIndex, progress: 0 };
+  animStartTime = performance.now();
+  animationInProgress = true;
+  requestAnimationFrame(animateCardPass);
+});
+
+
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
@@ -529,6 +519,25 @@ players.forEach((p) => {
       alert(msg);
     });
   }
+
+  function animateCardPass(timestamp) {
+  if (!animCard || !animationInProgress) return;
+
+  const duration = 500; // ms
+  const elapsed = timestamp - animStartTime;
+  animCard.progress = Math.min(elapsed / duration, 1);
+
+  drawTable(false, animCard);
+
+  if (animCard.progress < 1) {
+    requestAnimationFrame(animateCardPass);
+  } else {
+    animCard = null;
+    animationInProgress = false;
+    drawTable();
+  }
+}
+
   </script>
 </body>
 </html>
