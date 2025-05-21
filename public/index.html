@@ -491,14 +491,19 @@ players.forEach((p) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
       gameState.players = updatedPlayers;
-players.forEach((p, i) => {
-  const updated = updatedPlayers[i];
-  if (updated) {
-    p.card = updated.card;
-    p.chips = updated.chips;
-    p.eliminated = updated.eliminated; // ✅ Make sure the HUD knows who's out
-  }
-});
+if (players.length === updatedPlayers.length) {
+  players.forEach((p, i) => {
+    const updated = updatedPlayers[i];
+    if (updated) {
+      p.card = updated.card;
+      p.chips = updated.chips;
+      p.eliminated = updated.eliminated;
+    }
+  });
+} else {
+  players = updatedPlayers.map(p => ({ ...p })); // fallback if sync is broken
+}
+
       myTurn = false;
       peekPlayerCard = false;
       animCard = null;
