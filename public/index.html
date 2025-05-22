@@ -397,17 +397,27 @@ if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
   const to = players[animCard.toIndex];
 
 
+ // ✅ Card animation pass inside drawTable()
+if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+  const from = players[animCard.fromIndex];
+  const to = players[animCard.toIndex];
+
   if (from && to && from.cardX != null && to.cardX != null) {
     const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
     const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
     const cardImg = cardImages['back'];
     if (cardImg?.complete) {
       ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+    } else {
+      ctx.fillStyle = "blue"; // fallback debug color
+      ctx.fillRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
     }
   }
 }
 
- if (animationInProgress) return;
+  return; // ✅ Prevent static card re-draw while animating
+}
+
 
   // Render HUD
   // Render HUD
@@ -477,7 +487,7 @@ players.forEach((p) => {
       buttons.forEach(btn => btn.disabled = !myTurn);
     });
 
-    socket.on("cardPassed", ({ fromIndex, toIndex }) => {
+  socket.on("cardPassed", ({ fromIndex, toIndex }) => {
   console.log("Animating pass:", fromIndex, "→", toIndex);
   animCard = { fromIndex, toIndex, progress: 0 };
   animStartTime = performance.now();
@@ -487,63 +497,62 @@ players.forEach((p) => {
 
 
 
-    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
-      console.log("📣 Round ended!", updatedPlayers, losers);
 
-      gameState.players = updatedPlayers;
-updatedPlayers.forEach((updated, i) => {
-  if (!players[i]) {
-    players[i] = { ...updated }; // initialize new player if missing
-  } else {
-    players[i].card = updated.card;
-    players[i].chips = updated.chips;
-    players[i].eliminated = updated.eliminated;
-  }
+    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+  console.log("📣 Round ended!", updatedPlayers, losers);
+
+  showAllCards = true;
+  drawTable(false, animCard);
+
+  // ✅ Sync player states properly
+  updatedPlayers.forEach((updated, i) => {
+    if (!players[i]) {
+      players[i] = { ...updated };
+    } else {
+      players[i].card = updated.card;
+      players[i].chips = updated.chips;
+      players[i].eliminated = updated.eliminated;
+    }
+  });
+
+  myTurn = false;
+  peekPlayerCard = false;
+  animCard = null;
+
+  setTimeout(() => {
+    showAllCards = false;
+    drawTable();
+  }, 6500);
+
+  // ✅ Visual alert
+  const alertMessage = "💥 Round ended! Lost a chip: " + losers
+    .map(loser => {
+      const snapshot = updatedPlayers.find(p => p.name === loser.name);
+      if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+      return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+    })
+    .join(", ");
+
+  const alertBox = document.createElement("div");
+  alertBox.style.position = "fixed";
+  alertBox.style.top = "20px";
+  alertBox.style.left = "50%";
+  alertBox.style.transform = "translateX(-50%)";
+  alertBox.style.padding = "15px 25px";
+  alertBox.style.background = "#222";
+  alertBox.style.border = "2px solid #f00";
+  alertBox.style.color = "#fff";
+  alertBox.style.fontSize = "16px";
+  alertBox.style.zIndex = "1000";
+  alertBox.style.boxShadow = "0 0 10px red";
+  alertBox.innerText = alertMessage;
+  document.body.appendChild(alertBox);
+
+  setTimeout(() => {
+    document.body.removeChild(alertBox);
+  }, 4500);
 });
 
-
-      myTurn = false;
-      peekPlayerCard = false;
-      animCard = null;
-
-      showAllCards = true;
-      drawTable(false, animCard);
-
-      let frozenPlayers = [...players];
-
-      setTimeout(() => {
-        showAllCards = false;
-        players = frozenPlayers;
-        drawTable();
-      }, 6500);
-
-      const alertMessage = "💥 Round ended! Lost a chip: " + losers
-        .map(loser => {
-          const snapshot = updatedPlayers.find(p => p.name === loser.name);
-          if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
-          return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
-        })
-        .join(", ");
-      const alertBox = document.createElement("div");
-alertBox.style.position = "fixed";
-alertBox.style.top = "20px";
-alertBox.style.left = "50%";
-alertBox.style.transform = "translateX(-50%)";
-alertBox.style.padding = "15px 25px";
-alertBox.style.background = "#222";
-alertBox.style.border = "2px solid #f00";
-alertBox.style.color = "#fff";
-alertBox.style.fontSize = "16px";
-alertBox.style.zIndex = "1000";
-alertBox.style.boxShadow = "0 0 10px red";
-alertBox.innerText = alertMessage;
-document.body.appendChild(alertBox);
-
-setTimeout(() => {
-  document.body.removeChild(alertBox);
-}, 4500);
-
-    });
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
@@ -553,7 +562,7 @@ setTimeout(() => {
   function animateCardPass(timestamp) {
   if (!animCard || !animationInProgress) return;
 
-  const duration = 500; // ms
+  const duration = 500;
   const elapsed = timestamp - animStartTime;
   animCard.progress = Math.min(elapsed / duration, 1);
 
@@ -562,11 +571,12 @@ setTimeout(() => {
   if (animCard.progress < 1) {
     requestAnimationFrame(animateCardPass);
   } else {
-    animCard = null;
     animationInProgress = false;
+    animCard = null;
     drawTable();
   }
 }
+
 
 
   </script>
