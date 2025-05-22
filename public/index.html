@@ -331,7 +331,7 @@ resizeGame();
       socket.emit("keepCard", { room: myRoom });
     }
 
-    function drawTable(showCards = false, animCard = null) {
+ function drawTable(showCards = false, animCard = null) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (backgroundImage.complete) {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
@@ -347,11 +347,6 @@ resizeGame();
     { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
     { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
   ];
-  const hudOffsets = [
-    { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-    { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-    { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-  ];
 
   const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
   const radiusX = X_RADIUS - 100;
@@ -362,15 +357,14 @@ resizeGame();
     const angle = angleMap[i] * (Math.PI / 180);
     const offset = cardOffsets[i];
 
-    // Card position
     p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
     p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
     if (!p.card) return;
-if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
-  // Skip drawing static card at from/to only during active animation
-  return;
-}
+
+    if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+      return;
+    }
 
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
@@ -390,87 +384,6 @@ if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === anim
     }
   });
 
-  // Card animation pass
-  // ✅ Animation Fix - Prevent runaway frame loop
-if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-  const from = players[animCard.fromIndex];
-  const to = players[animCard.toIndex];
-
-
- // ✅ Card animation pass inside drawTable()
-if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-  const from = players[animCard.fromIndex];
-  const to = players[animCard.toIndex];
-
-  if (from && to && from.cardX != null && to.cardX != null) {
-    const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-    const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-    const cardImg = cardImages['back'];
-    if (cardImg?.complete) {
-      ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-    } else {
-      ctx.fillStyle = "blue"; // fallback debug color
-      ctx.fillRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-    }
-  }
-}
-
-  return; // ✅ Prevent static card re-draw while animating
-}
-
-
-  // Render HUD
-  // Render HUD
-const container = document.getElementById('playerContainer');
-container.innerHTML = '';
-
-// ✅ Relative nudges for each player
-const hudNudges = [
-  { x: 0, y: 40 },
-  { x: 0, y: 10 },
-  { x: 30, y: -20 },
-  { x: 30, y: 10 },
-  { x: 0, y: -20 },
-  { x: 0, y: -50 },
-  { x: -5, y: -20 },
-  { x: -30, y: 10 },
-  { x: -30, y: -20 },
-  { x: -5, y: 10 }
-];
-
-players.forEach((p) => {
-  const i = p.seatIndex ?? 0;
-  const angle = angleMap[i] * (Math.PI / 180);
-  
-  // ✅ Circular orbit base position
-  const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-  const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-
-  // ✅ Nudge from center using scaled adjustment
-  const offset = hudNudges[i];
-  const x = baseX + offset.x * scaleX;
-  const y = baseY + offset.y * scaleY;
-
-  const div = document.createElement('div');
-  div.className = 'player-ui';
-  div.id = `player-ui-${p.id}`;
-  div.innerHTML = `
-    <div class="hud">
-      <div class="name">${p.name}</div>
-      <img class="avatar" src="./assets/avatar.png" />
-      <div class="chips">
-        <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-        ${p.chips}
-      </div>
-    </div>
-  `;
-  div.style.left = `${x}px`;
-  div.style.top = `${y}px`;
-  div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
-  const avatarEl = div.querySelector('.avatar');
-  avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-  container.appendChild(div);
-});
 
 
     socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
