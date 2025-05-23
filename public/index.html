@@ -484,8 +484,11 @@ players.forEach((p) => {
       myTurn = (socket.id === currentPlayerId);
       peekPlayerCard = myTurn;
       updateTurnIndicator();
-      drawTable();
-      const actionBtns = document.getElementById("actionBtns");
+if (!animationInProgress) {
+  drawTable();
+} else {
+  console.log("⏳ Skipped drawTable in turnUpdate because animation is active");
+}      const actionBtns = document.getElementById("actionBtns");
       const buttons = document.querySelectorAll("#actionBtns button");
       actionBtns.style.display = myTurn ? "block" : "none";
       buttons.forEach(btn => btn.disabled = !myTurn);
