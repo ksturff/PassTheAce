@@ -410,7 +410,7 @@ if (passingPlayer && passingPlayer.card) {
   const key = `${rank}_of_${suit}`;
   const cardImg = cardImages[key] ?? cardImages['back'];
 
-  console.log(`🎴 Drawing anim card from ${fromIndex} to ${toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
 
   
   if (cardImg?.complete) {
