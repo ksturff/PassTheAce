@@ -367,13 +367,10 @@ resizeGame();
     p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
     if (!p.card) return;
-if (
-  animCard && animCard.progress < 1 &&
-  (p.id === players[animCard.fromIndex]?.id || p.id === players[animCard.toIndex]?.id)
-) {
+if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+  // Skip drawing static card at from/to only during active animation
   return;
 }
-
 
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
