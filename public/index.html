@@ -400,10 +400,21 @@ if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
   if (from && to && from.cardX != null && to.cardX != null) {
     const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
     const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-    const cardImg = cardImages['back'];
-    if (cardImg?.complete) {
-      ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-    }
+    const passingPlayer = players[animCard.fromIndex];
+const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+
+if (passingPlayer && passingPlayer.card) {
+  const rank = typeof passingPlayer.card.rank === 'number' ? passingPlayer.card.rank : rankMap[passingPlayer.card.rank];
+  const suit = suitMap[passingPlayer.card.suit];
+  const key = `${rank}_of_${suit}`;
+  const cardImg = cardImages[key] ?? cardImages['back'];
+  
+  if (cardImg?.complete) {
+    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+  }
+}
+
   }
 }
 
