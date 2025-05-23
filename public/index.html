@@ -409,6 +409,9 @@ if (passingPlayer && passingPlayer.card) {
   const suit = suitMap[passingPlayer.card.suit];
   const key = `${rank}_of_${suit}`;
   const cardImg = cardImages[key] ?? cardImages['back'];
+
+  console.log(`🎴 Drawing anim card from ${fromIndex} to ${toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+
   
   if (cardImg?.complete) {
     ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
