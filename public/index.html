@@ -496,8 +496,9 @@ players.forEach((p) => {
   animCard = { fromIndex, toIndex, progress: 0 };
   animStartTime = performance.now();
   animationInProgress = true;
-  requestAnimationFrame(animateCardPass);
+  runAnimationLoop();
 });
+
 
 
 
@@ -563,6 +564,16 @@ setTimeout(() => {
       alert(msg);
     });
   }
+
+  function runAnimationLoop() {
+  function step(timestamp) {
+    animateCardPass(timestamp);
+    if (animationInProgress) {
+      requestAnimationFrame(step);
+    }
+  }
+  requestAnimationFrame(step);
+}
 
   function animateCardPass(timestamp) {
   if (!animCard || !animationInProgress) return;
