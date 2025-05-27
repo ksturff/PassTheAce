@@ -333,15 +333,26 @@
     }
 
     function passCard() {
-      if (!myTurn) return;
+      if (!myTurn) {
+        showMessage("It's not your turn!", 3000, "#f00");
+        return;
+      }
 
       // Check if the current player has a king
       const currentPlayer = players.find(p => p.id === mySocketId);
       if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
         showMessage("You have a King! You cannot pass.", 3000, "#f00");
+        // Ensure the UI reflects that it's still the player's turn
+        const actionBtns = document.getElementById("actionBtns");
+        const passBtn = document.getElementById("passBtn");
+        const keepBtn = document.getElementById("keepBtn");
+        actionBtns.style.display = "block";
+        passBtn.disabled = true; // Already disabled, reinforcing
+        keepBtn.disabled = false;
         return;
       }
 
+      // If no king, proceed with the pass
       myTurn = false;
       peekPlayerCard = false;
       drawTable();
@@ -350,7 +361,10 @@
     }
 
     function keepCard() {
-      if (!myTurn) return;
+      if (!myTurn) {
+        showMessage("It's not your turn!", 3000, "#f00");
+        return;
+      }
       myTurn = false;
       peekPlayerCard = false;
       drawTable();
@@ -506,6 +520,9 @@
       const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
       passBtn.disabled = !myTurn || !canPass;
       keepBtn.disabled = !myTurn;
+
+      // Log for debugging
+      console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
