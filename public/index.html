@@ -492,7 +492,8 @@ updatedPlayers.forEach((updated, i) => {
       animCard = null;
 
       showAllCards = true;
-      drawTable(false, animCard);
+      drawTable(false);
+
 
       let frozenPlayers = [...players];
 
@@ -547,6 +548,7 @@ setTimeout(() => {
 
   
 function animateCardPass(timestamp) {
+  let animSkipIndices = [animCard.fromIndex, animCard.toIndex];
   if (!animCard || !animationInProgress) return;
 
   const duration = 500; // animation duration in ms
@@ -559,6 +561,10 @@ function animateCardPass(timestamp) {
   // Draw the moving card manually
   const from = players[animCard.fromIndex];
   const to = players[animCard.toIndex];
+
+  // TEMP: Animation visibility test box
+ctx.fillStyle = "yellow";
+ctx.fillRect(300, 300, 50, 50);
 
   if (from && to && from.cardX != null && to.cardX != null) {
     const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
