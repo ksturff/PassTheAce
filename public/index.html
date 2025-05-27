@@ -158,80 +158,76 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const socket = io();
+    socket.emit("requestLobbyState");
+    socket.on("connect", () => {
+      mySocketId = socket.id;
+    });
 
-     const socket = io();
-     socket.emit("requestLobbyState");
-     socket.on("connect", () => {
-  mySocketId = socket.id;
-});
+    socket.on("playerList", (playersList) => {
+      const listEl = document.getElementById("playerList");
+      listEl.innerHTML = "";
+      playersList.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.name;
+        listEl.appendChild(li);
+      });
 
-socket.on("playerList", (playersList) => {
-  const listEl = document.getElementById("playerList");
-  listEl.innerHTML = "";
-  playersList.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p.name;
-    listEl.appendChild(li);
-  });
+      // Count human players (non-bots)
+      const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
 
-  // ✅ Count human players (non-bots)
-  const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
+      // Enable the Start Game button only if 2+ humans
+      const startBtn = document.getElementById("startBtn");
+      if (startBtn) {
+        startBtn.disabled = humanCount < 2;
+      }
+    });
 
-  // ✅ Enable the Start Game button only if 2+ humans
-  const startBtn = document.getElementById("startBtn");
-  if (startBtn) {
-    startBtn.disabled = humanCount < 2;
-  }
-});
+    socket.on("gameStarted", (state) => {
+      console.log("🎮 Game started:", state);
+      gameState = state;
+      players = state.players;
 
-socket.on("gameStarted", (state) => {
-  console.log("🎮 Game started:", state);
-  gameState = state;
-  players = state.players;
-
-  preloadAssets().then(() => {
-    drawTable();
-  });
-});
-
+      preloadAssets().then(() => {
+        drawTable();
+      });
+    });
 
     // Create wrapper for responsive scaling
-const wrapper = document.createElement('div');
-wrapper.style.position = 'absolute';
-wrapper.style.left = '50%';
-wrapper.style.top = '50%';
-wrapper.style.transform = 'translate(-50%, -50%)';
-wrapper.style.width = '1024px';
-wrapper.style.height = '600px';
-wrapper.style.overflow = 'hidden';
-wrapper.style.zIndex = '1';
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '50%';
+    wrapper.style.top = '50%';
+    wrapper.style.transform = 'translate(-50%, -50%)';
+    wrapper.style.width = '1024px';
+    wrapper.style.height = '600px';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.zIndex = '1';
 
-// Create canvas
-const canvas = document.createElement('canvas');
-canvas.width = 1024;
-canvas.height = 600;
-canvas.style.display = 'block';
-canvas.style.width = '100%';
-canvas.style.height = '100%';
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 600;
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
 
-wrapper.appendChild(canvas);
-// Move playerContainer inside the wrapper
-const hudContainer = document.getElementById("playerContainer");
-wrapper.appendChild(hudContainer);
-document.body.appendChild(wrapper);
+    wrapper.appendChild(canvas);
+    // Move playerContainer inside the wrapper
+    const hudContainer = document.getElementById("playerContainer");
+    wrapper.appendChild(hudContainer);
+    document.body.appendChild(wrapper);
 
+    const ctx = canvas.getContext('2d');
 
-const ctx = canvas.getContext('2d');
-
-function resizeGame() {
-  const scaleX = window.innerWidth / 1024;
-  const scaleY = window.innerHeight / 600;
-  const scale = Math.min(scaleX, scaleY);
-  wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
-}
-window.addEventListener('resize', resizeGame);
-resizeGame();
-
+    function resizeGame() {
+      const scaleX = window.innerWidth / 1024;
+      const scaleY = window.innerHeight / 600;
+      const scale = Math.min(scaleX, scaleY);
+      wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    window.addEventListener('resize', resizeGame);
+    resizeGame();
 
     const backgroundImage = new Image();
     backgroundImage.src = './assets/background.png';
@@ -252,36 +248,36 @@ resizeGame();
     let showAllCards = false;
     let mySocketId = "", myUsername = "", myRoom = "";
     const cardImages = {};
+
     function preloadAssets() {
-  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
-  const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'jack', 'queen', 'king', 'ace'];
-  const loadPromises = [];
+      const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+      const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'jack', 'queen', 'king', 'ace'];
+      const loadPromises = [];
 
-  for (let s of suits) {
-    for (let r of ranks) {
-      const img = new Image();
-      const key = `${r}_of_${s}`;
-      img.src = `./assets/${key}.png`;
-      cardImages[key] = img;
+      for (let s of suits) {
+        for (let r of ranks) {
+          const img = new Image();
+          const key = `${r}_of_${s}`;
+          img.src = `./assets/${key}.png`;
+          cardImages[key] = img;
+          loadPromises.push(new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }));
+        }
+      }
+
+      // Add the card back
+      const back = new Image();
+      back.src = './assets/back.png';
+      cardImages['back'] = back;
       loadPromises.push(new Promise(resolve => {
-        img.onload = resolve;
-        img.onerror = resolve;
+        back.onload = resolve;
+        back.onerror = resolve;
       }));
+
+      return Promise.all(loadPromises);
     }
-  }
-
-  // ✅ Add the card back
-  const back = new Image();
-  back.src = './assets/back.png';
-  cardImages['back'] = back;
-  loadPromises.push(new Promise(resolve => {
-    back.onload = resolve;
-    back.onerror = resolve;
-  }));
-
-  return Promise.all(loadPromises);
-}
-
 
     function updateTurnIndicator() {
       const player = players.find(p => p.id === gameState.currentPlayerId);
@@ -313,6 +309,7 @@ resizeGame();
     function startGame() {
       socket.emit("startGame", myRoom);
     }
+
     function passCard() {
       if (!myTurn) return;
       myTurn = false;
@@ -332,151 +329,137 @@ resizeGame();
     }
 
     function drawTable(showCards = false, animCard = null) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (backgroundImage.complete) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
 
-  const BASE_WIDTH = 1024;
-  const BASE_HEIGHT = 600;
-  const scaleX = canvas.width / BASE_WIDTH;
-  const scaleY = canvas.height / BASE_HEIGHT;
+      const BASE_WIDTH = 1024;
+      const BASE_HEIGHT = 600;
+      const scaleX = canvas.width / BASE_WIDTH;
+      const scaleY = canvas.height / BASE_HEIGHT;
 
-  const cardOffsets = [
-    { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-    { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-    { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-  ];
-  const hudOffsets = [
-    { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-    { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-    { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-  ];
+      const cardOffsets = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+      const hudOffsets = [
+        { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+        { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+        { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+      ];
 
-  const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-  const radiusX = X_RADIUS - 100;
-  const radiusY = Y_RADIUS - 50;
+      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+      const radiusX = X_RADIUS - 100;
+      const radiusY = Y_RADIUS - 50;
 
-  players.forEach((p) => {
-    const i = p.seatIndex ?? 0;
-    const angle = angleMap[i] * (Math.PI / 180);
-    const offset = cardOffsets[i];
+      players.forEach((p) => {
+        const i = p.seatIndex ?? 0;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const offset = cardOffsets[i];
 
-    // Card position
-    p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
-    p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
+        // Card position
+        p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
+        p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
-    if (!p.card) return;
-if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
-  // Skip drawing static card at from/to only during active animation
-  return;
-}
+        if (!p.card) return;
+        if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+          // Skip drawing static card at from/to during active animation
+          return;
+        }
 
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        const key = `${rank}_of_${suit}`;
 
-    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-    const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-    const suit = suitMap[p.card.suit];
-    const key = `${rank}_of_${suit}`;
+        const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+        const cardImg = cardImages[show ? key : 'back'];
 
-    const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
-    const cardImg = cardImages[show ? key : 'back'];
+        if (cardImg?.complete) {
+          const scale = cardImg === cardImages['back'] ? 1.0 : 0.95;
+          ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
+        } else {
+          ctx.fillStyle = "red";
+          ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
+        }
+      });
 
-    if (cardImg?.complete) {
-      const scale = cardImg === cardImages['back'] ? 1.0 : 0.95;
-      ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-    } else {
-      ctx.fillStyle = "red";
-      ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
+      // Card animation pass
+      if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+        const from = players[animCard.fromIndex];
+        const to = players[animCard.toIndex];
+
+        if (from && to && from.cardX != null && to.cardX != null) {
+          const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
+          const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
+          const passingPlayer = players[animCard.fromIndex];
+          const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+          const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+
+          if (passingPlayer && passingPlayer.card) {
+            const rank = typeof passingPlayer.card.rank === 'number' ? passingPlayer.card.rank : rankMap[passingPlayer.card.rank];
+            const suit = suitMap[passingPlayer.card.suit];
+            const key = `${rank}_of_${suit}`;
+            const cardImg = cardImages[key] ?? cardImages['back'];
+
+            console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+
+            if (cardImg?.complete) {
+              ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+            } else {
+              ctx.fillStyle = "blue";
+              ctx.fillRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+              console.warn(`⚠️ Card image ${key} not loaded, drawing fallback.`);
+            }
+          }
+        } else {
+          console.warn("⚠️ Invalid from/to players or card positions:", { from, to });
+        }
+      }
+
+      // Render HUD
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+
+      const hudNudges = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+
+      players.forEach((p) => {
+        const i = p.seatIndex ?? 0;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
+        const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
+        const offset = hudNudges[i];
+        const x = baseX + offset.x * scaleX;
+        const y = baseY + offset.y * scaleY;
+
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        div.innerHTML = `
+          <div class="hud">
+            <div class="name">${p.name}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>
+        `;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
+        const avatarEl = div.querySelector('.avatar');
+        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+        container.appendChild(div);
+      });
     }
-  });
-
-  // Card animation pass
-  // ✅ Animation Fix - Prevent runaway frame loop
-if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-  const from = players[animCard.fromIndex];
-  const to = players[animCard.toIndex];
-
-
-  if (from && to && from.cardX != null && to.cardX != null) {
-    const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-    const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-    const passingPlayer = players[animCard.fromIndex];
-const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-
-if (passingPlayer && passingPlayer.card) {
-  const rank = typeof passingPlayer.card.rank === 'number' ? passingPlayer.card.rank : rankMap[passingPlayer.card.rank];
-  const suit = suitMap[passingPlayer.card.suit];
-  const key = `${rank}_of_${suit}`;
-  const cardImg = cardImages[key] ?? cardImages['back'];
-
-console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
-
-  
-  if (cardImg?.complete) {
-    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-  }
-}
-
-  }
-}
-
-
-
-  // Render HUD
-  // Render HUD
-const container = document.getElementById('playerContainer');
-container.innerHTML = '';
-
-// ✅ Relative nudges for each player
-const hudNudges = [
-  { x: 0, y: 40 },
-  { x: 0, y: 10 },
-  { x: 30, y: -20 },
-  { x: 30, y: 10 },
-  { x: 0, y: -20 },
-  { x: 0, y: -50 },
-  { x: -5, y: -20 },
-  { x: -30, y: 10 },
-  { x: -30, y: -20 },
-  { x: -5, y: 10 }
-];
-
-players.forEach((p) => {
-  const i = p.seatIndex ?? 0;
-  const angle = angleMap[i] * (Math.PI / 180);
-  
-  // ✅ Circular orbit base position
-  const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-  const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-
-  // ✅ Nudge from center using scaled adjustment
-  const offset = hudNudges[i];
-  const x = baseX + offset.x * scaleX;
-  const y = baseY + offset.y * scaleY;
-
-  const div = document.createElement('div');
-  div.className = 'player-ui';
-  div.id = `player-ui-${p.id}`;
-  div.innerHTML = `
-    <div class="hud">
-      <div class="name">${p.name}</div>
-      <img class="avatar" src="./assets/avatar.png" />
-      <div class="chips">
-        <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-        ${p.chips}
-      </div>
-    </div>
-  `;
-  div.style.left = `${x}px`;
-  div.style.top = `${y}px`;
-  div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
-  const avatarEl = div.querySelector('.avatar');
-  avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-  container.appendChild(div);
-});
-
 
     socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
       gameState.players = updatedPlayers;
@@ -493,30 +476,27 @@ players.forEach((p) => {
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
-  console.log("Animating pass:", fromIndex, "→", toIndex);
-  animCard = { fromIndex, toIndex, progress: 0 };
-  animStartTime = performance.now();
-  animationInProgress = true;
-  runAnimationLoop();
-});
-
-
-
+      console.log("Animating pass:", fromIndex, "→", toIndex);
+      drawTable(); // Ensure card positions are updated
+      animCard = { fromIndex, toIndex, progress: 0 };
+      animStartTime = null;
+      animationInProgress = true;
+      requestAnimationFrame(animateCardPass);
+    });
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
       gameState.players = updatedPlayers;
-updatedPlayers.forEach((updated, i) => {
-  if (!players[i]) {
-    players[i] = { ...updated }; // initialize new player if missing
-  } else {
-    players[i].card = updated.card;
-    players[i].chips = updated.chips;
-    players[i].eliminated = updated.eliminated;
-  }
-});
-
+      updatedPlayers.forEach((updated, i) => {
+        if (!players[i]) {
+          players[i] = { ...updated };
+        } else {
+          players[i].card = updated.card;
+          players[i].chips = updated.chips;
+          players[i].eliminated = updated.eliminated;
+        }
+      });
 
       myTurn = false;
       peekPlayerCard = false;
@@ -541,60 +521,48 @@ updatedPlayers.forEach((updated, i) => {
         })
         .join(", ");
       const alertBox = document.createElement("div");
-alertBox.style.position = "fixed";
-alertBox.style.top = "20px";
-alertBox.style.left = "50%";
-alertBox.style.transform = "translateX(-50%)";
-alertBox.style.padding = "15px 25px";
-alertBox.style.background = "#222";
-alertBox.style.border = "2px solid #f00";
-alertBox.style.color = "#fff";
-alertBox.style.fontSize = "16px";
-alertBox.style.zIndex = "1000";
-alertBox.style.boxShadow = "0 0 10px red";
-alertBox.innerText = alertMessage;
-document.body.appendChild(alertBox);
+      alertBox.style.position = "fixed";
+      alertBox.style.top = "20px";
+      alertBox.style.left = "50%";
+      alertBox.style.transform = "translateX(-50%)";
+      alertBox.style.padding = "15px 25px";
+      alertBox.style.background = "#222";
+      alertBox.style.border = "2px solid #f00";
+      alertBox.style.color = "#fff";
+      alertBox.style.fontSize = "16px";
+      alertBox.style.zIndex = "1000";
+      alertBox.style.boxShadow = "0 0 10px red";
+      alertBox.innerText = alertMessage;
+      document.body.appendChild(alertBox);
 
-setTimeout(() => {
-  document.body.removeChild(alertBox);
-}, 4500);
-
+      setTimeout(() => {
+        document.body.removeChild(alertBox);
+      }, 4500);
     });
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
     });
-  }
 
-  function runAnimationLoop() {
-  function step(timestamp) {
-    animateCardPass(timestamp);
-    if (animationInProgress) {
-      requestAnimationFrame(step);
+    function animateCardPass(timestamp) {
+      if (!animCard || !animationInProgress) return;
+
+      const duration = 500; // Animation duration in ms
+      if (!animStartTime) animStartTime = timestamp;
+      const elapsed = timestamp - animStartTime;
+      const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      animCard.progress = easeInOut(Math.min(elapsed / duration, 1));
+
+      drawTable(false, animCard);
+
+      if (animCard.progress < 1) {
+        requestAnimationFrame(animateCardPass);
+      } else {
+        animCard = null;
+        animationInProgress = false;
+        drawTable();
+      }
     }
-  }
-  requestAnimationFrame(step);
-}
-
-  function animateCardPass(timestamp) {
-  if (!animCard || !animationInProgress) return;
-
-  const duration = 500; // ms
-  const elapsed = timestamp - animStartTime;
-  animCard.progress = Math.min(elapsed / duration, 1);
-
-  drawTable(false, animCard);
-
-  if (animCard.progress < 1) {
-    requestAnimationFrame(animateCardPass);
-  } else {
-    animCard = null;
-    animationInProgress = false;
-    drawTable();
-  }
-}
-
-
   </script>
 </body>
 </html>
