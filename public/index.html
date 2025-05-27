@@ -400,10 +400,7 @@
           const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
 
           if (passingPlayer && passingPlayer.card) {
-            const rank = typeof passingPlayer.card.rank === 'number' ? passingPlayer.card.rank : rankMap[passingPlayer.card.rank];
-            const suit = suitMap[passingPlayer.card.suit];
-            const key = `${rank}_of_${suit}`;
-            const cardImg = cardImages[key] ?? cardImages['back'];
+            const cardImg = cardImages['back'];
 
             console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
 
@@ -412,7 +409,7 @@
             } else {
               ctx.fillStyle = "blue";
               ctx.fillRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-              console.warn(`⚠️ Card image ${key} not loaded, drawing fallback.`);
+              console.warn(`⚠️ Back image not loaded, drawing fallback.`);
             }
           }
         } else {
@@ -542,6 +539,12 @@
 
     socket.on("errorMessage", (msg) => {
       alert(msg);
+    });
+
+    // Added: Handle gameOver event to display winner
+    socket.on("gameOver", ({ winner }) => {
+      document.getElementById("winMessage").innerText = `${winner.name} Wins!`;
+      document.getElementById("endOverlay").style.display = "flex";
     });
 
     function animateCardPass(timestamp) {
