@@ -367,10 +367,12 @@ resizeGame();
     p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
     if (!p.card) return;
-    if (animationInProgress && animCard && animCard.progress < 1 &&
-      (i === animCard.fromIndex || i === animCard.toIndex)) {
-    return; // Skip static rendering of from/to cards during animation
-  }
+if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+  // Skip drawing static card at from/to only during active animation
+  return;
+}
+const triggerChange = () => {};
+
 
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
@@ -390,8 +392,41 @@ resizeGame();
     }
   });
 
+  // Card animation pass
+  // ✅ Animation Fix - Prevent runaway frame loop
+if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+  const from = players[animCard.fromIndex];
+  const to = players[animCard.toIndex];
 
- 
+
+  if (from && to && from.cardX != null && to.cardX != null) {
+    const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
+    const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
+    const passingPlayer = players[animCard.fromIndex];
+const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+
+if (passingPlayer && passingPlayer.card) {
+  const rank = typeof passingPlayer.card.rank === 'number' ? passingPlayer.card.rank : rankMap[passingPlayer.card.rank];
+  const suit = suitMap[passingPlayer.card.suit];
+  const key = `${rank}_of_${suit}`;
+  const cardImg = cardImages[key] ?? cardImages['back'];
+
+console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+
+  
+  if (cardImg?.complete) {
+    ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
+  }
+}
+
+  }
+}
+
+
+
+  // Render HUD
+  // Render HUD
 const container = document.getElementById('playerContainer');
 container.innerHTML = '';
 
@@ -458,16 +493,13 @@ players.forEach((p) => {
       buttons.forEach(btn => btn.disabled = !myTurn);
     });
 
-   socket.on("cardPassed", ({ fromIndex, toIndex }) => {
-  if (animationInProgress) return; // 👈 Prevent multiple triggers
-
+    socket.on("cardPassed", ({ fromIndex, toIndex }) => {
   console.log("Animating pass:", fromIndex, "→", toIndex);
   animCard = { fromIndex, toIndex, progress: 0 };
   animStartTime = performance.now();
   animationInProgress = true;
   runAnimationLoop();
 });
-
 
 
 
@@ -492,8 +524,7 @@ updatedPlayers.forEach((updated, i) => {
       animCard = null;
 
       showAllCards = true;
-      drawTable(false);
-
+      drawTable(false, animCard);
 
       let frozenPlayers = [...players];
 
@@ -546,52 +577,23 @@ setTimeout(() => {
   requestAnimationFrame(step);
 }
 
-  
-function animateCardPass(timestamp) {
-  let animSkipIndices = [animCard.fromIndex, animCard.toIndex];
+  function animateCardPass(timestamp) {
   if (!animCard || !animationInProgress) return;
 
-  const duration = 500; // animation duration in ms
+  const duration = 500; // ms
   const elapsed = timestamp - animStartTime;
   animCard.progress = Math.min(elapsed / duration, 1);
 
-  // Redraw the entire table without animating any card pass inside drawTable
-  drawTable(false);
-
-  // Draw the moving card manually
-  const from = players[animCard.fromIndex];
-  const to = players[animCard.toIndex];
-
-  // TEMP: Animation visibility test box
-ctx.fillStyle = "yellow";
-ctx.fillRect(300, 300, 50, 50);
-
-  if (from && to && from.cardX != null && to.cardX != null) {
-    const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-    const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-
-    const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-    const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-    const card = from.card;
-    const rank = typeof card.rank === 'number' ? card.rank : rankMap[card.rank];
-    const suit = suitMap[card.suit];
-    const key = `${rank}_of_${suit}`;
-    const cardImg = cardImages[key] ?? cardImages['back'];
-
-    if (cardImg?.complete) {
-      ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-    }
-  }
+  drawTable(false, animCard);
 
   if (animCard.progress < 1) {
     requestAnimationFrame(animateCardPass);
   } else {
     animCard = null;
     animationInProgress = false;
-    drawTable(); // Final render after animation finishes
+    drawTable();
   }
 }
-
 
 
   </script>
