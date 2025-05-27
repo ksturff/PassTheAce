@@ -367,6 +367,10 @@ resizeGame();
     p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
     if (!p.card) return;
+    if (animationInProgress && animCard && animCard.progress < 1 &&
+      (i === animCard.fromIndex || i === animCard.toIndex)) {
+    return; // Skip static rendering of from/to cards during animation
+  }
 
     const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
     const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
@@ -454,13 +458,16 @@ players.forEach((p) => {
       buttons.forEach(btn => btn.disabled = !myTurn);
     });
 
-    socket.on("cardPassed", ({ fromIndex, toIndex }) => {
+   socket.on("cardPassed", ({ fromIndex, toIndex }) => {
+  if (animationInProgress) return; // 👈 Prevent multiple triggers
+
   console.log("Animating pass:", fromIndex, "→", toIndex);
   animCard = { fromIndex, toIndex, progress: 0 };
   animStartTime = performance.now();
   animationInProgress = true;
   runAnimationLoop();
 });
+
 
 
 
