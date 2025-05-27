@@ -310,8 +310,38 @@
       socket.emit("startGame", myRoom);
     }
 
+    // Helper function to show temporary messages
+    function showMessage(message, duration = 3000, color = "#f00") {
+      const msgBox = document.createElement("div");
+      msgBox.style.position = "fixed";
+      msgBox.style.top = "100px";
+      msgBox.style.left = "50%";
+      msgBox.style.transform = "translateX(-50%)";
+      msgBox.style.padding = "10px 20px";
+      msgBox.style.background = "#222";
+      msgBox.style.border = `2px solid ${color}`;
+      msgBox.style.color = "#fff";
+      msgBox.style.fontSize = "14px";
+      msgBox.style.zIndex = "1000";
+      msgBox.style.boxShadow = `0 0 10px ${color}`;
+      msgBox.innerText = message;
+      document.body.appendChild(msgBox);
+
+      setTimeout(() => {
+        document.body.removeChild(msgBox);
+      }, duration);
+    }
+
     function passCard() {
       if (!myTurn) return;
+
+      // Check if the current player has a king
+      const currentPlayer = players.find(p => p.id === mySocketId);
+      if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
+        showMessage("You have a King! You cannot pass.", 3000, "#f00");
+        return;
+      }
+
       myTurn = false;
       peekPlayerCard = false;
       drawTable();
@@ -467,14 +497,26 @@
       updateTurnIndicator();
       drawTable();
       const actionBtns = document.getElementById("actionBtns");
-      const buttons = document.querySelectorAll("#actionBtns button");
+      const passBtn = document.getElementById("passBtn");
+      const keepBtn = document.getElementById("keepBtn");
       actionBtns.style.display = myTurn ? "block" : "none";
-      buttons.forEach(btn => btn.disabled = !myTurn);
+      
+      // Disable Pass button if the current player has a king
+      const currentPlayer = players.find(p => p.id === currentPlayerId);
+      const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
+      passBtn.disabled = !myTurn || !canPass;
+      keepBtn.disabled = !myTurn;
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
       console.log("Animating pass:", fromIndex, "→", toIndex);
-      drawTable(); // Ensure card positions are updated
+      // Double-check: don't animate if the recipient has a king (server should prevent this)
+      const toPlayer = players[toIndex];
+      if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
+        showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
+        return;
+      }
+      drawTable();
       animCard = { fromIndex, toIndex, progress: 0 };
       animStartTime = null;
       animationInProgress = true;
@@ -538,10 +580,9 @@
     });
 
     socket.on("errorMessage", (msg) => {
-      alert(msg);
+      showMessage(msg, 3000, "#f00");
     });
 
-    // Added: Handle gameOver event to display winner
     socket.on("gameOver", ({ winner }) => {
       document.getElementById("winMessage").innerText = `${winner.name} Wins!`;
       document.getElementById("endOverlay").style.display = "flex";
@@ -550,7 +591,7 @@
     function animateCardPass(timestamp) {
       if (!animCard || !animationInProgress) return;
 
-      const duration = 500; // Animation duration in ms
+      const duration = 500;
       if (!animStartTime) animStartTime = timestamp;
       const elapsed = timestamp - animStartTime;
       const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
