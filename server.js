@@ -11,6 +11,12 @@ app.use(express.static('public'));
 
 const rooms = new Map(); // roomCode -> { players, gameState }
 
+// List of predefined bot names
+const botNames = [
+  'Omega', 'Zero', 'Alpha', 'Beta', 'Gamma',
+  'Delta', 'Echo', 'Foxtrot', 'Sierra', 'Tango'
+];
+
 function log(message, roomCode = 'N/A') {
   console.log(`[${new Date().toISOString()}] [Room: ${roomCode}] ${message}`);
 }
@@ -128,18 +134,28 @@ function checkGameOver(players) {
 
 function addBotToRoom(roomCode, roomData) {
   const botId = `bot_${uuidv4()}`;
-  const botName = `Bot_${Math.floor(Math.random() * 1000)}`;
+  
+  // Find an unused bot name
+  const usedNames = roomData.players.map(p => p.name);
+  const availableNames = botNames.filter(name => !usedNames.includes(name));
+  
+  let botName;
+  if (availableNames.length > 0) {
+    // Use a predefined name if available
+    botName = availableNames[0];
+  } else {
+    // Fallback to numbered bot names if all predefined names are used
+    let botNumber = 1;
+    while (usedNames.includes(`Bot_${botNumber}`)) {
+      botNumber++;
+    }
+    botName = `Bot_${botNumber}`;
+  }
+
   const player = { id: botId, name: botName, chips: 5, eliminated: false, seatIndex: null };
   
   roomData.players.push(player);
-  rooms.set(roomCode, roomData);
-
   log(`Bot ${botName} joined`, roomCode);
-  const playersList = roomData.players.map(p => ({
-    ...p,
-    name: p.name || 'Unknown Player'
-  }));
-  io.to(roomCode).emit('playerList', playersList);
 
   return player;
 }
@@ -148,22 +164,27 @@ function ensureTenPlayers(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
-  const currentPlayers = room.players.length;
-  const botsToAdd = 10 - currentPlayers; // Ensure total of 10 players
+  const initialPlayerCount = room.players.length;
+  const botsToAdd = 10 - initialPlayerCount;
 
   if (botsToAdd > 0) {
-    log(`Adding ${botsToAdd} bot(s) to reach 10 players`, roomCode);
+    log(`Adding ${botsToAdd} bot(s) to reach 10 players (initial count: ${initialPlayerCount})`, roomCode);
     for (let i = 0; i < botsToAdd; i++) {
       const bot = addBotToRoom(roomCode, room);
-      // Schedule bot to play if it's their turn (will be checked after game starts)
       if (bot.id.startsWith('bot_')) {
         setTimeout(() => botPlay(bot, roomCode), 1000);
       }
     }
-  } else if (currentPlayers > 10) {
-    // If there are more than 10 players, remove excess bots
+    rooms.set(roomCode, room);
+    const playersList = room.players.map(p => ({
+      ...p,
+      name: p.name || 'Unknown Player'
+    }));
+    log(`Final playerList after adding bots: ${playersList.map(p => p.name).join(', ')}`, roomCode);
+    io.to(roomCode).emit('playerList', playersList);
+  } else if (initialPlayerCount > 10) {
     const bots = room.players.filter(p => p.id.startsWith('bot_'));
-    const excessBots = currentPlayers - 10;
+    const excessBots = initialPlayerCount - 10;
     if (bots.length >= excessBots) {
       for (let i = 0; i < excessBots; i++) {
         const botIndex = room.players.findIndex(p => p.id === bots[i].id);
@@ -192,7 +213,7 @@ function botPlay(bot, roomCode) {
   const botPlayer = players.find(p => p.id === bot.id);
   if (!botPlayer || botPlayer.eliminated || !botPlayer.card) return;
 
-  log(`Bot ${bot.name} is deciding...`, roomCode);
+  log(`Bot ${botPlayer.name} is deciding...`, roomCode);
 
   const hasAce = botPlayer.card.rank === 'A';
   const hasKing = botPlayer.card.rank === 'K';
@@ -200,10 +221,10 @@ function botPlay(bot, roomCode) {
 
   setTimeout(() => {
     if (shouldPass) {
-      log(`Bot ${bot.name} passes`, roomCode);
+      log(`Bot ${botPlayer.name} passes`, roomCode);
       io.to(roomCode).emit('passCard', { room: roomCode });
     } else {
-      log(`Bot ${bot.name} keeps`, roomCode);
+      log(`Bot ${botPlayer.name} keeps`, roomCode);
       io.to(roomCode).emit('keepCard', { room: roomCode });
     }
   }, 1500);
@@ -246,8 +267,6 @@ io.on('connection', (socket) => {
     }));
     log(`Updated playerList: ${playersList.map(p => p.name).join(', ')}`, room);
     io.to(room).emit('playerList', playersList);
-
-    // Removed immediate bot addition here; will handle in startGame
   });
 
   socket.on('startGame', (roomCode) => {
@@ -260,7 +279,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Ensure exactly 10 players by adding bots
     ensureTenPlayers(roomCode);
 
     log('Starting game', roomCode);
