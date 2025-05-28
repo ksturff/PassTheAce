@@ -28,7 +28,6 @@ function createDeck() {
 }
 
 function dealCards(players, deck) {
-  // Only deal to non-eliminated players
   const activePlayers = players.filter(p => !p.eliminated);
   const dealtCards = deck.slice(0, activePlayers.length);
   let cardIndex = 0;
@@ -38,7 +37,7 @@ function dealCards(players, deck) {
       player.card = dealtCards[cardIndex];
       cardIndex++;
     } else {
-      player.card = null; // Ensure eliminated players have no card
+      player.card = null;
     }
   });
 
@@ -177,20 +176,40 @@ io.on('connection', (socket) => {
   socket.on('requestLobbyState', () => {
     const roomCode = Array.from(socket.rooms).find(room => room !== socket.id);
     if (roomCode && rooms.has(roomCode)) {
-      socket.emit('playerList', rooms.get(roomCode).players);
+      const room = rooms.get(roomCode);
+      // Ensure all players have a name before emitting
+      const playersList = room.players.map(p => ({
+        ...p,
+        name: p.name || 'Unknown Player'
+      }));
+      log(`Sending playerList: ${playersList.map(p => p.name).join(', ')}`, roomCode);
+      socket.emit('playerList', playersList);
     }
   });
 
   socket.on('join', ({ username, room }) => {
     socket.join(room);
-    const player = { id: socket.id, name: username, chips: 5, eliminated: false, seatIndex: null };
+    // Validate username
+    const player = { 
+      id: socket.id, 
+      name: username || `Player_${socket.id.slice(0, 5)}`, // Fallback if username is empty
+      chips: 5, 
+      eliminated: false, 
+      seatIndex: null 
+    };
 
     const roomData = rooms.get(room) || { players: [], gameState: null };
     roomData.players.push(player);
     rooms.set(room, roomData);
 
-    log(`${username} joined`, room);
-    io.to(room).emit('playerList', roomData.players);
+    log(`${player.name} joined`, room);
+    // Emit updated player list to all clients in the room
+    const playersList = roomData.players.map(p => ({
+      ...p,
+      name: p.name || 'Unknown Player'
+    }));
+    log(`Updated playerList: ${playersList.map(p => p.name).join(', ')}`, room);
+    io.to(room).emit('playerList', playersList);
 
     if (roomData.players.length === 1) {
       addBotToRoom(room);
@@ -339,7 +358,6 @@ io.on('connection', (socket) => {
         }
 
         const deck = createDeck();
-        // Clear cards for all players before dealing
         updatedPlayers.forEach(p => {
           p.card = null;
         });
@@ -384,7 +402,12 @@ io.on('connection', (socket) => {
         const player = room.players[playerIndex];
         log(`${player.name} left`, roomCode);
         room.players.splice(playerIndex, 1);
-        io.to(roomCode).emit('playerList', room.players);
+        // Emit updated player list after disconnection
+        const playersList = room.players.map(p => ({
+          ...p,
+          name: p.name || 'Unknown Player'
+        }));
+        io.to(roomCode).emit('playerList', playersList);
         if (room.players.length === 0) {
           rooms.delete(roomCode);
         }

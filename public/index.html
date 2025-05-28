@@ -165,18 +165,16 @@
     });
 
     socket.on("playerList", (playersList) => {
+      console.log("Received playerList:", playersList); // Debug log
       const listEl = document.getElementById("playerList");
       listEl.innerHTML = "";
       playersList.forEach(p => {
         const li = document.createElement("li");
-        li.innerText = p.name;
+        li.innerText = p.name || "Unknown Player"; // Fallback if name is undefined
         listEl.appendChild(li);
       });
 
-      // Count human players (non-bots)
       const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
-
-      // Enable the Start Game button only if 2+ humans
       const startBtn = document.getElementById("startBtn");
       if (startBtn) {
         startBtn.disabled = humanCount < 2;
@@ -193,7 +191,6 @@
       });
     });
 
-    // Create wrapper for responsive scaling
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '50%';
@@ -204,7 +201,6 @@
     wrapper.style.overflow = 'hidden';
     wrapper.style.zIndex = '1';
 
-    // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 600;
@@ -213,7 +209,6 @@
     canvas.style.height = '100%';
 
     wrapper.appendChild(canvas);
-    // Move playerContainer inside the wrapper
     const hudContainer = document.getElementById("playerContainer");
     wrapper.appendChild(hudContainer);
     document.body.appendChild(wrapper);
@@ -267,7 +262,6 @@
         }
       }
 
-      // Add the card back
       const back = new Image();
       back.src = './assets/back.png';
       cardImages['back'] = back;
@@ -310,7 +304,6 @@
       socket.emit("startGame", myRoom);
     }
 
-    // Helper function to show temporary messages
     function showMessage(message, duration = 3000, color = "#f00") {
       const msgBox = document.createElement("div");
       msgBox.style.position = "fixed";
@@ -338,21 +331,18 @@
         return;
       }
 
-      // Check if the current player has a king
       const currentPlayer = players.find(p => p.id === mySocketId);
       if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
         showMessage("You have a King! You cannot pass.", 3000, "#f00");
-        // Ensure the UI reflects that it's still the player's turn
         const actionBtns = document.getElementById("actionBtns");
         const passBtn = document.getElementById("passBtn");
         const keepBtn = document.getElementById("keepBtn");
         actionBtns.style.display = "block";
-        passBtn.disabled = true; // Already disabled, reinforcing
+        passBtn.disabled = true;
         keepBtn.disabled = false;
         return;
       }
 
-      // If no king, proceed with the pass
       myTurn = false;
       peekPlayerCard = false;
       drawTable();
@@ -403,13 +393,11 @@
         const angle = angleMap[i] * (Math.PI / 180);
         const offset = cardOffsets[i];
 
-        // Card position
         p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
         p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
         if (!p.card) return;
         if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
-          // Skip drawing static card at from/to during active animation
           return;
         }
 
@@ -431,7 +419,6 @@
         }
       });
 
-      // Card animation pass
       if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
         const from = players[animCard.fromIndex];
         const to = players[animCard.toIndex];
@@ -461,7 +448,6 @@
         }
       }
 
-      // Render HUD
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
 
@@ -485,7 +471,7 @@
         div.id = `player-ui-${p.id}`;
         div.innerHTML = `
           <div class="hud">
-            <div class="name">${p.name}</div>
+            <div class="name">${p.name || 'Unknown Player'}</div>
             <img class="avatar" src="./assets/avatar.png" />
             <div class="chips">
               <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
@@ -515,19 +501,16 @@
       const keepBtn = document.getElementById("keepBtn");
       actionBtns.style.display = myTurn ? "block" : "none";
       
-      // Disable Pass button if the current player has a king
       const currentPlayer = players.find(p => p.id === currentPlayerId);
       const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
       passBtn.disabled = !myTurn || !canPass;
       keepBtn.disabled = !myTurn;
 
-      // Log for debugging
       console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
       console.log("Animating pass:", fromIndex, "→", toIndex);
-      // Double-check: don't animate if the recipient has a king (server should prevent this)
       const toPlayer = players[toIndex];
       if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
         showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
