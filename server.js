@@ -11,12 +11,6 @@ app.use(express.static('public'));
 
 const rooms = new Map(); // roomCode -> { players, gameState }
 
-// List of predefined bot names
-const botNames = [
-  'Omega', 'Zero', 'Alpha', 'Beta', 'Gamma',
-  'Delta', 'Echo', 'Foxtrot', 'Sierra', 'Tango'
-];
-
 function log(message, roomCode = 'N/A') {
   console.log(`[${new Date().toISOString()}] [Room: ${roomCode}] ${message}`);
 }
@@ -34,19 +28,10 @@ function createDeck() {
 }
 
 function dealCards(players, deck) {
-  const activePlayers = players.filter(p => !p.eliminated);
-  const dealtCards = deck.slice(0, activePlayers.length);
-  let cardIndex = 0;
-
-  players.forEach(player => {
-    if (!player.eliminated) {
-      player.card = dealtCards[cardIndex];
-      cardIndex++;
-    } else {
-      player.card = null;
-    }
+  const dealtCards = deck.slice(0, players.length);
+  players.forEach((player, i) => {
+    player.card = dealtCards[i];
   });
-
   return players;
 }
 
@@ -64,6 +49,7 @@ function endRound(room) {
   let aceCount = 0;
   let kingCount = 0;
 
+  // First pass: Count aces and kings
   players.forEach(p => {
     if (!p.eliminated && p.card) {
       if (p.card.rank === 'A') aceCount++;
@@ -74,12 +60,14 @@ function endRound(room) {
   const hasAce = aceCount > 0;
   const allKings = kingCount === players.filter(p => !p.eliminated).length;
 
+  // Define card values for comparison (A=1, 2=2, ..., 10=10, J=11, Q=12, K=13)
   const rankValues = {
     'A': 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10,
     'J': 11, 'Q': 12, 'K': 13
   };
 
   if (hasAce) {
+    // If there’s an ace, only ace holders lose a chip
     players.forEach(p => {
       if (p.eliminated) return;
       if (p.card.rank === 'A') {
@@ -89,6 +77,7 @@ function endRound(room) {
       }
     });
   } else if (allKings) {
+    // If all players have kings, all lose a chip
     players.forEach(p => {
       if (p.eliminated) return;
       p.chips--;
@@ -96,6 +85,7 @@ function endRound(room) {
       log(`Player ${p.name} loses a chip with ${p.card.rank}${p.card.suit} (all kings)`, room.gameState.roomCode);
     });
   } else {
+    // Otherwise, the player with the lowest card loses a chip
     let minValue = Infinity;
     const activePlayers = players.filter(p => !p.eliminated && p.card);
     activePlayers.forEach(p => {
@@ -105,6 +95,7 @@ function endRound(room) {
       }
     });
 
+    // Deduct chips from players with the lowest card
     activePlayers.forEach(p => {
       if (p.eliminated) return;
       const value = rankValues[p.card.rank];
@@ -116,6 +107,7 @@ function endRound(room) {
     });
   }
 
+  // Eliminate players with 0 chips
   const activePlayers = players.filter(p => !p.eliminated);
   activePlayers.forEach(p => {
     if (p.chips <= 0) p.eliminated = true;
@@ -132,74 +124,20 @@ function checkGameOver(players) {
   return null;
 }
 
-function addBotToRoom(roomCode, roomData) {
+function addBotToRoom(roomCode) {
   const botId = `bot_${uuidv4()}`;
-  
-  // Find an unused bot name
-  const usedNames = roomData.players.map(p => p.name);
-  const availableNames = botNames.filter(name => !usedNames.includes(name));
-  
-  let botName;
-  if (availableNames.length > 0) {
-    // Use a predefined name if available
-    botName = availableNames[0];
-  } else {
-    // Fallback to numbered bot names if all predefined names are used
-    let botNumber = 1;
-    while (usedNames.includes(`Bot_${botNumber}`)) {
-      botNumber++;
-    }
-    botName = `Bot_${botNumber}`;
-  }
-
+  const botName = `Bot_${Math.floor(Math.random() * 1000)}`;
   const player = { id: botId, name: botName, chips: 5, eliminated: false, seatIndex: null };
   
-  roomData.players.push(player);
+  const room = rooms.get(roomCode) || { players: [], gameState: null };
+  room.players.push(player);
+  rooms.set(roomCode, room);
+
   log(`Bot ${botName} joined`, roomCode);
+  io.to(roomCode).emit('playerList', room.players);
 
-  return player;
-}
-
-function ensureTenPlayers(roomCode) {
-  const room = rooms.get(roomCode);
-  if (!room) return;
-
-  const initialPlayerCount = room.players.length;
-  const botsToAdd = 10 - initialPlayerCount;
-
-  if (botsToAdd > 0) {
-    log(`Adding ${botsToAdd} bot(s) to reach 10 players (initial count: ${initialPlayerCount})`, roomCode);
-    for (let i = 0; i < botsToAdd; i++) {
-      const bot = addBotToRoom(roomCode, room);
-      if (bot.id.startsWith('bot_')) {
-        setTimeout(() => botPlay(bot, roomCode), 1000);
-      }
-    }
-    rooms.set(roomCode, room);
-    const playersList = room.players.map(p => ({
-      ...p,
-      name: p.name || 'Unknown Player'
-    }));
-    log(`Final playerList after adding bots: ${playersList.map(p => p.name).join(', ')}`, roomCode);
-    io.to(roomCode).emit('playerList', playersList);
-  } else if (initialPlayerCount > 10) {
-    const bots = room.players.filter(p => p.id.startsWith('bot_'));
-    const excessBots = initialPlayerCount - 10;
-    if (bots.length >= excessBots) {
-      for (let i = 0; i < excessBots; i++) {
-        const botIndex = room.players.findIndex(p => p.id === bots[i].id);
-        if (botIndex !== -1) {
-          room.players.splice(botIndex, 1);
-        }
-      }
-      rooms.set(roomCode, room);
-      log(`Removed ${excessBots} excess bot(s) to maintain 10 players`, roomCode);
-      const playersList = room.players.map(p => ({
-        ...p,
-        name: p.name || 'Unknown Player'
-      }));
-      io.to(roomCode).emit('playerList', playersList);
-    }
+  if (player.id.startsWith('bot_')) {
+    setTimeout(() => botPlay(player, roomCode), 1000);
   }
 }
 
@@ -213,7 +151,7 @@ function botPlay(bot, roomCode) {
   const botPlayer = players.find(p => p.id === bot.id);
   if (!botPlayer || botPlayer.eliminated || !botPlayer.card) return;
 
-  log(`Bot ${botPlayer.name} is deciding...`, roomCode);
+  log(`Bot ${bot.name} is deciding...`, roomCode);
 
   const hasAce = botPlayer.card.rank === 'A';
   const hasKing = botPlayer.card.rank === 'K';
@@ -221,10 +159,10 @@ function botPlay(bot, roomCode) {
 
   setTimeout(() => {
     if (shouldPass) {
-      log(`Bot ${botPlayer.name} passes`, roomCode);
+      log(`Bot ${bot.name} passes`, roomCode);
       io.to(roomCode).emit('passCard', { room: roomCode });
     } else {
-      log(`Bot ${botPlayer.name} keeps`, roomCode);
+      log(`Bot ${bot.name} keeps`, roomCode);
       io.to(roomCode).emit('keepCard', { room: roomCode });
     }
   }, 1500);
@@ -236,37 +174,28 @@ io.on('connection', (socket) => {
   socket.on('requestLobbyState', () => {
     const roomCode = Array.from(socket.rooms).find(room => room !== socket.id);
     if (roomCode && rooms.has(roomCode)) {
-      const room = rooms.get(roomCode);
-      const playersList = room.players.map(p => ({
-        ...p,
-        name: p.name || 'Unknown Player'
-      }));
-      log(`Sending playerList: ${playersList.map(p => p.name).join(', ')}`, roomCode);
-      socket.emit('playerList', playersList);
+      socket.emit('playerList', rooms.get(roomCode).players);
     }
   });
 
   socket.on('join', ({ username, room }) => {
     socket.join(room);
-    const player = { 
-      id: socket.id, 
-      name: username || `Player_${socket.id.slice(0, 5)}`,
-      chips: 5, 
-      eliminated: false, 
-      seatIndex: null 
-    };
+    const player = { id: socket.id, name: username, chips: 5, eliminated: false, seatIndex: null };
 
     const roomData = rooms.get(room) || { players: [], gameState: null };
     roomData.players.push(player);
     rooms.set(room, roomData);
 
-    log(`${player.name} joined`, room);
-    const playersList = roomData.players.map(p => ({
-      ...p,
-      name: p.name || 'Unknown Player'
-    }));
-    log(`Updated playerList: ${playersList.map(p => p.name).join(', ')}`, room);
-    io.to(room).emit('playerList', playersList);
+    log(`${username} joined`, room);
+    io.to(room).emit('playerList', roomData.players);
+
+    if (roomData.players.length === 1) {
+      addBotToRoom(room);
+    }
+
+    if (player.id.startsWith('bot_')) {
+      setTimeout(() => botPlay(player, room), 1000);
+    }
   });
 
   socket.on('startGame', (roomCode) => {
@@ -278,8 +207,6 @@ io.on('connection', (socket) => {
       socket.emit('errorMessage', 'Need at least 2 human players to start the game.');
       return;
     }
-
-    ensureTenPlayers(roomCode);
 
     log('Starting game', roomCode);
 
@@ -294,7 +221,7 @@ io.on('connection', (socket) => {
       round: 1,
       dealerIndex: 0,
       startingPlayerIndex: 0,
-      roomCode
+      roomCode // Added for logging in endRound
     };
 
     rooms.set(roomCode, room);
@@ -409,9 +336,6 @@ io.on('connection', (socket) => {
         }
 
         const deck = createDeck();
-        updatedPlayers.forEach(p => {
-          p.card = null;
-        });
         room.gameState.players = dealCards(updatedPlayers, deck);
         room.gameState.deck = deck;
         room.gameState.round++;
@@ -453,11 +377,7 @@ io.on('connection', (socket) => {
         const player = room.players[playerIndex];
         log(`${player.name} left`, roomCode);
         room.players.splice(playerIndex, 1);
-        const playersList = room.players.map(p => ({
-          ...p,
-          name: p.name || 'Unknown Player'
-        }));
-        io.to(roomCode).emit('playerList', playersList);
+        io.to(roomCode).emit('playerList', room.players);
         if (room.players.length === 0) {
           rooms.delete(roomCode);
         }

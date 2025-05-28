@@ -165,22 +165,35 @@
     });
 
     socket.on("playerList", (playersList) => {
-      console.log("Received playerList:", playersList);
       const listEl = document.getElementById("playerList");
       listEl.innerHTML = "";
       playersList.forEach(p => {
         const li = document.createElement("li");
-        li.innerText = p.name || "Unknown Player";
+        li.innerText = p.name;
         listEl.appendChild(li);
       });
 
+      // Count human players (non-bots)
       const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
+
+      // Enable the Start Game button only if 2+ humans
       const startBtn = document.getElementById("startBtn");
       if (startBtn) {
         startBtn.disabled = humanCount < 2;
       }
     });
 
+    socket.on("gameStarted", (state) => {
+      console.log("🎮 Game started:", state);
+      gameState = state;
+      players = state.players;
+
+      preloadAssets().then(() => {
+        drawTable();
+      });
+    });
+
+    // Create wrapper for responsive scaling
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '50%';
@@ -191,6 +204,7 @@
     wrapper.style.overflow = 'hidden';
     wrapper.style.zIndex = '1';
 
+    // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 600;
@@ -199,6 +213,7 @@
     canvas.style.height = '100%';
 
     wrapper.appendChild(canvas);
+    // Move playerContainer inside the wrapper
     const hudContainer = document.getElementById("playerContainer");
     wrapper.appendChild(hudContainer);
     document.body.appendChild(wrapper);
@@ -252,6 +267,7 @@
         }
       }
 
+      // Add the card back
       const back = new Image();
       back.src = './assets/back.png';
       cardImages['back'] = back;
@@ -294,6 +310,7 @@
       socket.emit("startGame", myRoom);
     }
 
+    // Helper function to show temporary messages
     function showMessage(message, duration = 3000, color = "#f00") {
       const msgBox = document.createElement("div");
       msgBox.style.position = "fixed";
@@ -321,18 +338,21 @@
         return;
       }
 
+      // Check if the current player has a king
       const currentPlayer = players.find(p => p.id === mySocketId);
       if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
         showMessage("You have a King! You cannot pass.", 3000, "#f00");
+        // Ensure the UI reflects that it's still the player's turn
         const actionBtns = document.getElementById("actionBtns");
         const passBtn = document.getElementById("passBtn");
         const keepBtn = document.getElementById("keepBtn");
         actionBtns.style.display = "block";
-        passBtn.disabled = true;
+        passBtn.disabled = true; // Already disabled, reinforcing
         keepBtn.disabled = false;
         return;
       }
 
+      // If no king, proceed with the pass
       myTurn = false;
       peekPlayerCard = false;
       drawTable();
@@ -352,62 +372,6 @@
       socket.emit("keepCard", { room: myRoom });
     }
 
-    socket.on("gameStarted", (state) => {
-      console.log("🎮 Game started:", state);
-      gameState = state;
-      players = state.players;
-
-      document.getElementById("lobby").style.display = "none";
-      document.getElementById("ui").style.display = "block";
-      document.getElementById("endOverlay").style.display = "none";
-
-      // Clear existing HUDs
-      const container = document.getElementById('playerContainer');
-      container.innerHTML = '';
-
-      // Create HUD elements for all players
-      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-      const hudNudges = [
-        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-      ];
-      const scaleX = canvas.width / 1024;
-      const scaleY = canvas.height / 600;
-
-      players.forEach((p) => {
-        const i = p.seatIndex ?? 0;
-        const angle = angleMap[i] * (Math.PI / 180);
-        const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-        const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-        const offset = hudNudges[i];
-        const x = baseX + offset.x * scaleX;
-        const y = baseY + offset.y * scaleY;
-
-        const div = document.createElement('div');
-        div.className = 'player-ui';
-        div.id = `player-ui-${p.id}`;
-        div.innerHTML = `
-          <div class="hud">
-            <div class="name">${p.name || 'Unknown Player'}</div>
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="chips">
-              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-              ${p.chips}
-            </div>
-          </div>
-        `;
-        div.style.left = `${x}px`;
-        div.style.top = `${y}px`;
-        div.style.transform = 'translate(-50%, -50%)';
-        container.appendChild(div);
-      });
-
-      preloadAssets().then(() => {
-        drawTable();
-      });
-    });
-
     function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage.complete) {
@@ -424,6 +388,11 @@
         { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
         { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
       ];
+      const hudOffsets = [
+        { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+        { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+        { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+      ];
 
       const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
       const radiusX = X_RADIUS - 100;
@@ -434,11 +403,13 @@
         const angle = angleMap[i] * (Math.PI / 180);
         const offset = cardOffsets[i];
 
+        // Card position
         p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
         p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
         if (!p.card) return;
         if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+          // Skip drawing static card at from/to during active animation
           return;
         }
 
@@ -460,6 +431,7 @@
         }
       });
 
+      // Card animation pass
       if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
         const from = players[animCard.fromIndex];
         const to = players[animCard.toIndex];
@@ -489,15 +461,44 @@
         }
       }
 
-      // Update HUDs
+      // Render HUD
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+
+      const hudNudges = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+
       players.forEach((p) => {
         const i = p.seatIndex ?? 0;
-        const div = document.getElementById(`player-ui-${p.id}`);
-        if (div) {
-          const avatarEl = div.querySelector('.avatar');
-          avatarEl.classList.toggle('active-glow', p.id === gameState.currentPlayerId && p.chips > 0);
-          div.style.transform = 'translate(-50%, -50%)' + (p.id === gameState.currentPlayerId && p.chips > 0 ? ' scale(1.05)' : '');
-        }
+        const angle = angleMap[i] * (Math.PI / 180);
+        const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
+        const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
+        const offset = hudNudges[i];
+        const x = baseX + offset.x * scaleX;
+        const y = baseY + offset.y * scaleY;
+
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        div.innerHTML = `
+          <div class="hud">
+            <div class="name">${p.name}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>
+        `;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
+        const avatarEl = div.querySelector('.avatar');
+        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+        container.appendChild(div);
       });
     }
 
@@ -514,16 +515,19 @@
       const keepBtn = document.getElementById("keepBtn");
       actionBtns.style.display = myTurn ? "block" : "none";
       
+      // Disable Pass button if the current player has a king
       const currentPlayer = players.find(p => p.id === currentPlayerId);
       const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
       passBtn.disabled = !myTurn || !canPass;
       keepBtn.disabled = !myTurn;
 
+      // Log for debugging
       console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
     });
 
     socket.on("cardPassed", ({ fromIndex, toIndex }) => {
       console.log("Animating pass:", fromIndex, "→", toIndex);
+      // Double-check: don't animate if the recipient has a king (server should prevent this)
       const toPlayer = players[toIndex];
       if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
         showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
@@ -534,11 +538,6 @@
       animStartTime = null;
       animationInProgress = true;
       requestAnimationFrame(animateCardPass);
-
-      // Update the card in the game state
-      const tempCard = players[fromIndex].card;
-      players[fromIndex].card = null;
-      players[toIndex].card = tempCard;
     });
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
@@ -552,25 +551,6 @@
           players[i].card = updated.card;
           players[i].chips = updated.chips;
           players[i].eliminated = updated.eliminated;
-        }
-      });
-
-      // Update HUDs
-      players.forEach((p) => {
-        const div = document.getElementById(`player-ui-${p.id}`);
-        if (div) {
-          const hud = div.querySelector('.hud');
-          hud.innerHTML = `
-            <div class="name">${p.name || 'Unknown Player'}</div>
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="chips">
-              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-              ${p.chips}
-            </div>
-          `;
-          const avatarEl = hud.querySelector('.avatar');
-          avatarEl.classList.toggle('active-glow', p.id === gameState.currentPlayerId && p.chips > 0);
-          div.style.transform = 'translate(-50%, -50%)' + (p.id === gameState.currentPlayerId && p.chips > 0 ? ' scale(1.05)' : '');
         }
       });
 
