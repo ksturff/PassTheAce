@@ -165,12 +165,12 @@
     });
 
     socket.on("playerList", (playersList) => {
-      console.log("Received playerList:", playersList); // Debug log
+      console.log("Received playerList:", playersList);
       const listEl = document.getElementById("playerList");
       listEl.innerHTML = "";
       playersList.forEach(p => {
         const li = document.createElement("li");
-        li.innerText = p.name || "Unknown Player"; // Fallback if name is undefined
+        li.innerText = p.name || "Unknown Player";
         listEl.appendChild(li);
       });
 
@@ -179,16 +179,6 @@
       if (startBtn) {
         startBtn.disabled = humanCount < 2;
       }
-    });
-
-    socket.on("gameStarted", (state) => {
-      console.log("🎮 Game started:", state);
-      gameState = state;
-      players = state.players;
-
-      preloadAssets().then(() => {
-        drawTable();
-      });
     });
 
     const wrapper = document.createElement('div');
@@ -362,6 +352,62 @@
       socket.emit("keepCard", { room: myRoom });
     }
 
+    socket.on("gameStarted", (state) => {
+      console.log("🎮 Game started:", state);
+      gameState = state;
+      players = state.players;
+
+      document.getElementById("lobby").style.display = "none";
+      document.getElementById("ui").style.display = "block";
+      document.getElementById("endOverlay").style.display = "none";
+
+      // Clear existing HUDs
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+
+      // Create HUD elements for all players
+      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+      const hudNudges = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+      const scaleX = canvas.width / 1024;
+      const scaleY = canvas.height / 600;
+
+      players.forEach((p) => {
+        const i = p.seatIndex ?? 0;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
+        const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
+        const offset = hudNudges[i];
+        const x = baseX + offset.x * scaleX;
+        const y = baseY + offset.y * scaleY;
+
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        div.innerHTML = `
+          <div class="hud">
+            <div class="name">${p.name || 'Unknown Player'}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>
+        `;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)';
+        container.appendChild(div);
+      });
+
+      preloadAssets().then(() => {
+        drawTable();
+      });
+    });
+
     function drawTable(showCards = false, animCard = null) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage.complete) {
@@ -377,11 +423,6 @@
         { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
         { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
         { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-      ];
-      const hudOffsets = [
-        { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-        { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-        { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
       ];
 
       const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
@@ -448,43 +489,15 @@
         }
       }
 
-      const container = document.getElementById('playerContainer');
-      container.innerHTML = '';
-
-      const hudNudges = [
-        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-      ];
-
+      // Update HUDs
       players.forEach((p) => {
         const i = p.seatIndex ?? 0;
-        const angle = angleMap[i] * (Math.PI / 180);
-        const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-        const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-        const offset = hudNudges[i];
-        const x = baseX + offset.x * scaleX;
-        const y = baseY + offset.y * scaleY;
-
-        const div = document.createElement('div');
-        div.className = 'player-ui';
-        div.id = `player-ui-${p.id}`;
-        div.innerHTML = `
-          <div class="hud">
-            <div class="name">${p.name || 'Unknown Player'}</div>
-            <img class="avatar" src="./assets/avatar.png" />
-            <div class="chips">
-              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-              ${p.chips}
-            </div>
-          </div>
-        `;
-        div.style.left = `${x}px`;
-        div.style.top = `${y}px`;
-        div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
-        const avatarEl = div.querySelector('.avatar');
-        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-        container.appendChild(div);
+        const div = document.getElementById(`player-ui-${p.id}`);
+        if (div) {
+          const avatarEl = div.querySelector('.avatar');
+          avatarEl.classList.toggle('active-glow', p.id === gameState.currentPlayerId && p.chips > 0);
+          div.style.transform = 'translate(-50%, -50%)' + (p.id === gameState.currentPlayerId && p.chips > 0 ? ' scale(1.05)' : '');
+        }
       });
     }
 
@@ -521,6 +534,11 @@
       animStartTime = null;
       animationInProgress = true;
       requestAnimationFrame(animateCardPass);
+
+      // Update the card in the game state
+      const tempCard = players[fromIndex].card;
+      players[fromIndex].card = null;
+      players[toIndex].card = tempCard;
     });
 
     socket.on("roundEnded", ({ updatedPlayers, losers }) => {
@@ -534,6 +552,25 @@
           players[i].card = updated.card;
           players[i].chips = updated.chips;
           players[i].eliminated = updated.eliminated;
+        }
+      });
+
+      // Update HUDs
+      players.forEach((p) => {
+        const div = document.getElementById(`player-ui-${p.id}`);
+        if (div) {
+          const hud = div.querySelector('.hud');
+          hud.innerHTML = `
+            <div class="name">${p.name || 'Unknown Player'}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          `;
+          const avatarEl = hud.querySelector('.avatar');
+          avatarEl.classList.toggle('active-glow', p.id === gameState.currentPlayerId && p.chips > 0);
+          div.style.transform = 'translate(-50%, -50%)' + (p.id === gameState.currentPlayerId && p.chips > 0 ? ' scale(1.05)' : '');
         }
       });
 
