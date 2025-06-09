@@ -6,36 +6,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
     body {
-      margin: 0; 
-      background: #111; 
-      overflow: hidden; 
-      color: white; 
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      color: white;
       font-family: 'Orbitron', sans-serif;
     }
     canvas {
       display: block;
     }
     #ui {
-      position: absolute; 
-      bottom: 40px; 
-      right: 40px; 
-      text-align: right; 
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      text-align: right;
       z-index: 10;
+      display: none;
     }
     button {
-      margin: 5px; 
-      padding: 12px 25px; 
+      margin: 5px;
+      padding: 12px 25px;
       font-size: 18px;
-      background: linear-gradient(45deg, #444, #888); 
+      background: linear-gradient(45deg, #444, #888);
       color: #fff;
-      border: none; 
-      border-radius: 10px; 
+      border: none;
+      border-radius: 10px;
       cursor: pointer;
-      box-shadow: 0 0 10px #00f7ff; 
+      box-shadow: 0 0 10px #00f7ff;
       transition: 0.3s;
     }
     button:hover {
-      background: linear-gradient(45deg, #666, #aaa); 
+      background: linear-gradient(45deg, #666, #aaa);
       box-shadow: 0 0 20px #00f7ff;
     }
     button:disabled {
@@ -44,73 +45,73 @@
       box-shadow: none;
     }
     #turnIndicator {
-      position: absolute; 
-      top: 60px; 
+      position: absolute;
+      top: 60px;
       width: 100%;
-      text-align: center; 
-      font-size: 20px; 
-      color: #0ff; 
+      text-align: center;
+      font-size: 20px;
+      color: #0ff;
       text-shadow: 0 0 5px #0ff;
     }
     #endOverlay {
-      display: none; 
-      position: absolute; 
-      top: 0; 
+      display: none;
+      position: absolute;
+      top: 0;
       left: 0;
-      width: 100%; 
-      height: 100%; 
+      width: 100%;
+      height: 100%;
       background: rgba(0,0,0,0.85);
-      color: white; 
-      font-size: 32px; 
+      color: white;
+      font-size: 32px;
       display: flex;
-      align-items: center; 
+      align-items: center;
       justify-content: center;
-      flex-direction: column; 
+      flex-direction: column;
       z-index: 20;
     }
     #endOverlay button {
-      font-size: 22px; 
+      font-size: 22px;
       margin-top: 20px;
-      background: #28a745; 
+      background: #28a745;
       box-shadow: 0 0 15px #28a745;
     }
     #playerContainer {
-      position: absolute; 
-      top: 0; 
+      position: absolute;
+      top: 0;
       left: 0;
-      width: 100%; 
-      height: 100%; 
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
     .player-ui {
-      position: absolute; 
+      position: absolute;
       display: flex;
-      align-items: center; 
+      align-items: center;
       gap: 8px;
-      color: white; 
+      color: white;
       font-family: 'Orbitron', sans-serif;
       pointer-events: none;
     }
     .hud {
-      display: flex; 
+      display: flex;
       flex-direction: column;
-      align-items: center; 
-      pointer-events: none; 
+      align-items: center;
+      pointer-events: none;
       gap: 3px;
     }
     .hud .name {
-      background: #000; 
-      color: white; 
+      background: #000;
+      color: white;
       font-size: 10px;
-      padding: 2px 8px; 
-      border-radius: 20px; 
+      padding: 2px 8px;
+      border-radius: 20px;
       text-align: center;
     }
     .hud .avatar {
-      width: 42px; 
-      height: 42px; 
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      border: 2px solid white; 
+      border: 2px solid white;
       box-shadow: 0 0 4px #000;
     }
     .hud .avatar.active-glow {
@@ -118,28 +119,85 @@
       border-color: #0ff;
     }
     .hud .chips {
-      font-size: 10px; 
-      color: gold; 
+      font-size: 10px;
+      color: gold;
       background: none;
-      padding: 1px 4px; 
+      padding: 1px 4px;
       border-radius: 10px;
-      display: flex; 
-      align-items: center; 
+      display: flex;
+      align-items: center;
       gap: 2px;
+    }
+    /* Lobby Styles */
+    #lobby {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    #lobby #player-info {
+      margin-bottom: 20px;
+    }
+    #lobby .tab {
+      display: inline-block;
+      padding: 10px;
+      cursor: pointer;
+      margin-right: 10px;
+      background: #333;
+      border-radius: 5px;
+    }
+    #lobby .tab.active {
+      background: #007bff;
+    }
+    #lobby #game-lobby {
+      margin: 20px 0;
+      width: 80%;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    #lobby .game-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      border-bottom: 1px solid #444;
+      border-radius: 5px;
+      margin: 5px 0;
+    }
+    #lobby input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 10px;
+      width: 200px;
     }
   </style>
 </head>
 <body>
-  <!-- Multiplayer Lobby -->
-  <div id="lobby" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
-    <h2 style="color:white;">Join Game</h2>
-    <input id="usernameInput" type="text" placeholder="Enter your name" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <input id="roomInput" type="text" placeholder="Enter room code" style="padding:10px; font-size:16px; border-radius:5px; border:none; margin-bottom:10px;">
-    <button onclick="joinGame()">Join Game</button>
+  <div id="lobby">
+    <div id="player-info">
+      <span id="player-name"></span> (<span id="player-rank">Bronze I</span>) - <span id="player-chips">5</span> Chips
+      <progress id="xp-bar" max="200" value="150"></progress>
+    </div>
+    <div id="tabs">
+      <div class="tab active" onclick="switchTab('all')">All Games</div>
+      <div class="tab" onclick="switchTab('my')">My Games</div>
+      <div class="tab" onclick="switchTab('tournaments')">Tournaments</div>
+    </div>
+    <div id="game-lobby"></div>
+    <input id="usernameInput" type="text" placeholder="Enter your name">
+    <input id="roomInput" type="text" placeholder="Enter room code">
+    <button onclick="createOrJoinGame()">Create/Join Game</button>
   </div>
 
-  <!-- Main UI (hidden at first) -->
-  <div id="ui" style="display:none;">
+  <div id="ui">
     <button id="startBtn" onclick="startGame()" disabled>Start Game</button><br>
     <div id="actionBtns" style="display:none;">
       <button id="keepBtn" onclick="keepCard()">Keep</button>
@@ -156,42 +214,157 @@
     <strong>Players:</strong>
     <ul id="playerList" style="list-style:none; padding-left: 0; margin-top: 5px;"></ul>
   </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    socket.emit("requestLobbyState");
-    socket.on("connect", () => {
+    let mySocketId = "", myUsername = "", myRoom = "";
+    let currentTab = 'all';
+    let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
+    let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
+    let gameRunning = false, eliminatedPlayers = [], gameState = {};
+    let animCard = null, animStartTime = null;
+    let animationInProgress = false;
+    let showAllCards = false;
+    const cardImages = {};
+
+    socket.on('connect', () => {
       mySocketId = socket.id;
+      socket.emit('requestLobbyState');
     });
 
-    socket.on("playerList", (playersList) => {
-      const listEl = document.getElementById("playerList");
-      listEl.innerHTML = "";
+    socket.on('lobbyUpdate', (games) => updateLobby(games));
+    socket.on('roomCreated', (roomCode) => {
+      myRoom = roomCode;
+      document.getElementById('current-room').textContent = `Joined: ${roomCode}`;
+      updateLobby();
+    });
+    socket.on('playerList', (playersList) => {
+      document.getElementById('player-info').dataset.room = myRoom || '';
+      updatePlayerInfo(playersList.find(p => p.id === mySocketId));
+      const listEl = document.getElementById('playerList');
+      listEl.innerHTML = '';
       playersList.forEach(p => {
-        const li = document.createElement("li");
+        const li = document.createElement('li');
         li.innerText = p.name;
         listEl.appendChild(li);
       });
 
-      // Count human players (non-bots)
       const humanCount = playersList.filter(p => !p.id.startsWith('bot_')).length;
-
-      // Enable the Start Game button only if 2+ humans
-      const startBtn = document.getElementById("startBtn");
-      if (startBtn) {
-        startBtn.disabled = humanCount < 2;
-      }
+      const startBtn = document.getElementById('startBtn');
+      if (startBtn) startBtn.disabled = humanCount < 2;
     });
 
-    socket.on("gameStarted", (state) => {
-      console.log("🎮 Game started:", state);
-      gameState = state;
-      players = state.players;
-
-      preloadAssets().then(() => {
-        drawTable();
+    function updateLobby(games = []) {
+      const lobby = document.getElementById('game-lobby');
+      lobby.innerHTML = '';
+      const currentRoom = document.getElementById('player-info').dataset.room;
+      const filteredGames = currentTab === 'my' ? games.filter(g => g.roomCode === currentRoom) : games;
+      filteredGames.forEach(game => {
+        lobby.innerHTML += `
+          <div class="game-row">
+            <span>Game ${game.roomCode} (${game.playerCount}/${game.maxPlayers}) - ${game.status}</span>
+            <button onclick="joinGame('${game.roomCode}')">Join</button>
+          </div>
+        `;
       });
-    });
+      if (currentTab === 'tournaments') lobby.innerHTML = '<div>Coming Soon!</div>';
+    }
+
+    function updatePlayerInfo(player) {
+      if (player) {
+        document.getElementById('player-name').textContent = player.name;
+        document.getElementById('player-chips').textContent = player.chips;
+        document.getElementById('player-rank').textContent = 'Bronze I';
+        document.getElementById('xp-bar').value = 150;
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      updateLobby();
+      document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`#tabs .tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    }
+
+    function createOrJoinGame() {
+      const name = document.getElementById('usernameInput').value.trim();
+      const room = document.getElementById('roomInput').value.trim();
+      if (!name) return alert('Please enter a name.');
+      myUsername = name;
+      if (room) {
+        joinGame(room);
+      } else {
+        socket.emit('createGame');
+      }
+    }
+
+    function joinGame(roomCode) {
+      if (!myUsername) return alert('Please enter a name first.');
+      myRoom = roomCode;
+      socket.emit('join', { username: myUsername, room: roomCode });
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('ui').style.display = 'block';
+    }
+
+    function startGame() {
+      if (myRoom) socket.emit('startGame', myRoom);
+    }
+
+    function keepCard() {
+      if (myTurn) {
+        myTurn = false;
+        document.getElementById('actionBtns').style.display = 'none';
+        socket.emit('keepCard', { room: myRoom });
+      }
+    }
+
+    function passCard() {
+      if (myTurn) {
+        const currentPlayer = players.find(p => p.id === mySocketId);
+        if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
+          showMessage('You have a King! You cannot pass.', 3000, '#f00');
+          return;
+        }
+        myTurn = false;
+        document.getElementById('actionBtns').style.display = 'none';
+        socket.emit('passCard', { room: myRoom });
+      }
+    }
+
+    // Helper function to show temporary messages
+    function showMessage(message, duration = 3000, color = "#f00") {
+      const msgBox = document.createElement("div");
+      msgBox.style.position = "fixed";
+      msgBox.style.top = "100px";
+      msgBox.style.left = "50%";
+      msgBox.style.transform = "translateX(-50%)";
+      msgBox.style.padding = "10px 20px";
+      msgBox.style.background = "#222";
+      msgBox.style.border = `2px solid ${color}`;
+      msgBox.style.color = "#fff";
+      msgBox.style.fontSize = "14px";
+      msgBox.style.zIndex = "1000";
+      msgBox.style.boxShadow = `0 0 10px ${color}`;
+      msgBox.innerText = message;
+      document.body.appendChild(msgBox);
+
+      setTimeout(() => {
+        document.body.removeChild(msgBox);
+      }, duration);
+    }
+
+    function restartGame() {
+      document.getElementById("endOverlay").style.display = "none";
+      document.getElementById("startBtn").style.display = "block";
+      dealerIndex = null;
+      startGame();
+    }
+
+    function updateTurnIndicator() {
+      const player = players.find(p => p.id === gameState.currentPlayerId);
+      document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
+    }
 
     // Create wrapper for responsive scaling
     const wrapper = document.createElement('div');
@@ -213,7 +386,6 @@
     canvas.style.height = '100%';
 
     wrapper.appendChild(canvas);
-    // Move playerContainer inside the wrapper
     const hudContainer = document.getElementById("playerContainer");
     wrapper.appendChild(hudContainer);
     document.body.appendChild(wrapper);
@@ -240,14 +412,6 @@
     const CARD_W = 40, CARD_H = 55;
     const CENTER_X = 512, CENTER_Y = 300;
     let X_RADIUS = 360, Y_RADIUS = 210;
-    let players = [], dealerIndex = null, currentPlayer = 0, deck = [];
-    let myTurn = false, peekPlayerCard = false, startingPlayerIndex = null;
-    let gameRunning = false, eliminatedPlayers = [], gameState = {};
-    let animCard = null, animStartTime = null;
-    let animationInProgress = false;
-    let showAllCards = false;
-    let mySocketId = "", myUsername = "", myRoom = "";
-    const cardImages = {};
 
     function preloadAssets() {
       const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -267,7 +431,6 @@
         }
       }
 
-      // Add the card back
       const back = new Image();
       back.src = './assets/back.png';
       cardImages['back'] = back;
@@ -277,99 +440,6 @@
       }));
 
       return Promise.all(loadPromises);
-    }
-
-    function updateTurnIndicator() {
-      const player = players.find(p => p.id === gameState.currentPlayerId);
-      document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
-    }
-
-    function restartGame() {
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-      dealerIndex = null;
-      startGame();
-    }
-
-    function joinGame() {
-      const name = document.getElementById("usernameInput").value.trim();
-      const room = document.getElementById("roomInput").value.trim();
-      if (!name || !room) return alert("Please enter both a name and a room code.");
-
-      myUsername = name;
-      myRoom = room;
-      socket.emit("join", { username: name, room });
-      socket.emit("requestLobbyState");
-      document.getElementById("lobby").style.display = "none";
-      document.getElementById("ui").style.display = "block";
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-    }
-
-    function startGame() {
-      socket.emit("startGame", myRoom);
-    }
-
-    // Helper function to show temporary messages
-    function showMessage(message, duration = 3000, color = "#f00") {
-      const msgBox = document.createElement("div");
-      msgBox.style.position = "fixed";
-      msgBox.style.top = "100px";
-      msgBox.style.left = "50%";
-      msgBox.style.transform = "translateX(-50%)";
-      msgBox.style.padding = "10px 20px";
-      msgBox.style.background = "#222";
-      msgBox.style.border = `2px solid ${color}`;
-      msgBox.style.color = "#fff";
-      msgBox.style.fontSize = "14px";
-      msgBox.style.zIndex = "1000";
-      msgBox.style.boxShadow = `0 0 10px ${color}`;
-      msgBox.innerText = message;
-      document.body.appendChild(msgBox);
-
-      setTimeout(() => {
-        document.body.removeChild(msgBox);
-      }, duration);
-    }
-
-    function passCard() {
-      if (!myTurn) {
-        showMessage("It's not your turn!", 3000, "#f00");
-        return;
-      }
-
-      // Check if the current player has a king
-      const currentPlayer = players.find(p => p.id === mySocketId);
-      if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
-        showMessage("You have a King! You cannot pass.", 3000, "#f00");
-        // Ensure the UI reflects that it's still the player's turn
-        const actionBtns = document.getElementById("actionBtns");
-        const passBtn = document.getElementById("passBtn");
-        const keepBtn = document.getElementById("keepBtn");
-        actionBtns.style.display = "block";
-        passBtn.disabled = true; // Already disabled, reinforcing
-        keepBtn.disabled = false;
-        return;
-      }
-
-      // If no king, proceed with the pass
-      myTurn = false;
-      peekPlayerCard = false;
-      drawTable();
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("passCard", { room: myRoom });
-    }
-
-    function keepCard() {
-      if (!myTurn) {
-        showMessage("It's not your turn!", 3000, "#f00");
-        return;
-      }
-      myTurn = false;
-      peekPlayerCard = false;
-      drawTable();
-      document.getElementById("actionBtns").style.display = "none";
-      socket.emit("keepCard", { room: myRoom });
     }
 
     function drawTable(showCards = false, animCard = null) {
@@ -403,13 +473,11 @@
         const angle = angleMap[i] * (Math.PI / 180);
         const offset = cardOffsets[i];
 
-        // Card position
         p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
         p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
 
         if (!p.card) return;
         if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
-          // Skip drawing static card at from/to during active animation
           return;
         }
 
@@ -431,7 +499,6 @@
         }
       });
 
-      // Card animation pass
       if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
         const from = players[animCard.fromIndex];
         const to = players[animCard.toIndex];
@@ -461,7 +528,6 @@
         }
       }
 
-      // Render HUD
       const container = document.getElementById('playerContainer');
       container.innerHTML = '';
 
@@ -502,32 +568,39 @@
       });
     }
 
-    socket.on("turnUpdate", ({ currentPlayerId, players: updatedPlayers }) => {
+    socket.on('gameStarted', (state) => {
+      console.log('🎮 Game started:', state);
+      gameState = state;
+      players = state.players;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('ui').style.display = 'block';
+
+      preloadAssets().then(() => {
+        drawTable();
+      });
+    });
+
+    socket.on('turnUpdate', ({ currentPlayerId, players: updatedPlayers }) => {
       gameState.players = updatedPlayers;
       gameState.currentPlayerId = currentPlayerId;
       players = updatedPlayers;
-      myTurn = (socket.id === currentPlayerId);
+      myTurn = (mySocketId === currentPlayerId);
       peekPlayerCard = myTurn;
       updateTurnIndicator();
       drawTable();
-      const actionBtns = document.getElementById("actionBtns");
-      const passBtn = document.getElementById("passBtn");
-      const keepBtn = document.getElementById("keepBtn");
-      actionBtns.style.display = myTurn ? "block" : "none";
-      
-      // Disable Pass button if the current player has a king
+      const actionBtns = document.getElementById('actionBtns');
+      const passBtn = document.getElementById('passBtn');
+      const keepBtn = document.getElementById('keepBtn');
+      actionBtns.style.display = myTurn ? 'block' : 'none';
       const currentPlayer = players.find(p => p.id === currentPlayerId);
       const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
       passBtn.disabled = !myTurn || !canPass;
       keepBtn.disabled = !myTurn;
-
-      // Log for debugging
       console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
     });
 
-    socket.on("cardPassed", ({ fromIndex, toIndex }) => {
+    socket.on('cardPassed', ({ fromIndex, toIndex }) => {
       console.log("Animating pass:", fromIndex, "→", toIndex);
-      // Double-check: don't animate if the recipient has a king (server should prevent this)
       const toPlayer = players[toIndex];
       if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
         showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
@@ -540,7 +613,7 @@
       requestAnimationFrame(animateCardPass);
     });
 
-    socket.on("roundEnded", ({ updatedPlayers, losers }) => {
+    socket.on('roundEnded', ({ updatedPlayers, losers }) => {
       console.log("📣 Round ended!", updatedPlayers, losers);
 
       gameState.players = updatedPlayers;
@@ -596,13 +669,13 @@
       }, 4500);
     });
 
-    socket.on("errorMessage", (msg) => {
+    socket.on('errorMessage', (msg) => {
       showMessage(msg, 3000, "#f00");
     });
 
-    socket.on("gameOver", ({ winner }) => {
-      document.getElementById("winMessage").innerText = `${winner.name} Wins!`;
-      document.getElementById("endOverlay").style.display = "flex";
+    socket.on('gameOver', ({ winner }) => {
+      document.getElementById('winMessage').innerText = `${winner.name} Wins!`;
+      document.getElementById('endOverlay').style.display = 'flex';
     });
 
     function animateCardPass(timestamp) {
