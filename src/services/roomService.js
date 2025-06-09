@@ -12,6 +12,10 @@ function initRoom(code) {
 function joinRoom(socket, username, roomCode, io) {
   socket.join(roomCode);
   const room = initRoom(roomCode);
+  if (room.players.length >= 10) {
+    socket.emit('errorMessage', 'Room is full!');
+    return;
+  }
   const player = {
     id: socket.id,
     name: username,
@@ -21,26 +25,28 @@ function joinRoom(socket, username, roomCode, io) {
   };
   room.players.push(player);
   io.to(roomCode).emit('playerList', room.players);
+  io.emit('lobbyUpdate', getLobbyState()); // Broadcast lobby update
 }
 
 function removePlayer(socketId, io) {
   for (const [code, room] of rooms.entries()) {
     const idx = room.players.findIndex(p => p.id === socketId);
     if (idx !== -1) {
-      const name = room.players[idx].name;
       room.players.splice(idx, 1);
       io.to(code).emit('playerList', room.players);
-      console.log(`❌ ${name} left room ${code}`);
-      if (room.players.length === 0) {
-        rooms.delete(code);
-      }
+      io.emit('lobbyUpdate', getLobbyState()); // Update lobby
+      if (room.players.length === 0) rooms.delete(code);
     }
   }
 }
 
-module.exports = {
-  rooms,
-  initRoom,
-  joinRoom,
-  removePlayer
-};
+function getLobbyState() {
+  return Array.from(rooms.entries()).map(([code, room]) => ({
+    roomCode: code,
+    playerCount: room.players.length,
+    maxPlayers: 10,
+    status: room.gameState ? 'In Progress' : 'Waiting'
+  }));
+}
+
+module.exports = { rooms, initRoom, joinRoom, removePlayer, getLobbyState };
