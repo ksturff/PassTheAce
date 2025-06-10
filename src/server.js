@@ -4,8 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const socketManager = require('./socketManager');
 
-const rootDir = path.resolve(__dirname, '..');
-const filePath = path.join(rootDir, 'index.html');
+// Set root directory to the Render project root for deployment
+const rootDir = '/opt/render/project';
+const publicDir = path.join(rootDir, 'public');
+const filePath = path.join(publicDir, 'index.html');
 console.log('Resolved index.html path:', filePath); // Debug the exact path
 
 const server = http.createServer((req, res) => {
