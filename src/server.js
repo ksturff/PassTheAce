@@ -1,35 +1,20 @@
-const http = require('http');
+const express = require('express');
 const { Server } = require('socket.io');
-const fs = require('fs');
 const path = require('path');
 const socketManager = require('./socketManager');
 
-// Set root directory to the Render project root for deployment
-const rootDir = '/opt/render/project';
-const publicDir = path.join(rootDir, 'public');
-const filePath = path.join(publicDir, 'index.html');
-console.log('Resolved index.html path:', filePath); // Debug the exact path
+const app = express();
+const server = require('http').createServer(app);
+const io = new Server(server);
 
-const server = http.createServer((req, res) => {
-  console.log('Request URL:', req.url); // Debug the requested URL
-  if (req.url === '/' || req.url === '/index.html') {
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        console.error('File read error:', err.message);
-        res.writeHead(500);
-        res.end('Error loading index.html: ' + err.message);
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(data);
-    });
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
+// Serve static files from the public directory (including assets)
+app.use(express.static(path.join(__dirname, '..', '..', 'public')));
+
+// Fallback to index.html for root route, pointing to the correct location
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', '..', 'public', 'assets', 'index.html'));
 });
 
-const io = new Server(server);
 socketManager(io);
 
 const PORT = process.env.PORT || 3000;
