@@ -7,12 +7,17 @@ const app = express();
 const server = require('http').createServer(app);
 const io = new Server(server);
 
-// Serve static files from the public directory (including assets)
-app.use(express.static(path.join(__dirname, '..', '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Fallback to index.html for root route, pointing to the correct location
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', '..', 'public', 'assets', 'index.html'));
+  const indexPath = path.join(__dirname, '..', 'public', 'index.html');
+  console.log(`Attempting to serve: ${indexPath}`); // Debug log
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error(`Failed to load index.html: ${err.message}`);
+      res.status(500).send('Server error: Index file not found');
+    }
+  });
 });
 
 socketManager(io);
