@@ -217,27 +217,289 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      let mySocketId = "";
-      let myUsername = "";
-      let myRoom = "";
-      let currentTab = 'all';
-      let players = [];
-      let dealerIndex = null;
-      let currentPlayer = 0;
-      let deck = [];
-      let myTurn = false;
-      let peekPlayerCard = false;
-      let startingPlayerIndex = null;
-      let gameRunning = false;
-      let eliminatedPlayers = [];
-      let gameState = {};
-      let animCard = null;
-      let animStartTime = null;
-      let animationInProgress = false;
-      let showAllCards = false;
-      const cardImages = {};
+    // Declare functions in global scope
+    let mySocketId = "";
+    let myUsername = "";
+    let myRoom = "";
+    let currentTab = 'all';
+    let players = [];
+    let dealerIndex = null;
+    let currentPlayer = 0;
+    let deck = [];
+    let myTurn = false;
+    let peekPlayerCard = false;
+    let startingPlayerIndex = null;
+    let gameRunning = false;
+    let eliminatedPlayers = [];
+    let gameState = {};
+    let animCard = null;
+    let animStartTime = null;
+    let animationInProgress = false;
+    let showAllCards = false;
+    const cardImages = {};
 
+    function updateLobby(games = []) {
+      const lobby = document.getElementById('game-lobby');
+      lobby.innerHTML = '';
+      const currentRoom = document.getElementById('player-info').dataset.room;
+      const filteredGames = currentTab === 'my' ? games.filter(g => g.roomCode === currentRoom) : games;
+      filteredGames.forEach(game => {
+        lobby.innerHTML += `
+          <div class="game-room">
+            <span>Game ${game.roomCode} (${game.playerCount}/${game.maxPlayers}) - ${game.status}</span>
+            <button onclick="joinGame('${game.roomCode}')">Join</button>
+          </div>
+        `;
+      });
+      if (currentTab === 'tournaments') lobby.innerHTML = '<div>Coming Soon!</div>';
+    }
+
+    function updatePlayerInfo(player) {
+      if (player) {
+        document.getElementById('player-name').textContent = player.name;
+        document.getElementById('player-chips').textContent = player.chips;
+        document.getElementById('player-rank').textContent = 'Bronze I';
+        document.getElementById('xp-bar').value = 150;
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      updateLobby();
+      document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`#tabs .tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    }
+
+    function createOrJoinGame() {
+      console.log('createOrJoinGame triggered'); // Debug log
+      const name = document.getElementById('usernameInput').value.trim();
+      const room = document.getElementById('roomInput').value.trim();
+      if (!name) return alert('Please enter a name.');
+      myUsername = name;
+      console.log('Username set:', myUsername, 'Room:', room); // Debug log
+      if (room) {
+        joinGame(room);
+      } else {
+        socket.emit('createGame', { username: myUsername });
+        console.log('Emitted createGame with username:', myUsername); // Debug log
+      }
+    }
+
+    function joinGame(roomCode) {
+      console.log('joinGame triggered with room:', roomCode); // Debug log
+      if (!myUsername) return alert('Please enter a name first.');
+      myRoom = roomCode;
+      socket.emit('join', { username: myUsername, room: roomCode });
+      console.log('Emitted join with username:', myUsername, 'room:', roomCode); // Debug log
+    }
+
+    function startGame() {
+      if (myRoom) socket.emit('startGame', myRoom);
+    }
+
+    function keepCard() {
+      if (myTurn) {
+        myTurn = false;
+        document.getElementById('actionBtns').style.display = 'none';
+        socket.emit('keepCard', { room: myRoom });
+      }
+    }
+
+    function passCard() {
+      if (myTurn) {
+        const currentPlayer = players.find(p => p.id === mySocketId);
+        if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
+          showMessage('You have a King! You cannot pass.', 3000, '#f00');
+          return;
+        }
+        myTurn = false;
+        document.getElementById('actionBtns').style.display = 'none';
+        socket.emit('passCard', { room: myRoom });
+      }
+    }
+
+    function showMessage(message, duration = 3000, color = "#f00") {
+      const msgBox = document.createElement("div");
+      msgBox.style.position = "fixed";
+      msgBox.style.top = "100px";
+      msgBox.style.left = "50%";
+      msgBox.style.transform = "translateX(-50%)";
+      msgBox.style.padding = "10px 20px";
+      msgBox.style.background = "#222";
+      msgBox.style.border = `2px solid ${color}`;
+      msgBox.style.color = "#fff";
+      msgBox.style.fontSize = "14px";
+      msgBox.style.zIndex = "1000";
+      msgBox.style.boxShadow = `0 0 10px ${color}`;
+      msgBox.innerText = message;
+      document.body.appendChild(msgBox);
+
+      setTimeout(() => {
+        document.body.removeChild(msgBox);
+      }, duration);
+    }
+
+    function restartGame() {
+      document.getElementById("endOverlay").style.display = "none";
+      document.getElementById("startBtn").style.display = "block";
+      dealerIndex = null;
+      startGame();
+    }
+
+    function updateTurnIndicator() {
+      const player = players.find(p => p.id === gameState.currentPlayerId);
+      document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
+    }
+
+    function drawTable(showCards = false, animCard = null) {
+      const ctx = document.querySelector('canvas').getContext('2d');
+      ctx.clearRect(0, 0, 1024, 600);
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
+      }
+
+      const BASE_WIDTH = 1024;
+      const BASE_HEIGHT = 600;
+      const scaleX = 1024 / BASE_WIDTH;
+      const scaleY = 600 / BASE_HEIGHT;
+
+      const cardOffsets = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+      const hudOffsets = [
+        { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
+        { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
+        { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
+      ];
+
+      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+      const radiusX = X_RADIUS - 100;
+      const radiusY = Y_RADIUS - 50;
+
+      players.forEach((p) => {
+        const i = p.seatIndex ?? 0;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const offset = cardOffsets[i];
+
+        p.cardX = 512 + Math.cos(angle) * radiusX + offset.x * scaleX;
+        p.cardY = 300 + Math.sin(angle) * radiusY + offset.y * scaleY;
+
+        if (!p.card) return;
+        if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
+          return;
+        }
+
+        const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+        const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+        const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
+        const suit = suitMap[p.card.suit];
+        const key = `${rank}_of_${suit}`;
+
+        const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
+        const cardImg = cardImages[show ? key : 'back'];
+
+        if (cardImg?.complete) {
+          const scale = cardImg === cardImages['back'] ? 1.0 : 0.95;
+          ctx.drawImage(cardImg, p.cardX - 40 / 2, p.cardY - 55 / 2, 40 * scale, 55 * scale);
+        } else {
+          ctx.fillStyle = "red";
+          ctx.fillRect(p.cardX - 40 / 2, p.cardY - 55 / 2, 40, 55);
+        }
+      });
+
+      if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
+        const from = players[animCard.fromIndex];
+        const to = players[animCard.toIndex];
+
+        if (from && to && from.cardX != null && to.cardX != null) {
+          const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
+          const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
+          const passingPlayer = players[animCard.fromIndex];
+          const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
+          const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
+
+          if (passingPlayer && passingPlayer.card) {
+            const cardImg = cardImages['back'];
+
+            console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+
+            if (cardImg?.complete) {
+              ctx.drawImage(cardImg, x - 40 / 2, y - 55 / 2, 40, 55);
+            } else {
+              ctx.fillStyle = "blue";
+              ctx.fillRect(x - 40 / 2, y - 55 / 2, 40, 55);
+              console.warn(`⚠️ Back image not loaded, drawing fallback.`);
+            }
+          }
+        } else {
+          console.warn("⚠️ Invalid from/to players or card positions:", { from, to });
+        }
+      }
+
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+
+      const hudNudges = [
+        { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+        { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
+        { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
+      ];
+
+      players.forEach((p) => {
+        const i = p.seatIndex ?? 0;
+        const angle = angleMap[i] * (Math.PI / 180);
+        const baseX = 512 + Math.cos(angle) * (X_RADIUS + 30);
+        const baseY = 300 + Math.sin(angle) * (Y_RADIUS + 30);
+        const offset = hudNudges[i];
+        const x = baseX + offset.x * scaleX;
+        const y = baseY + offset.y * scaleY;
+
+        const div = document.createElement('div');
+        div.className = 'player-ui';
+        div.id = `player-ui-${p.id}`;
+        div.innerHTML = `
+          <div class="hud">
+            <div class="name">${p.name}</div>
+            <img class="avatar" src="./assets/avatar.png" />
+            <div class="chips">
+              <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
+              ${p.chips}
+            </div>
+          </div>
+        `;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
+        const avatarEl = div.querySelector('.avatar');
+        avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
+        container.appendChild(div);
+      });
+    }
+
+    function animateCardPass(timestamp) {
+      if (!animCard || !animationInProgress) return;
+
+      const duration = 500;
+      if (!animStartTime) animStartTime = timestamp;
+      const elapsed = timestamp - animStartTime;
+      const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      animCard.progress = easeInOut(Math.min(elapsed / duration, 1));
+
+      drawTable(false, animCard);
+
+      if (animCard.progress < 1) {
+        requestAnimationFrame(animateCardPass);
+      } else {
+        animCard = null;
+        animationInProgress = false;
+        drawTable();
+      }
+    }
+
+    // Initialize on DOM load
+    document.addEventListener('DOMContentLoaded', () => {
       const socket = io();
       mySocketId = socket.id;
 
@@ -388,163 +650,14 @@
         document.getElementById('endOverlay').style.display = 'flex';
       });
 
-      function updateLobby(games = []) {
-        const lobby = document.getElementById('game-lobby');
-        lobby.innerHTML = '';
-        const currentRoom = document.getElementById('player-info').dataset.room;
-        const filteredGames = currentTab === 'my' ? games.filter(g => g.roomCode === currentRoom) : games;
-        filteredGames.forEach(game => {
-          lobby.innerHTML += `
-            <div class="game-room">
-              <span>Game ${game.roomCode} (${game.playerCount}/${game.maxPlayers}) - ${game.status}</span>
-              <button onclick="joinGame('${game.roomCode}')">Join</button>
-            </div>
-          `;
-        });
-        if (currentTab === 'tournaments') lobby.innerHTML = '<div>Coming Soon!</div>';
-      }
-
-      function updatePlayerInfo(player) {
-        if (player) {
-          document.getElementById('player-name').textContent = player.name;
-          document.getElementById('player-chips').textContent = player.chips;
-          document.getElementById('player-rank').textContent = 'Bronze I';
-          document.getElementById('xp-bar').value = 150;
-        }
-      }
-
-      function switchTab(tab) {
-        currentTab = tab;
-        updateLobby();
-        document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
-        document.querySelector(`#tabs .tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-      }
-
-      function createOrJoinGame() {
-        console.log('createOrJoinGame triggered'); // Debug log
-        const name = document.getElementById('usernameInput').value.trim();
-        const room = document.getElementById('roomInput').value.trim();
-        if (!name) return alert('Please enter a name.');
-        myUsername = name;
-        console.log('Username set:', myUsername, 'Room:', room); // Debug log
-        if (room) {
-          joinGame(room);
-        } else {
-          socket.emit('createGame', { username: myUsername });
-          console.log('Emitted createGame with username:', myUsername); // Debug log
-        }
-      }
-
-      function joinGame(roomCode) {
-        console.log('joinGame triggered with room:', roomCode); // Debug log
-        if (!myUsername) return alert('Please enter a name first.');
-        myRoom = roomCode;
-        socket.emit('join', { username: myUsername, room: roomCode });
-        console.log('Emitted join with username:', myUsername, 'room:', roomCode); // Debug log
-      }
-
-      function startGame() {
-        if (myRoom) socket.emit('startGame', myRoom);
-      }
-
-      function keepCard() {
-        if (myTurn) {
-          myTurn = false;
-          document.getElementById('actionBtns').style.display = 'none';
-          socket.emit('keepCard', { room: myRoom });
-        }
-      }
-
-      function passCard() {
-        if (myTurn) {
-          const currentPlayer = players.find(p => p.id === mySocketId);
-          if (currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K') {
-            showMessage('You have a King! You cannot pass.', 3000, '#f00');
-            return;
-          }
-          myTurn = false;
-          document.getElementById('actionBtns').style.display = 'none';
-          socket.emit('passCard', { room: myRoom });
-        }
-      }
-
-      function showMessage(message, duration = 3000, color = "#f00") {
-        const msgBox = document.createElement("div");
-        msgBox.style.position = "fixed";
-        msgBox.style.top = "100px";
-        msgBox.style.left = "50%";
-        msgBox.style.transform = "translateX(-50%)";
-        msgBox.style.padding = "10px 20px";
-        msgBox.style.background = "#222";
-        msgBox.style.border = `2px solid ${color}`;
-        msgBox.style.color = "#fff";
-        msgBox.style.fontSize = "14px";
-        msgBox.style.zIndex = "1000";
-        msgBox.style.boxShadow = `0 0 10px ${color}`;
-        msgBox.innerText = message;
-        document.body.appendChild(msgBox);
-
-        setTimeout(() => {
-          document.body.removeChild(msgBox);
-        }, duration);
-      }
-
-      function restartGame() {
-        document.getElementById("endOverlay").style.display = "none";
-        document.getElementById("startBtn").style.display = "block";
-        dealerIndex = null;
-        startGame();
-      }
-
-      function updateTurnIndicator() {
-        const player = players.find(p => p.id === gameState.currentPlayerId);
-        document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
-      }
-
-      const wrapper = document.createElement('div');
-      wrapper.style.position = 'absolute';
-      wrapper.style.left = '50%';
-      wrapper.style.top = '50%';
-      wrapper.style.transform = 'translate(-50%, -50%)';
-      wrapper.style.width = '1024px';
-      wrapper.style.height = '600px';
-      wrapper.style.overflow = 'hidden';
-      wrapper.style.zIndex = '1';
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 1024;
-      canvas.height = 600;
-      canvas.style.display = 'block';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-
-      wrapper.appendChild(canvas);
-      const hudContainer = document.getElementById("playerContainer");
-      wrapper.appendChild(hudContainer);
-      document.body.appendChild(wrapper);
-
-      const ctx = canvas.getContext('2d');
-
-      function resizeGame() {
-        const scaleX = window.innerWidth / 1024;
-        const scaleY = window.innerHeight / 600;
-        const scale = Math.min(scaleX, scaleY);
-        wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
-      }
-      window.addEventListener('resize', resizeGame);
-      resizeGame();
-
       const backgroundImage = new Image();
       backgroundImage.src = './assets/background.png';
       backgroundImage.onerror = () => {
         console.warn("⚠️ Background image failed to load.");
+        const ctx = document.querySelector('canvas').getContext('2d');
         ctx.fillStyle = "#222";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, 1024, 600);
       };
-
-      const CARD_W = 40, CARD_H = 55;
-      const CENTER_X = 512, CENTER_Y = 300;
-      let X_RADIUS = 360, Y_RADIUS = 210;
 
       function preloadAssets() {
         const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -573,152 +686,6 @@
         }));
 
         return Promise.all(loadPromises);
-      }
-
-      function drawTable(showCards = false, animCard = null) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (backgroundImage.complete) {
-          ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-        }
-
-        const BASE_WIDTH = 1024;
-        const BASE_HEIGHT = 600;
-        const scaleX = canvas.width / BASE_WIDTH;
-        const scaleY = canvas.height / BASE_HEIGHT;
-
-        const cardOffsets = [
-          { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-          { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-          { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-        ];
-        const hudOffsets = [
-          { x: 130, y: 40 }, { x: 50, y: 10 }, { x: 135, y: -30 }, { x: 150, y: 15 },
-          { x: 50, y: 30 }, { x: 130, y: -10 }, { x: 200, y: 30 },
-          { x: 110, y: 15 }, { x: 110, y: -30 }, { x: 200, y: 10 }
-        ];
-
-        const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-        const radiusX = X_RADIUS - 100;
-        const radiusY = Y_RADIUS - 50;
-
-        players.forEach((p) => {
-          const i = p.seatIndex ?? 0;
-          const angle = angleMap[i] * (Math.PI / 180);
-          const offset = cardOffsets[i];
-
-          p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x * scaleX;
-          p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y * scaleY;
-
-          if (!p.card) return;
-          if (animCard && animCard.progress < 1 && (i === animCard.fromIndex || i === animCard.toIndex)) {
-            return;
-          }
-
-          const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-          const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-          const rank = typeof p.card.rank === 'number' ? p.card.rank : rankMap[p.card.rank];
-          const suit = suitMap[p.card.suit];
-          const key = `${rank}_of_${suit}`;
-
-          const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === 'K';
-          const cardImg = cardImages[show ? key : 'back'];
-
-          if (cardImg?.complete) {
-            const scale = cardImg === cardImages['back'] ? 1.0 : 0.95;
-            ctx.drawImage(cardImg, p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W * scale, CARD_H * scale);
-          } else {
-            ctx.fillStyle = "red";
-            ctx.fillRect(p.cardX - CARD_W / 2, p.cardY - CARD_H / 2, CARD_W, CARD_H);
-          }
-        });
-
-        if (animCard && animCard.fromIndex != null && animCard.toIndex != null) {
-          const from = players[animCard.fromIndex];
-          const to = players[animCard.toIndex];
-
-          if (from && to && from.cardX != null && to.cardX != null) {
-            const x = from.cardX + (to.cardX - from.cardX) * animCard.progress;
-            const y = from.cardY + (to.cardY - from.cardY) * animCard.progress;
-            const passingPlayer = players[animCard.fromIndex];
-            const rankMap = { J: 'jack', Q: 'queen', K: 'king', A: 'ace' };
-            const suitMap = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' };
-
-            if (passingPlayer && passingPlayer.card) {
-              const cardImg = cardImages['back'];
-
-              console.log(`🎴 Drawing anim card from ${animCard.fromIndex} to ${animCard.toIndex} at (${x.toFixed(1)}, ${y.toFixed(1)})`);
-
-              if (cardImg?.complete) {
-                ctx.drawImage(cardImg, x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-              } else {
-                ctx.fillStyle = "blue";
-                ctx.fillRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H);
-                console.warn(`⚠️ Back image not loaded, drawing fallback.`);
-              }
-            }
-          } else {
-            console.warn("⚠️ Invalid from/to players or card positions:", { from, to });
-          }
-        }
-
-        const container = document.getElementById('playerContainer');
-        container.innerHTML = '';
-
-        const hudNudges = [
-          { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-          { x: 0, y: -20 }, { x: 0, y: -50 }, { x: -5, y: -20 },
-          { x: -30, y: 10 }, { x: -30, y: -20 }, { x: -5, y: 10 }
-        ];
-
-        players.forEach((p) => {
-          const i = p.seatIndex ?? 0;
-          const angle = angleMap[i] * (Math.PI / 180);
-          const baseX = CENTER_X + Math.cos(angle) * (X_RADIUS + 30);
-          const baseY = CENTER_Y + Math.sin(angle) * (Y_RADIUS + 30);
-          const offset = hudNudges[i];
-          const x = baseX + offset.x * scaleX;
-          const y = baseY + offset.y * scaleY;
-
-          const div = document.createElement('div');
-          div.className = 'player-ui';
-          div.id = `player-ui-${p.id}`;
-          div.innerHTML = `
-            <div class="hud">
-              <div class="name">${p.name}</div>
-              <img class="avatar" src="./assets/avatar.png" />
-              <div class="chips">
-                <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
-                ${p.chips}
-              </div>
-            </div>
-          `;
-          div.style.left = `${x}px`;
-          div.style.top = `${y}px`;
-          div.style.transform = 'translate(-50%, -50%)' + (i === currentPlayer && p.chips > 0 ? ' scale(1.05)' : '');
-          const avatarEl = div.querySelector('.avatar');
-          avatarEl.classList.toggle('active-glow', i === currentPlayer && p.chips > 0);
-          container.appendChild(div);
-        });
-      }
-
-      function animateCardPass(timestamp) {
-        if (!animCard || !animationInProgress) return;
-
-        const duration = 500;
-        if (!animStartTime) animStartTime = timestamp;
-        const elapsed = timestamp - animStartTime;
-        const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        animCard.progress = easeInOut(Math.min(elapsed / duration, 1));
-
-        drawTable(false, animCard);
-
-        if (animCard.progress < 1) {
-          requestAnimationFrame(animateCardPass);
-        } else {
-          animCard = null;
-          animationInProgress = false;
-          drawTable();
-        }
       }
     });
   </script>
