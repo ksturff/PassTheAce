@@ -1,19 +1,20 @@
 const { initRoom, joinRoom, removePlayer, getAllRooms } = require('./services/roomService');
-const {
-  startGame,
-  handlePassCard,
-  handleKeepCard
-} = require('./game/gameengine');
+const { startGame, handlePassCard, handleKeepCard } = require('./game/gameengine');
 
 module.exports = function(io) {
   io.on('connection', (socket) => {
     console.log(`🟢 Connected: ${socket.id}`);
 
-    // Emit initial lobby state to the connected client
     socket.emit('lobbyUpdate', getAllRooms());
 
     socket.on('join', ({ username, room }) => {
       joinRoom(socket, username, room, io);
+      const roomData = initRoom(room);
+      socket.emit('joinedRoom', {
+        roomCode: room,
+        player: roomData.players.find(p => p.id === socket.id),
+        players: roomData.players
+      });
       io.emit('lobbyUpdate', getAllRooms()); // Broadcast updated lobby state
     });
 
@@ -21,8 +22,8 @@ module.exports = function(io) {
       const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
       if (roomCode) {
         const room = initRoom(roomCode);
-        socket.emit('playerList', room.players); // Room-specific player list
-        socket.emit('lobbyUpdate', getAllRooms()); // Also send lobby state
+        socket.emit('playerList', room.players);
+        socket.emit('lobbyUpdate', getAllRooms());
       }
     });
 
@@ -40,7 +41,7 @@ module.exports = function(io) {
 
     socket.on('disconnect', () => {
       removePlayer(socket.id, io);
-      io.emit('lobbyUpdate', getAllRooms()); // Update lobby when a player leaves
+      io.emit('lobbyUpdate', getAllRooms());
       console.log(`🔴 Disconnected: ${socket.id}`);
     });
   });

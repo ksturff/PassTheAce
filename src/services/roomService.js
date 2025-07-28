@@ -25,7 +25,7 @@ function joinRoom(socket, username, roomCode, io) {
   };
   room.players.push(player);
   io.to(roomCode).emit('playerList', room.players);
-  io.emit('lobbyUpdate', getLobbyState()); // Broadcast lobby update
+  io.emit('lobbyUpdate', getAllRooms()); // Updated to use getAllRooms
 }
 
 function removePlayer(socketId, io) {
@@ -34,13 +34,13 @@ function removePlayer(socketId, io) {
     if (idx !== -1) {
       room.players.splice(idx, 1);
       io.to(code).emit('playerList', room.players);
-      io.emit('lobbyUpdate', getLobbyState()); // Update lobby
+      io.emit('lobbyUpdate', getAllRooms()); // Updated to use getAllRooms
       if (room.players.length === 0) rooms.delete(code);
     }
   }
 }
 
-function getLobbyState() {
+function getAllRooms() { // Renamed from getLobbyState
   return Array.from(rooms.entries()).map(([code, room]) => ({
     roomCode: code,
     playerCount: room.players.length,
@@ -49,4 +49,4 @@ function getLobbyState() {
   }));
 }
 
-module.exports = { rooms, initRoom, joinRoom, removePlayer, getLobbyState };
+module.exports = { rooms, initRoom, joinRoom, removePlayer, getAllRooms };

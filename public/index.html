@@ -255,6 +255,125 @@
       if (startBtn) startBtn.disabled = humanCount < 2;
     });
 
+    socket.on('joinedRoom', (data) => {
+      myRoom = data.roomCode;
+      players = data.players;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('ui').style.display = 'block';
+      const playerListEl = document.getElementById('playerList');
+      playerListEl.innerHTML = players.map(p => `<li>${p.name}</li>`).join('');
+    });
+
+    socket.on('gameStarted', (state) => {
+      console.log('🎮 Game started:', state);
+      gameState = state;
+      players = state.players;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('ui').style.display = 'block';
+
+      preloadAssets().then(() => {
+        drawTable();
+      });
+    });
+
+    socket.on('turnUpdate', ({ currentPlayerId, players: updatedPlayers }) => {
+      gameState.players = updatedPlayers;
+      gameState.currentPlayerId = currentPlayerId;
+      players = updatedPlayers;
+      myTurn = (mySocketId === currentPlayerId);
+      peekPlayerCard = myTurn;
+      updateTurnIndicator();
+      drawTable();
+      const actionBtns = document.getElementById('actionBtns');
+      const passBtn = document.getElementById('passBtn');
+      const keepBtn = document.getElementById('keepBtn');
+      actionBtns.style.display = myTurn ? 'block' : 'none';
+      const currentPlayer = players.find(p => p.id === currentPlayerId);
+      const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
+      passBtn.disabled = !myTurn || !canPass;
+      keepBtn.disabled = !myTurn;
+      console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
+    });
+
+    socket.on('cardPassed', ({ fromIndex, toIndex }) => {
+      console.log("Animating pass:", fromIndex, "→", toIndex);
+      const toPlayer = players[toIndex];
+      if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
+        showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
+        return;
+      }
+      drawTable();
+      animCard = { fromIndex, toIndex, progress: 0 };
+      animStartTime = null;
+      animationInProgress = true;
+      requestAnimationFrame(animateCardPass);
+    });
+
+    socket.on('roundEnded', ({ updatedPlayers, losers }) => {
+      console.log("📣 Round ended!", updatedPlayers, losers);
+
+      gameState.players = updatedPlayers;
+      updatedPlayers.forEach((updated, i) => {
+        if (!players[i]) {
+          players[i] = { ...updated };
+        } else {
+          players[i].card = updated.card;
+          players[i].chips = updated.chips;
+          players[i].eliminated = updated.eliminated;
+        }
+      });
+
+      myTurn = false;
+      peekPlayerCard = false;
+      animCard = null;
+
+      showAllCards = true;
+      drawTable(false, animCard);
+
+      let frozenPlayers = [...players];
+
+      setTimeout(() => {
+        showAllCards = false;
+        players = frozenPlayers;
+        drawTable();
+      }, 6500);
+
+      const alertMessage = "💥 Round ended! Lost a chip: " + losers
+        .map(loser => {
+          const snapshot = updatedPlayers.find(p => p.name === loser.name);
+          if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
+          return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
+        })
+        .join(", ");
+      const alertBox = document.createElement("div");
+      alertBox.style.position = "fixed";
+      alertBox.style.top = "20px";
+      alertBox.style.left = "50%";
+      alertBox.style.transform = "translateX(-50%)";
+      alertBox.style.padding = "15px 25px";
+      alertBox.style.background = "#222";
+      alertBox.style.border = "2px solid #f00";
+      alertBox.style.color = "#fff";
+      alertBox.style.fontSize = "16px";
+      alertBox.style.zIndex = "1000";
+      alertBox.style.boxShadow = "0 0 10px red";
+      alertBox.innerText = alertMessage;
+      document.body.appendChild(alertBox);
+
+      setTimeout(() => {
+        document.body.removeChild(alertBox);
+      }, 4500);
+    });
+
+    socket.on('errorMessage', (msg) => {
+      showMessage(msg, 3000, "#f00");
+    });
+
+    socket.on('gameOver', ({ winner }) => {
+      document.getElementById('winMessage').innerText = `${winner.name} Wins!`;
+      document.getElementById('endOverlay').style.display = 'flex';
+    });
+
     function updateLobby(games = []) {
       const lobby = document.getElementById('game-lobby');
       lobby.innerHTML = '';
@@ -303,8 +422,6 @@
       if (!myUsername) return alert('Please enter a name first.');
       myRoom = roomCode;
       socket.emit('join', { username: myUsername, room: roomCode });
-      document.getElementById('lobby').style.display = 'none';
-      document.getElementById('ui').style.display = 'block';
     }
 
     function startGame() {
@@ -332,7 +449,6 @@
       }
     }
 
-    // Helper function to show temporary messages
     function showMessage(message, duration = 3000, color = "#f00") {
       const msgBox = document.createElement("div");
       msgBox.style.position = "fixed";
@@ -366,7 +482,6 @@
       document.getElementById("turnIndicator").innerText = player ? `${player.name}'s Turn` : '';
     }
 
-    // Create wrapper for responsive scaling
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '50%';
@@ -377,7 +492,6 @@
     wrapper.style.overflow = 'hidden';
     wrapper.style.zIndex = '1';
 
-    // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 600;
@@ -567,116 +681,6 @@
         container.appendChild(div);
       });
     }
-
-    socket.on('gameStarted', (state) => {
-      console.log('🎮 Game started:', state);
-      gameState = state;
-      players = state.players;
-      document.getElementById('lobby').style.display = 'none';
-      document.getElementById('ui').style.display = 'block';
-
-      preloadAssets().then(() => {
-        drawTable();
-      });
-    });
-
-    socket.on('turnUpdate', ({ currentPlayerId, players: updatedPlayers }) => {
-      gameState.players = updatedPlayers;
-      gameState.currentPlayerId = currentPlayerId;
-      players = updatedPlayers;
-      myTurn = (mySocketId === currentPlayerId);
-      peekPlayerCard = myTurn;
-      updateTurnIndicator();
-      drawTable();
-      const actionBtns = document.getElementById('actionBtns');
-      const passBtn = document.getElementById('passBtn');
-      const keepBtn = document.getElementById('keepBtn');
-      actionBtns.style.display = myTurn ? 'block' : 'none';
-      const currentPlayer = players.find(p => p.id === currentPlayerId);
-      const canPass = !(currentPlayer && currentPlayer.card && currentPlayer.card.rank === 'K');
-      passBtn.disabled = !myTurn || !canPass;
-      keepBtn.disabled = !myTurn;
-      console.log(`Turn Update - MyTurn: ${myTurn}, CanPass: ${canPass}, CurrentPlayer: ${currentPlayer ? currentPlayer.name : 'N/A'}, Card: ${currentPlayer && currentPlayer.card ? currentPlayer.card.rank + currentPlayer.card.suit : 'None'}`);
-    });
-
-    socket.on('cardPassed', ({ fromIndex, toIndex }) => {
-      console.log("Animating pass:", fromIndex, "→", toIndex);
-      const toPlayer = players[toIndex];
-      if (toPlayer && toPlayer.card && toPlayer.card.rank === 'K') {
-        showMessage(`${toPlayer.name} has a King and cannot be passed to!`, 3000, "#f00");
-        return;
-      }
-      drawTable();
-      animCard = { fromIndex, toIndex, progress: 0 };
-      animStartTime = null;
-      animationInProgress = true;
-      requestAnimationFrame(animateCardPass);
-    });
-
-    socket.on('roundEnded', ({ updatedPlayers, losers }) => {
-      console.log("📣 Round ended!", updatedPlayers, losers);
-
-      gameState.players = updatedPlayers;
-      updatedPlayers.forEach((updated, i) => {
-        if (!players[i]) {
-          players[i] = { ...updated };
-        } else {
-          players[i].card = updated.card;
-          players[i].chips = updated.chips;
-          players[i].eliminated = updated.eliminated;
-        }
-      });
-
-      myTurn = false;
-      peekPlayerCard = false;
-      animCard = null;
-
-      showAllCards = true;
-      drawTable(false, animCard);
-
-      let frozenPlayers = [...players];
-
-      setTimeout(() => {
-        showAllCards = false;
-        players = frozenPlayers;
-        drawTable();
-      }, 6500);
-
-      const alertMessage = "💥 Round ended! Lost a chip: " + losers
-        .map(loser => {
-          const snapshot = updatedPlayers.find(p => p.name === loser.name);
-          if (!snapshot || !snapshot.card) return `${loser.name} (?)`;
-          return `${loser.name} (${snapshot.card.rank}${snapshot.card.suit})`;
-        })
-        .join(", ");
-      const alertBox = document.createElement("div");
-      alertBox.style.position = "fixed";
-      alertBox.style.top = "20px";
-      alertBox.style.left = "50%";
-      alertBox.style.transform = "translateX(-50%)";
-      alertBox.style.padding = "15px 25px";
-      alertBox.style.background = "#222";
-      alertBox.style.border = "2px solid #f00";
-      alertBox.style.color = "#fff";
-      alertBox.style.fontSize = "16px";
-      alertBox.style.zIndex = "1000";
-      alertBox.style.boxShadow = "0 0 10px red";
-      alertBox.innerText = alertMessage;
-      document.body.appendChild(alertBox);
-
-      setTimeout(() => {
-        document.body.removeChild(alertBox);
-      }, 4500);
-    });
-
-    socket.on('errorMessage', (msg) => {
-      showMessage(msg, 3000, "#f00");
-    });
-
-    socket.on('gameOver', ({ winner }) => {
-      document.getElementById('winMessage').innerText = `${winner.name} Wins!`;
-      document.getElementById('endOverlay').style.display = 'flex';
-    });
 
     function animateCardPass(timestamp) {
       if (!animCard || !animationInProgress) return;

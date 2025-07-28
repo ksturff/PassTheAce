@@ -13,7 +13,7 @@ function fillRoomWithBots(room, io, roomCode) {
     room.players.push(bot);
   }
   io.to(roomCode).emit('playerList', room.players);
-  io.emit('lobbyUpdate', require('./services/roomService').getLobbyState()); // Update lobby
+  io.emit('lobbyUpdate', require('./services/roomService').getAllRooms()); // Updated to getAllRooms
 }
 
 function handleBotTurn(room, io, roomCode) {
