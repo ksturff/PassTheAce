@@ -468,8 +468,8 @@
         div.id = `player-ui-${p.id}`;
         div.innerHTML = `
           <div class="hud">
-            <div class="name">${p.name}</div>
-            <img class="avatar" src="./assets/avatar.png" />
+            <div class="name" style="${p.id.startsWith('bot_') ? 'color: #666; opacity: 0.7;' : ''}">${p.name}</div>
+            <img class="avatar" src="./assets/avatar.png" style="${p.id.startsWith('bot_') ? 'opacity: 0.5;' : ''}" />
             <div class="chips">
               <img src="./assets/coin.png" style="height:14px; vertical-align:middle;" />
               ${p.chips}
@@ -703,7 +703,7 @@
       wrapper.style.width = '1024px';
       wrapper.style.height = '600px';
       wrapper.style.overflow = 'hidden';
-      wrapper.style.zIndex = '1';
+      wrapper.style.zIndex = '1'; // Corrected from z-index to zIndex
 
       const canvas = document.createElement('canvas');
       canvas.width = 1024;
