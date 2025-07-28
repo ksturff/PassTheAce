@@ -5,7 +5,12 @@ const socketManager = require('./socketManager');
 
 const app = express();
 const server = require('http').createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins for testing; restrict in production
+    methods: ["GET", "POST"]
+  }
+});
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -25,4 +30,6 @@ socketManager(io);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT} at ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`);
+}).on('error', (err) => {
+  console.error('Server error:', err.message);
 });
