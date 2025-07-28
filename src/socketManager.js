@@ -4,10 +4,10 @@ const { startGame, handlePassCard, handleKeepCard } = require('./game/gameengine
 module.exports = function(io) {
   io.on('connection', (socket) => {
     console.log(`🟢 Connected: ${socket.id}`);
-
     socket.emit('lobbyUpdate', getAllRooms());
 
     socket.on('join', ({ username, room }) => {
+      console.log(`Received join request: ${username} to ${room}`); // Debug log
       joinRoom(socket, username, room, io);
       const roomData = initRoom(room);
       socket.emit('joinedRoom', {
@@ -15,7 +15,16 @@ module.exports = function(io) {
         player: roomData.players.find(p => p.id === socket.id),
         players: roomData.players
       });
-      io.emit('lobbyUpdate', getAllRooms()); // Broadcast updated lobby state
+      console.log(`Emitted joinedRoom for ${socket.id} in ${room}`); // Debug log
+      io.emit('lobbyUpdate', getAllRooms());
+    });
+
+    socket.on('createGame', ({ username }) => {
+      console.log(`Received createGame request from ${username}`); // Debug log
+      const roomCode = require('uuid').v4().slice(0, 6);
+      joinRoom(socket, username, roomCode, io);
+      socket.emit('roomCreated', roomCode);
+      console.log(`Created and joined room ${roomCode} for ${username}`); // Debug log
     });
 
     socket.on('requestLobbyState', () => {

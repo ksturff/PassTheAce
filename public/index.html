@@ -217,29 +217,27 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Initialize variables with default values
-    let mySocketId = "";
-    let myUsername = "";
-    let myRoom = "";
-    let currentTab = 'all';
-    let players = [];
-    let dealerIndex = null;
-    let currentPlayer = 0;
-    let deck = [];
-    let myTurn = false;
-    let peekPlayerCard = false;
-    let startingPlayerIndex = null;
-    let gameRunning = false;
-    let eliminatedPlayers = [];
-    let gameState = {};
-    let animCard = null;
-    let animStartTime = null;
-    let animationInProgress = false;
-    let showAllCards = false;
-    const cardImages = {};
-
-    // Connect event
     document.addEventListener('DOMContentLoaded', () => {
+      let mySocketId = "";
+      let myUsername = "";
+      let myRoom = "";
+      let currentTab = 'all';
+      let players = [];
+      let dealerIndex = null;
+      let currentPlayer = 0;
+      let deck = [];
+      let myTurn = false;
+      let peekPlayerCard = false;
+      let startingPlayerIndex = null;
+      let gameRunning = false;
+      let eliminatedPlayers = [];
+      let gameState = {};
+      let animCard = null;
+      let animStartTime = null;
+      let animationInProgress = false;
+      let showAllCards = false;
+      const cardImages = {};
+
       const socket = io();
       mySocketId = socket.id;
 
@@ -271,6 +269,7 @@
       });
 
       socket.on('joinedRoom', (data) => {
+        console.log('Received joinedRoom:', data); // Debug log
         myRoom = data.roomCode;
         players = data.players;
         document.getElementById('lobby').style.display = 'none';
@@ -422,21 +421,26 @@
       }
 
       function createOrJoinGame() {
+        console.log('createOrJoinGame triggered'); // Debug log
         const name = document.getElementById('usernameInput').value.trim();
         const room = document.getElementById('roomInput').value.trim();
         if (!name) return alert('Please enter a name.');
         myUsername = name;
+        console.log('Username set:', myUsername, 'Room:', room); // Debug log
         if (room) {
           joinGame(room);
         } else {
-          socket.emit('createGame');
+          socket.emit('createGame', { username: myUsername });
+          console.log('Emitted createGame with username:', myUsername); // Debug log
         }
       }
 
       function joinGame(roomCode) {
+        console.log('joinGame triggered with room:', roomCode); // Debug log
         if (!myUsername) return alert('Please enter a name first.');
         myRoom = roomCode;
         socket.emit('join', { username: myUsername, room: roomCode });
+        console.log('Emitted join with username:', myUsername, 'room:', roomCode); // Debug log
       }
 
       function startGame() {
