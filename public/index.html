@@ -238,6 +238,7 @@
     let showAllCards = false;
     const cardImages = {};
     let socket; // Declare socket globally
+    const backgroundImage = new Image(); // Move backgroundImage to global scope
 
     // Global functions
     function updateLobby(games = []) {
@@ -356,8 +357,12 @@
     function drawTable(showCards = false, animCard = null) {
       const ctx = document.querySelector('canvas').getContext('2d');
       ctx.clearRect(0, 0, 1024, 600);
-      if (backgroundImage.complete) {
+      if (backgroundImage.complete && backgroundImage.naturalWidth > 0) {
         ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
+      } else {
+        ctx.fillStyle = '#222'; // Fallback color if image fails
+        ctx.fillRect(0, 0, 1024, 600);
+        console.warn('⚠️ Background image failed to load or is incomplete. Using fallback color.');
       }
 
       const BASE_WIDTH = 1024;
@@ -652,12 +657,11 @@
         document.getElementById('endOverlay').style.display = 'flex';
       });
 
-      const backgroundImage = new Image();
-      backgroundImage.src = './assets/background.png';
+      backgroundImage.src = './assets/background.png'; // Set source after DOM is ready
       backgroundImage.onerror = () => {
-        console.warn("⚠️ Background image failed to load.");
+        console.warn('⚠️ Background image failed to load. Using fallback color.');
         const ctx = document.querySelector('canvas').getContext('2d');
-        ctx.fillStyle = "#222";
+        ctx.fillStyle = '#222';
         ctx.fillRect(0, 0, 1024, 600);
       };
 
