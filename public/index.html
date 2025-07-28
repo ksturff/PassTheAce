@@ -217,7 +217,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Declare functions in global scope
+    // Global variables and socket
     let mySocketId = "";
     let myUsername = "";
     let myRoom = "";
@@ -237,7 +237,9 @@
     let animationInProgress = false;
     let showAllCards = false;
     const cardImages = {};
+    let socket; // Declare socket globally
 
+    // Global functions
     function updateLobby(games = []) {
       const lobby = document.getElementById('game-lobby');
       lobby.innerHTML = '';
@@ -375,8 +377,8 @@
       ];
 
       const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-      const radiusX = X_RADIUS - 100;
-      const radiusY = Y_RADIUS - 50;
+      const radiusX = 360 - 100;
+      const radiusY = 210 - 50;
 
       players.forEach((p) => {
         const i = p.seatIndex ?? 0;
@@ -450,8 +452,8 @@
       players.forEach((p) => {
         const i = p.seatIndex ?? 0;
         const angle = angleMap[i] * (Math.PI / 180);
-        const baseX = 512 + Math.cos(angle) * (X_RADIUS + 30);
-        const baseY = 300 + Math.sin(angle) * (Y_RADIUS + 30);
+        const baseX = 512 + Math.cos(angle) * (360 + 30);
+        const baseY = 300 + Math.sin(angle) * (210 + 30);
         const offset = hudNudges[i];
         const x = baseX + offset.x * scaleX;
         const y = baseY + offset.y * scaleY;
@@ -500,7 +502,7 @@
 
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', () => {
-      const socket = io();
+      socket = io(); // Initialize socket globally
       mySocketId = socket.id;
 
       socket.on('connect', () => {
@@ -687,6 +689,38 @@
 
         return Promise.all(loadPromises);
       }
+
+      // Initialize canvas and wrapper
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'absolute';
+      wrapper.style.left = '50%';
+      wrapper.style.top = '50%';
+      wrapper.style.transform = 'translate(-50%, -50%)';
+      wrapper.style.width = '1024px';
+      wrapper.style.height = '600px';
+      wrapper.style.overflow = 'hidden';
+      wrapper.style.zIndex = '1';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 600;
+      canvas.style.display = 'block';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+
+      wrapper.appendChild(canvas);
+      const hudContainer = document.getElementById("playerContainer");
+      wrapper.appendChild(hudContainer);
+      document.body.appendChild(wrapper);
+
+      function resizeGame() {
+        const scaleX = window.innerWidth / 1024;
+        const scaleY = window.innerHeight / 600;
+        const scale = Math.min(scaleX, scaleY);
+        wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      }
+      window.addEventListener('resize', resizeGame);
+      resizeGame();
     });
   </script>
 </body>
