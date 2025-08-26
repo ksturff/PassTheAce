@@ -1,126 +1,235 @@
-const { rooms } = require('../services/roomService');
-const { createDeck, dealCards, findNextPlayer } = require('./deckManager');
+// game/gameengine.js
+const { getRoom, initRoom } = require('../services/roomService');
+const { deriveRules } = require('../services/rules');
 
-function startGame(roomCode, io) {
-  const room = rooms.get(roomCode);
-  if (!room) return;
+const stateByRoom = new Map();
 
-  const deck = createDeck();
-  room.players.forEach((p, i) => p.seatIndex = i);
-  const players = dealCards(room.players, deck);
+const SUITS = ['S', 'H', 'D', 'C'];
+const RANKS = [2,3,4,5,6,7,8,9,10,'J','Q','K','A'];
+const RANK_VALUE = new Map([
+  [2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],
+  ['J',11],['Q',12],['K',13],['A',14]
+]);
 
-  room.gameState = {
-    players,
-    deck,
-    round: 1,
-    dealerIndex: 0,
-    startingPlayerIndex: 0,
-    currentPlayerId: players[0].id
-  };
-
-  io.to(roomCode).emit('gameStarted', room.gameState);
-  io.to(roomCode).emit('turnUpdate', {
-    currentPlayerId: room.gameState.currentPlayerId,
-    players: room.gameState.players
-  });
+function makeDeck() {
+  const d = [];
+  for (const s of SUITS) for (const r of RANKS) d.push({ rank: r, suit: s });
+  for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; }
+  return d;
 }
 
-function handlePassCard(roomCode, io) {
-  const room = rooms.get(roomCode);
-  if (!room || !room.gameState) return;
+function alivePlayers(room) { return room.players.filter(p => !p.eliminated && (p.chips ?? 0) > 0); }
 
-  const { players, currentPlayerId } = room.gameState;
-  const currIdx = players.findIndex(p => p.id === currentPlayerId);
-  const nextIdx = findNextPlayer(players, currIdx);
+function nextActiveIndex(room, fromIndex, step) {
+  const n = room.players.length; if (!n) return -1;
+  let idx = fromIndex;
+  for (let hops = 0; hops < n * 2; hops++) {
+    idx = (idx + step + n) % n;
+    const p = room.players[idx];
+    if (p && !p.eliminated && p.chips > 0) return idx;
+  }
+  return -1;
+}
 
-  if (players[nextIdx].card.rank === 'K') {
-    io.to(roomCode).emit('errorMessage', `${players[nextIdx].name} has a King and cannot be passed to!`);
+function isBot(p){ return typeof p?.id === 'string' && p.id.startsWith('bot_'); }
+
+function clearTurnTimer(roomCode) {
+  const s = stateByRoom.get(roomCode);
+  if (s?.turnTimer) { clearTimeout(s.turnTimer); s.turnTimer = null; }
+}
+
+function scheduleTurnTimer(roomCode, io) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  clearTurnTimer(roomCode);
+  if (!room || !s || s.rules.turnTimerMs <= 0) return;
+
+  s.turnTimer = setTimeout(() => {
+    const cur = room.players[s.currentIndex];
+    if (!cur) return;
+    // if timer hits on bot, just act like bot
+    if (isBot(cur)) return botAct(roomCode, io);
+    // human timeout falls back to default
+    if (s.rules.timeoutAction === 'pass') handlePassCard(roomCode, io, { isTimeout: true });
+    else handleKeepCard(roomCode, io, { isTimeout: true });
+  }, s.rules.turnTimerMs);
+}
+
+function dealOneEach(room) {
+  const s = stateByRoom.get(room.code);
+  s.deck = makeDeck();
+  alivePlayers(room).forEach(p => { p.card = s.deck.pop(); });
+}
+
+function startRound(roomCode, io) {
+  const room = initRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (s.dealerIndex == null) {
+    s.dealerIndex = room.players.findIndex(p => !p.eliminated && p.chips > 0);
+    if (s.dealerIndex < 0) s.dealerIndex = 0;
+  } else {
+    s.dealerIndex = nextActiveIndex(room, s.dealerIndex, +1);
+  }
+
+  dealOneEach(room);
+
+  const step = s.rules.passStep >= 0 ? +1 : -1;
+  s.currentIndex = nextActiveIndex(room, s.dealerIndex, step);
+  s.turnsTaken = 0;
+
+  io.to(roomCode).emit('gameStarted', {
+    players: room.players,
+    currentPlayerId: room.players[s.currentIndex]?.id,
+    mode: room.options.mode,
+    pace: room.options.pace,
+    seats: room.options.seats
+  });
+
+  emitTurnUpdate(roomCode, io);
+}
+
+function emitTurnUpdate(roomCode, io) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (!room || !s) return;
+  const currentPlayer = room.players[s.currentIndex];
+  const currentPlayerId = currentPlayer?.id;
+
+  io.to(roomCode).emit('turnUpdate', {
+    currentPlayerId,
+    players: room.players,
+    peekAllowed: s.rules.allowPeekOnTurn
+  });
+
+  // If it's a bot, let it think briefly and act
+  if (isBot(currentPlayer)) {
+    setTimeout(() => botAct(roomCode, io), 600);
     return;
   }
 
-  const temp = players[currIdx].card;
-  players[currIdx].card = null;
-  players[nextIdx].card = temp;
-
-  io.to(roomCode).emit('cardPassed', { fromIndex: currIdx, toIndex: nextIdx });
-
-  const newIdx = findNextPlayer(players, currIdx);
-  room.gameState.currentPlayerId = players[newIdx].id;
-
-  io.to(roomCode).emit('turnUpdate', {
-    currentPlayerId: room.gameState.currentPlayerId,
-    players: room.gameState.players
-  });
+  scheduleTurnTimer(roomCode, io);
 }
 
-function handleKeepCard(roomCode, io) {
-  const room = rooms.get(roomCode);
-  if (!room || !room.gameState) return;
+function endRound(roomCode, io) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (!room || !s) return;
 
-  const { players, currentPlayerId } = room.gameState;
-  const currIdx = players.findIndex(p => p.id === currentPlayerId);
-  const nextIdx = findNextPlayer(players, currIdx);
-
-  if (nextIdx === room.gameState.startingPlayerIndex) {
-    const { updatedPlayers, losers } = endRound(room);
-    io.to(roomCode).emit('roundEnded', { updatedPlayers, losers });
-
-    const winner = checkGameOver(updatedPlayers);
-    if (winner) {
-      io.to(roomCode).emit('gameOver', { winner });
-      rooms.delete(roomCode);
-      return;
-    }
-
-    const newDeck = createDeck();
-    const redelt = dealCards(updatedPlayers, newDeck);
-    const newDealer = (room.gameState.dealerIndex + 1) % redelt.length;
-
-    room.gameState.players = redelt;
-    room.gameState.deck = newDeck;
-    room.gameState.dealerIndex = newDealer;
-    room.gameState.startingPlayerIndex = findNextPlayer(redelt, newDealer);
-    room.gameState.currentPlayerId = redelt[room.gameState.startingPlayerIndex].id;
-    room.gameState.round++;
-
-    io.to(roomCode).emit('turnUpdate', {
-      currentPlayerId: room.gameState.currentPlayerId,
-      players: redelt
-    });
-
-  } else {
-    room.gameState.currentPlayerId = players[nextIdx].id;
-    io.to(roomCode).emit('turnUpdate', {
-      currentPlayerId: room.gameState.currentPlayerId,
-      players
-    });
+  let minVal = Infinity;
+  for (const p of alivePlayers(room)) {
+    const v = RANK_VALUE.get(p.card?.rank);
+    if (v != null) minVal = Math.min(minVal, v);
   }
+  const losers = [];
+  for (const p of alivePlayers(room)) {
+    const v = RANK_VALUE.get(p.card?.rank);
+    if (v === minVal) {
+      const penalty = (s.rules.kingPenalty && p.card?.rank === 'K') ? s.rules.kingPenalty : 1;
+      p.chips = Math.max(0, (p.chips || 0) - penalty);
+      if (p.chips === 0) p.eliminated = true;
+      losers.push({ name: p.name });
+    }
+  }
+
+  io.to(roomCode).emit('roundEnded', { updatedPlayers: room.players, losers });
+
+  const alive = alivePlayers(room);
+  if (alive.length <= 1) {
+    const winner = alive[0] || room.players[0];
+    io.to(roomCode).emit('gameOver', { winner });
+    clearTurnTimer(roomCode);
+    stateByRoom.delete(roomCode);
+    return;
+  }
+
+  clearTurnTimer(roomCode);
+  setTimeout(() => startRound(roomCode, io), 1800);
 }
 
-function endRound(room) {
-  const { players } = room.gameState;
-  const rankMap = { 'A': 1, 'J': 11, 'Q': 12, 'K': 13 };
-  const value = c => typeof c.rank === 'number' ? c.rank : rankMap[c.rank];
+function startGame(roomCode, io) {
+  const room = initRoom(roomCode);
+  const rules = deriveRules(room.options);
+  stateByRoom.set(roomCode, { rules, deck: [], currentIndex: 0, dealerIndex: null, turnsTaken: 0, turnTimer: null });
 
-  const active = players.filter(p => !p.eliminated && p.card);
-  const minVal = Math.min(...active.map(p => value(p.card)));
-  const losers = active.filter(p => value(p.card) === minVal);
+  // (Re)initialize chips for all players according to mode (so Sudden Death = 1, etc.)
+  if (rules.livesPerPlayer != null) {
+    room.players.forEach(p => { p.chips = rules.livesPerPlayer; p.eliminated = false; });
+  }
 
-  losers.forEach(p => p.chips--);
-  players.forEach(p => {
-    if (p.chips <= 0) p.eliminated = true;
-  });
-
-  return { updatedPlayers: players, losers };
+  startRound(roomCode, io);
 }
 
-function checkGameOver(players) {
-  const alive = players.filter(p => !p.eliminated);
-  return alive.length === 1 ? alive[0] : null;
+function handleKeepCard(roomCode, io, meta = {}) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (!room || !s) return;
+  clearTurnTimer(roomCode);
+
+  s.turnsTaken++;
+  s.currentIndex = nextActiveIndex(room, s.currentIndex, s.rules.passStep >= 0 ? +1 : -1);
+
+  const aliveCount = alivePlayers(room).length;
+  if (s.turnsTaken >= aliveCount) endRound(roomCode, io);
+  else emitTurnUpdate(roomCode, io);
 }
 
-module.exports = {
-  startGame,
-  handlePassCard,
-  handleKeepCard
-};
+function handlePassCard(roomCode, io, meta = {}) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (!room || !s) return;
+  clearTurnTimer(roomCode);
+
+  const fromIndex = s.currentIndex;
+  const toIndex = nextActiveIndex(room, fromIndex, s.rules.passStep >= 0 ? +1 : -1);
+  const fromPlayer = room.players[fromIndex];
+  const toPlayer   = room.players[toIndex];
+  if (!fromPlayer || !toPlayer) return;
+
+  if (fromPlayer.card?.rank === 'K') {
+    io.to(fromPlayer.id).emit('errorMessage', 'You have a King! You cannot pass.');
+    scheduleTurnTimer(roomCode, io);
+    return;
+  }
+  if (toPlayer.card?.rank === 'K') {
+    io.to(fromPlayer.id).emit('errorMessage', `${toPlayer.name} has a King and cannot be passed to!`);
+    scheduleTurnTimer(roomCode, io);
+    return;
+  }
+
+  const tmp = fromPlayer.card; fromPlayer.card = toPlayer.card; toPlayer.card = tmp;
+  io.to(roomCode).emit('cardPassed', { fromIndex, toIndex });
+
+  s.turnsTaken++;
+  s.currentIndex = toIndex;
+
+  const aliveCount = alivePlayers(room).length;
+  if (s.turnsTaken >= aliveCount) endRound(roomCode, io);
+  else emitTurnUpdate(roomCode, io);
+}
+
+// ---------- very simple bot logic ----------
+function botAct(roomCode, io) {
+  const room = getRoom(roomCode);
+  const s = stateByRoom.get(roomCode);
+  if (!room || !s) return;
+
+  const cur = room.players[s.currentIndex];
+  if (!isBot(cur)) { scheduleTurnTimer(roomCode, io); return; }
+
+  const rank = cur.card?.rank;
+  if (rank === 'K') return handleKeepCard(roomCode, io); // cannot pass
+
+  const val = RANK_VALUE.get(rank) || 0;
+
+  // Decide: pass if low (<=8), keep if high (>=10), coin-flip on 9
+  let wantPass = (val <= 8) || (val === 9 && Math.random() < 0.5);
+  // avoid passing to a King (server enforces this too)
+  const toIndex = nextActiveIndex(room, s.currentIndex, s.rules.passStep >= 0 ? +1 : -1);
+  const toPlayer = room.players[toIndex];
+  if (toPlayer?.card?.rank === 'K') wantPass = false;
+
+  if (wantPass) handlePassCard(roomCode, io);
+  else handleKeepCard(roomCode, io);
+}
+
+module.exports = { startGame, handlePassCard, handleKeepCard };

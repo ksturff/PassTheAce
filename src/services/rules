@@ -1,0 +1,25 @@
+// services/rules.js
+function deriveRules(options = {}) {
+  const mode = options.mode || 'Classic';
+  const pace = options.pace || 'Regular';
+
+  const rules = {
+    livesPerPlayer: 3,
+    allowPeekOnTurn: true,
+    passStep: 1,            // +1 cw, -1 ccw
+    turnTimerMs: 0,
+    timeoutAction: 'keep',
+    kingPenalty: 1,
+    freePassTokens: 0,
+    randomSkipChance: 0
+  };
+
+  if (mode === 'Sudden Death') rules.livesPerPlayer = 1;
+  if (mode === 'Blind')        rules.allowPeekOnTurn = false;
+  if (mode === 'Reverse Pass') rules.passStep = -1;
+  if (mode === 'Turbo')        rules.turnTimerMs = 5000;
+  if (pace === 'Turbo')        rules.turnTimerMs = Math.max(rules.turnTimerMs, 5000);
+
+  return rules;
+}
+module.exports = { deriveRules };
