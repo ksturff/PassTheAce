@@ -199,15 +199,37 @@
           <button class="l-tab" data-tab="tournaments">Tournaments</button>
         </div>
 
-        <div class="l-form" style="grid-template-columns:1fr 1fr 1fr auto; align-items:center">
-          <select id="sel-type"><option>Hold’em</option><option>Omaha</option><option>Custom</option></select>
-          <select id="sel-stakes"><option>Bronze I – 5 Chips</option><option>Bronze II – 10 Chips</option><option>Silver I – 25 Chips</option></select>
-          <select id="sel-speed"><option>Regular</option><option>Turbo</option></select>
+        <!-- >>> UPDATED: Pass the Ace settings (Mode, Seats, Pace, Buy-in) -->
+        <div class="l-form" style="grid-template-columns:1fr 1fr 1fr 1fr auto; align-items:center">
+          <select id="sel-mode">
+            <option>Classic</option>
+            <option>Sudden Death</option>
+            <option>Blind</option>
+            <option>Reverse Pass</option>
+            <option>Turbo</option>
+          </select>
+          <select id="sel-seats">
+            <option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option>
+            <option>8</option><option>9</option><option>10</option>
+          </select>
+          <select id="sel-pace">
+            <option>Regular</option>
+            <option>Turbo</option>
+          </select>
+          <select id="sel-buyin">
+            <option>5 Chips</option>
+            <option>10 Chips</option>
+            <option>25 Chips</option>
+          </select>
           <button class="l-btn" id="btn-create">Create Table</button>
         </div>
 
         <table class="l-table" style="margin-top:10px">
-          <thead><tr><th>Room</th><th>Type</th><th>Stakes</th><th>Players</th><th>Status</th><th></th></tr></thead>
+          <!-- >>> UPDATED: header columns -->
+          <thead>
+            <tr><th>Room</th><th>Mode</th><th>Seats</th><th>Players</th><th>Status</th><th></th></tr>
+          </thead>
           <tbody id="rooms-body"></tbody>
         </table>
 
@@ -530,6 +552,8 @@
       mySocketId = socket.id;
 
       socket.on('connect', () => {
+        const cs = document.getElementById('conn-status');
+        if (cs) cs.textContent = 'Connected';
         socket.emit('requestLobbyState');
       });
 
@@ -707,117 +731,130 @@
 
     /* ===== Bridge the NEW lobby UI to your existing Socket.IO code ===== */
 
-// Keep a cache of rooms to render the new table
-let _roomsCache = [];
-let myRooms = new Set();
+    // Keep a cache of rooms to render the new table
+    let _roomsCache = [];
+    let myRooms = new Set();
 
-// Hook up the new buttons/tabs once the page is ready
-document.addEventListener('DOMContentLoaded', () => {
-  // Clock in the left panel
-  const clockEl = document.getElementById('clock');
-  if (clockEl) setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString(); }, 1000);
+    // Hook up the new buttons/tabs once the page is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      // Clock in the left panel
+      const clockEl = document.getElementById('clock');
+      if (clockEl) setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString(); }, 1000);
 
-  // Join-by-code button
-  const btnJoinCode = document.getElementById('btn-join-code');
-  if (btnJoinCode) {
-    btnJoinCode.addEventListener('click', () => {
-      const name = (document.getElementById('usernameInput')?.value || '').trim();
-      const room = (document.getElementById('roomInput')?.value || '').trim();
-      if (!name || !room) return alert('Enter your name and room code.');
-      myUsername = name;
-      joinGame(room);    // uses your existing join function
+      // Join-by-code button
+      const btnJoinCode = document.getElementById('btn-join-code');
+      if (btnJoinCode) {
+        btnJoinCode.addEventListener('click', () => {
+          const name = (document.getElementById('usernameInput')?.value || '').trim();
+          const room = (document.getElementById('roomInput')?.value || '').trim();
+          if (!name || !room) return alert('Enter your name and room code.');
+          myUsername = name;
+          joinGame(room);    // uses your existing join function
+        });
+      }
+
+      // Create table button (now uses Pass the Ace options)
+      const btnCreate = document.getElementById('btn-create');
+      if (btnCreate) {
+        btnCreate.addEventListener('click', () => {
+          const name = (document.getElementById('usernameInput')?.value || '').trim();
+          if (!name) return alert('Please enter a name.');
+          myUsername = name;
+
+          const mode  = document.getElementById('sel-mode')?.value;
+          const seats = Number(document.getElementById('sel-seats')?.value || 8);
+          const pace  = document.getElementById('sel-pace')?.value;
+          const buyIn = document.getElementById('sel-buyin')?.value;
+
+          const opts = {
+            mode, seats, pace, buyIn
+            // you can add 'rules' later on the server if you want these to change behavior
+          };
+
+          socket.emit('createGame', { username: myUsername, options: opts });
+        });
+      }
+
+      // Tabs (All / My / Tournaments)
+      document.querySelectorAll('.l-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.l-tab').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentTab = btn.dataset.tab;   // reuses your currentTab variable
+          renderRoomsFromCache();
+        });
+      });
     });
-  }
 
-  // Create table button (sends optional metadata – ok if server ignores it)
-  const btnCreate = document.getElementById('btn-create');
-  if (btnCreate) {
-    btnCreate.addEventListener('click', () => {
-      const name = (document.getElementById('usernameInput')?.value || '').trim();
-      if (!name) return alert('Please enter a name.');
-      myUsername = name;
-      const opts = {
-        type: document.getElementById('sel-type')?.value,
-        stakes: document.getElementById('sel-stakes')?.value,
-        speed: document.getElementById('sel-speed')?.value
-      };
-      socket.emit('createGame', { username: myUsername, options: opts });
-    });
-  }
+    // Render the polished table (right panel)
+    function renderRoomsFromCache() {
+      const body = document.getElementById('rooms-body');
+      if (!body) return;
+      body.innerHTML = '';
 
-  // Tabs (All / My / Tournaments)
-  document.querySelectorAll('.l-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.l-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTab = btn.dataset.tab;   // reuses your currentTab variable
+      let list = _roomsCache.slice();
+
+      if (currentTab === 'my') {
+        // Show only the room we're in (simple "My Games" for now)
+        const currentRoom = (document.getElementById('player-info') || {}).dataset?.room;
+        list = currentRoom ? list.filter(r => r.roomCode === currentRoom) : [];
+      }
+
+      if (currentTab === 'tournaments') {
+        body.innerHTML = `<tr class="l-row"><td colspan="6" style="padding:16px">Tournaments – coming soon!</td></tr>`;
+        return;
+      }
+
+      const onlineEl = document.getElementById('players-online');
+      if (onlineEl) onlineEl.textContent = String(list.reduce((sum, r) => sum + (r.playerCount || 0), 0));
+
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'l-row';
+
+        // Accept both new (mode/seats) and old (type/stakes/maxPlayers) fields
+        const mode  = r.mode || r.type || 'Classic';
+        const seats = r.seats || r.maxPlayers || 8;
+        const buyIn = r.buyIn || r.stakes || ''; // shown alongside mode
+
+        const status = r.status === 'Full'
+          ? `<span class="l-status full">Full</span>`
+          : `<span class="l-status ok">Open</span>`;
+
+        tr.innerHTML = `
+          <td><span class="l-pill">${(r.roomCode || '').slice(0,6)}</span></td>
+          <td>${mode}${buyIn ? ` — ${buyIn}` : ''}</td>
+          <td>${seats}</td>
+          <td>${r.playerCount || 0}/${seats}</td>
+          <td>${status}</td>
+          <td style="text-align:right">
+            <button class="l-tab" data-join="${r.roomCode}" style="padding:6px 10px">Join</button>
+          </td>
+        `;
+        body.appendChild(tr);
+        tr.querySelector('[data-join]').addEventListener('click', () => joinGame(r.roomCode));
+      });
+    }
+
+    // Keep your original updateLobby for the legacy view, but *also* feed the new table.
+    const __originalUpdateLobby = updateLobby;  // your existing function above
+    updateLobby = function(games = []) {
+      _roomsCache = games;
       renderRoomsFromCache();
-    });
-  });
-});
+      if (typeof __originalUpdateLobby === 'function') __originalUpdateLobby(games);
+    };
 
-// Render the polished table (right panel)
-function renderRoomsFromCache() {
-  const body = document.getElementById('rooms-body');
-  if (!body) return;
-  body.innerHTML = '';
-
-  let list = _roomsCache.slice();
-
-  if (currentTab === 'my') {
-    // Show only the room we're in (simple "My Games" for now)
-    const currentRoom = (document.getElementById('player-info') || {}).dataset?.room;
-    list = currentRoom ? list.filter(r => r.roomCode === currentRoom) : [];
-  }
-
-  if (currentTab === 'tournaments') {
-    body.innerHTML = `<tr class="l-row"><td colspan="6" style="padding:16px">Tournaments – coming soon!</td></tr>`;
-    return;
-  }
-
-  const onlineEl = document.getElementById('players-online');
-  if (onlineEl) onlineEl.textContent = String(list.reduce((sum, r) => sum + (r.playerCount || 0), 0));
-
-  list.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.className = 'l-row';
-    const status = r.status === 'Full'
-      ? `<span class="l-status full">Full</span>`
-      : `<span class="l-status ok">Open</span>`;
-
-    tr.innerHTML = `
-      <td><span class="l-pill">${(r.roomCode || '').slice(0,6)}</span></td>
-      <td>${r.type || '-'}</td>
-      <td>${r.stakes || '-'}</td>
-      <td>${r.playerCount || 0}/${r.maxPlayers || 0}</td>
-      <td>${status}</td>
-      <td style="text-align:right">
-        <button class="l-tab" data-join="${r.roomCode}" style="padding:6px 10px">Join</button>
-      </td>
-    `;
-    body.appendChild(tr);
-    tr.querySelector('[data-join]').addEventListener('click', () => joinGame(r.roomCode));
-  });
-}
-
-// Keep your original updateLobby for the legacy view, but *also* feed the new table.
-const __originalUpdateLobby = updateLobby;  // your existing function above
-updateLobby = function(games = []) {
-  _roomsCache = games;
-  renderRoomsFromCache();
-  if (typeof __originalUpdateLobby === 'function') __originalUpdateLobby(games);
-};
-
-// When you create or join, remember the room for "My Games"
-if (typeof io !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    // after socket is set up in your code:
-    socket?.on?.('roomCreated', (roomCode) => { if (roomCode) myRooms.add(roomCode); });
-    socket?.on?.('joinedRoom',  (data) => { if (data?.roomCode) myRooms.add(data.roomCode); });
-  });
-}
-/* ===== End bridge ===== */
+    // When you create or join, remember the room for "My Games"
+    if (typeof io !== 'undefined') {
+      document.addEventListener('DOMContentLoaded', () => {
+        // after socket is set up in your code:
+        socket?.on?.('roomCreated', (roomCode) => { if (roomCode) myRooms.add(roomCode); });
+        socket?.on?.('joinedRoom',  (data) => { if (data?.roomCode) myRooms.add(data.roomCode); });
+      });
+    }
+    /* ===== End bridge ===== */
 
   </script>
 </body>
 </html>
+
