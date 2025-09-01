@@ -1,70 +1,116 @@
-// socketManager.js
-const { v4: uuidv4 } = require('uuid');
-const {
-  initRoom, setOptions, getRoom, joinRoom, addBots,
-  removePlayer, getAllRooms
-} = require('./services/roomService');
+// src/socketManager.js  (or server/socketManager.js if that's your layout)
+const { rooms, initRoom, joinRoom, removePlayer, getAllRooms, setRoomOptions } = require('./services/roomService');
 const { startGame, handlePassCard, handleKeepCard } = require('./game/gameengine');
+const { fillRoomWithBots } = require('./services/botService');
+const { v4: uuidv4 } = require('uuid');
 
-module.exports = function (io) {
+module.exports = function(io) {
   io.on('connection', (socket) => {
     console.log(`🟢 Connected: ${socket.id}`);
+    // Send current lobby snapshot on connect
     socket.emit('lobbyUpdate', getAllRooms());
 
-    socket.on('requestLobbyState', () => {
-      socket.emit('lobbyUpdate', getAllRooms());
-      const joined = Array.from(socket.rooms).filter(r => r !== socket.id);
-      if (joined.length) {
-        const roomCode = joined[0];
-        const room = getRoom(roomCode);
-        if (room) socket.emit('playerList', room.players);
+    // --- JOIN EXISTING ROOM ---
+    socket.on('join', ({ username, room }) => {
+      try {
+        joinRoom(socket, username, room, io);
+        const roomData = initRoom(room);
+        socket.emit('joinedRoom', {
+          roomCode: room,
+          player: roomData.players.find(p => p.id === socket.id),
+          players: roomData.players
+        });
+        io.emit('lobbyUpdate', getAllRooms());
+      } catch (e) {
+        console.error('join error:', e);
+        socket.emit('errorMessage', 'Failed to join room.');
       }
     });
 
-    socket.on('join', ({ username, room }) => {
-      if (!username || !room) return;
-      setOptions(room, {}); // ensure room exists with defaults
-      joinRoom(socket, username, room, io);
-      const roomData = getRoom(room);
-      socket.emit('joinedRoom', {
-        roomCode: room,
-        player: roomData.players.find(p => p.id === socket.id),
-        players: roomData.players
-      });
-      io.emit('lobbyUpdate', getAllRooms());
-    });
+    // --- CREATE GAME (single or multi) ---
+    socket.on('createGame', ({ username, options = {}, singlePlayer = false } = {}) => {
+      try {
+        const roomCode = uuidv4().slice(0, 6).toUpperCase();
+        const seats = Number(options.seats) || 10;
 
-    socket.on('createGame', ({ username, options, singlePlayer }) => {
-      if (!username) return;
-      const roomCode = uuidv4().slice(0, 6).toUpperCase();
+        setRoomOptions(roomCode, { ...options, seats });
+        joinRoom(socket, username, roomCode, io);
 
-      setOptions(roomCode, options || {});
-      joinRoom(socket, username, roomCode, io);
-
-      if (singlePlayer) {
-        const room = getRoom(roomCode);
-        const seats = (room && room.options && room.options.seats) || 10;
-        const toAdd = Math.max(0, seats - room.players.length);
-        addBots(roomCode, toAdd, io);
-
+        // Tell the client right away so UI swaps from splash/lobby to table
+        const roomData = initRoom(roomCode);
+        socket.emit('roomCreated', roomCode);
         socket.emit('joinedRoom', {
           roomCode,
-          player: room.players.find(p => p.id === socket.id),
-          players: room.players
+          player: roomData.players.find(p => p.id === socket.id),
+          players: roomData.players,
+          singlePlayer: !!singlePlayer
         });
 
-        startGame(roomCode, io); // auto-start single player
-      } else {
-        socket.emit('roomCreated', roomCode); // multiplayer flow
+        if (singlePlayer) {
+          // Fill table and auto-start
+          fillRoomWithBots(roomCode, seats, io);
+          setTimeout(() => startGame(roomCode, io), 150);
+        } else {
+          // Multiplayer: update lobby list; host can hit "Start Game" when ready
+          io.emit('lobbyUpdate', getAllRooms());
+        }
+      } catch (e) {
+        console.error('createGame error:', e);
+        socket.emit('errorMessage', 'Failed to create game.');
       }
-
-      io.emit('lobbyUpdate', getAllRooms());
     });
 
-    socket.on('startGame', (roomCode) => startGame(roomCode, io));
-    socket.on('passCard', ({ room }) => handlePassCard(room, io));
-    socket.on('keepCard', ({ room }) => handleKeepCard(room, io));
+    // --- LOBBY SNAPSHOT / WHO'S IN MY ROOM? ---
+    socket.on('requestLobbyState', () => {
+      socket.emit('lobbyUpdate', getAllRooms());
+      const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
+      if (roomCode) {
+        const room = initRoom(roomCode);
+        socket.emit('playerList', room.players);
+      }
+    });
 
+    // --- START GAME (multiplayer host presses button) ---
+    socket.on('startGame', (roomCode) => {
+      try {
+        startGame(roomCode, io);
+      } catch (e) {
+        console.error('startGame error:', e);
+        socket.emit('errorMessage', 'Failed to start game.');
+      }
+    });
+
+    // --- PLAYER ACTIONS ---
+    socket.on('passCard', ({ room }) => {
+      try {
+        handlePassCard(room, io);
+      } catch (e) {
+        console.error('passCard error:', e);
+      }
+    });
+
+    socket.on('keepCard', ({ room }) => {
+      try {
+        handleKeepCard(room, io);
+      } catch (e) {
+        console.error('keepCard error:', e);
+      }
+    });
+
+    // --- NEW: FILL WITH BOTS FROM CLIENT UI ---
+    socket.on('addBots', ({ roomCode, seats }) => {
+      try {
+        const code = roomCode || Array.from(socket.rooms).find(r => r !== socket.id);
+        const desiredSeats = Math.max(2, Math.min(10, Number(seats) || 10));
+        if (!code) return socket.emit('errorMessage', 'No room joined.');
+        fillRoomWithBots(code, desiredSeats, io);
+      } catch (e) {
+        console.error('addBots error:', e);
+        socket.emit('errorMessage', 'Failed to add bots.');
+      }
+    });
+
+    // --- DISCONNECT ---
     socket.on('disconnect', () => {
       removePlayer(socket.id, io);
       io.emit('lobbyUpdate', getAllRooms());
@@ -72,4 +118,3 @@ module.exports = function (io) {
     });
   });
 };
-

@@ -167,6 +167,14 @@
       <button id="keepBtn" onclick="keepCard()">Keep</button>
       <button id="passBtn" onclick="passCard()">Pass</button>
     </div>
+
+    <!-- NEW: Bot Controls -->
+    <div id="botControls" style="display:none; margin-top:8px; text-align:right;">
+      <label for="botSeats" style="font-size:14px; margin-right:6px;">Target seats:</label>
+      <input id="botSeats" type="number" min="2" max="10" value="10"
+             style="width:64px; padding:4px 6px; border-radius:6px; border:1px solid #333; background:#0f0f12; color:#fff;" />
+      <button class="l-tab" id="btn-fill-bots" style="padding:6px 10px; margin-left:6px;">Fill with Bots</button>
+    </div>
   </div>
   <div id="turnIndicator"></div>
   <div id="endOverlay">
@@ -739,6 +747,28 @@
       }
       window.addEventListener("resize", resizeGame);
       resizeGame();
+
+      // ---- Add Bots UI wiring ----
+      (function setupBotControls(){
+        var btnFill = document.getElementById('btn-fill-bots');
+        var inputSeats = document.getElementById('botSeats');
+        var controls = document.getElementById('botControls');
+
+        function showBotControls() { if (controls) controls.style.display = 'block'; }
+
+        // Reveal when we switch into the table UI
+        socket.on("joinedRoom", function(){ showBotControls(); });
+        socket.on("gameStarted", function(){ showBotControls(); });
+
+        if (btnFill) {
+          btnFill.addEventListener('click', function(){
+            var seats = Number((inputSeats && inputSeats.value) || 10);
+            seats = Math.max(2, Math.min(10, seats || 10));
+            if (!myRoom) { alert("Not in a room yet."); return; }
+            socket.emit('addBots', { roomCode: myRoom, seats: seats });
+          });
+        }
+      })();
     });
   </script>
 </body>
