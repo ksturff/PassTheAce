@@ -215,6 +215,7 @@
     var backgroundImage = new Image();
     var _roomsCache = [];
     var myRooms = {};
+    var isSolo = false; // <— NEW
 
     function showMessage(message, duration, color) {
       if (!duration) duration = 3000;
@@ -609,6 +610,7 @@
         updateLobby(_roomsCache);
       });
 
+      // UPDATED: don’t block solo with start button disabled
       socket.on("playerList", function(playersList){
         var pi = document.getElementById("player-info");
         if (pi) pi.dataset.room = myRoom || "";
@@ -623,19 +625,25 @@
         }
         var humanCount = playersList.filter(function(p){ return p.id.indexOf("bot_") !== 0; }).length;
         var startBtn = document.getElementById("startBtn");
-        if (startBtn) startBtn.disabled = humanCount < 2;
+        if (startBtn) startBtn.disabled = isSolo ? false : (humanCount < 2);
       });
 
+      // UPDATED: set isSolo, hide splash/lobby, draw table immediately
       socket.on("joinedRoom", function(data){
-        myRoom = data.roomCode;
-        players = data.players;
+        myRoom   = data.roomCode;
+        players  = data.players || [];
+        isSolo   = !!data.singlePlayer;
+
         var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
         document.getElementById("lobby").style.display = "none";
         document.getElementById("ui").style.display = "block";
+
         var playerListEl = document.getElementById("playerList");
         if (playerListEl) {
           playerListEl.innerHTML = players.map(function(p){ return "<li>" + p.name + "</li>"; }).join("");
         }
+
+        preloadAssets().then(function(){ drawTable(); });
       });
 
       socket.on("gameStarted", function(state){
@@ -756,7 +764,6 @@
 
         function showBotControls() { if (controls) controls.style.display = 'block'; }
 
-        // Reveal when we switch into the table UI
         socket.on("joinedRoom", function(){ showBotControls(); });
         socket.on("gameStarted", function(){ showBotControls(); });
 
@@ -773,4 +780,3 @@
   </script>
 </body>
 </html>
-
