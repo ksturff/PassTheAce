@@ -187,6 +187,7 @@
     <ul id="playerList" style="list-style:none; padding-left:0; margin-top:5px;"></ul>
   </div>
 
+  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     /* =======================
@@ -215,7 +216,7 @@
     var backgroundImage = new Image();
     var _roomsCache = [];
     var myRooms = {};
-    var isSolo = false; // <— NEW
+    var isSolo = false;
 
     function showMessage(message, duration, color) {
       if (!duration) duration = 3000;
@@ -253,7 +254,6 @@
 
     function updateLobby(games) {
       if (!games) games = [];
-      // legacy list (hidden UI)
       var lobby = document.getElementById("game-lobby");
       if (lobby) {
         lobby.innerHTML = "";
@@ -266,7 +266,6 @@
         if (currentTab === "tournaments") lobby.innerHTML = "<div>Coming Soon!</div>";
       }
 
-      // polished table
       _roomsCache = games;
       renderRoomsFromCache();
     }
@@ -274,7 +273,6 @@
     function switchTab(tab) {
       currentTab = tab;
       updateLobby(_roomsCache);
-      // legacy visual state
       var tabs = document.querySelectorAll("#tabs .tab");
       if (tabs && tabs.length) {
         for (var i=0;i<tabs.length;i++) tabs[i].classList.remove("active");
@@ -408,14 +406,18 @@
         var x = baseX + offset.x;
         var y = baseY + offset.y;
 
+        // avatar/coin with fallback path for avatar in /assets/avatars/
+        var avatarPath = "/assets/avatar.png";
+        var coinPath = "/assets/coin.png";
+
         var div = document.createElement("div");
         div.className = "player-ui";
         div.id = "player-ui-" + p.id;
         div.innerHTML =
           '<div class="hud">' +
           '<div class="name" style="' + (p.id.indexOf("bot_") === 0 ? "color:#666;opacity:.7;" : "") + '">' + p.name + '</div>' +
-          '<img class="avatar" src="./assets/avatar.png" style="' + (p.id.indexOf("bot_") === 0 ? "opacity:.5;" : "") + '" />' +
-          '<div class="chips"><img src="./assets/coin.png" style="height:14px;vertical-align:middle;" /> ' + p.chips + "</div>" +
+          '<img class="avatar" src="' + avatarPath + '" onerror="this.onerror=null;this.src=\'/assets/avatars/avatar.png\';" style="' + (p.id.indexOf("bot_") === 0 ? "opacity:.5;" : "") + '" />' +
+          '<div class="chips"><img src="' + coinPath + '" style="height:14px;vertical-align:middle;" /> ' + p.chips + "</div>" +
           "</div>";
         div.style.left = x + "px";
         div.style.top = y + "px";
@@ -451,13 +453,13 @@
           (function(suit, rank){
             var img = new Image();
             var key = rank + "_of_" + suit;
-            img.src = "./assets/" + key + ".png";
+            img.src = "/assets/" + key + ".png";
             cardImages[key] = img;
             ps.push(new Promise(function(res){ img.onload = res; img.onerror = res; }));
           })(suits[s], ranks[r]);
         }
       }
-      var back = new Image(); back.src = "./assets/back.png"; cardImages["back"] = back;
+      var back = new Image(); back.src = "/assets/back.png"; cardImages["back"] = back;
       ps.push(new Promise(function(res){ back.onload = res; back.onerror = res; }));
       return Promise.all(ps);
     }
@@ -610,7 +612,6 @@
         updateLobby(_roomsCache);
       });
 
-      // UPDATED: don’t block solo with start button disabled
       socket.on("playerList", function(playersList){
         var pi = document.getElementById("player-info");
         if (pi) pi.dataset.room = myRoom || "";
@@ -628,7 +629,6 @@
         if (startBtn) startBtn.disabled = isSolo ? false : (humanCount < 2);
       });
 
-      // UPDATED: set isSolo, hide splash/lobby, draw table immediately
       socket.on("joinedRoom", function(data){
         myRoom   = data.roomCode;
         players  = data.players || [];
@@ -722,7 +722,7 @@
       });
 
       // canvas + assets
-      backgroundImage.src = "./assets/background.png";
+      backgroundImage.src = "/assets/background.png";
       backgroundImage.onerror = function(){
         var ctx = document.querySelector("canvas").getContext("2d");
         ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
@@ -763,7 +763,6 @@
         var controls = document.getElementById('botControls');
 
         function showBotControls() { if (controls) controls.style.display = 'block'; }
-
         socket.on("joinedRoom", function(){ showBotControls(); });
         socket.on("gameStarted", function(){ showBotControls(); });
 
