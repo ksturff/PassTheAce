@@ -28,7 +28,6 @@
     .hud .avatar.active-glow { box-shadow:0 0 12px 4px #00f7ff, 0 0 24px 6px #0ff; border-color:#0ff; }
     .hud .chips { font-size:10px; color:gold; padding:1px 4px; border-radius:10px; display:flex; align-items:center; gap:2px; }
 
-    /* ===== PRO LOBBY ===== */
     :root{
       --bg:#0f0f10; --card:#141518; --fg:#e8f4ff; --muted:#8aa0ad;
       --accent:#00e5ff; --accent2:#1765ff; --stroke:#22262b;
@@ -58,8 +57,7 @@
     .l-status{ font-size:11px; padding:3px 8px; border-radius:999px; }
     .l-status.ok{ background:rgba(82,196,26,.15); color:#b5ffc1; border:1px solid rgba(82,196,26,.35); }
     .l-status.full{ background:rgba(255,77,79,.12); color:#ffc2c2; border:1px solid rgba(255,77,79,.35); }
-    .l-foot{ margin-top:12px; display:flex; align-items:center; justify-content:space-between; color:#8aa0ad; font-size:12px; }
-    /* ===== SPLASH ===== */
+
     #splash { position:fixed; inset:0; background:radial-gradient(1200px 600px at 50% 0%, #16212b 0%, #0b0d10 55%, #07080a 100%); display:grid; place-items:center; z-index:9999; }
     .splash-inner{ width:min(680px,92vw); background:#11161b; border:1px solid #25303a; border-radius:16px; box-shadow:0 20px 70px rgba(0,0,0,.55); padding:28px; text-align:center; color:#e8f4ff; }
     .splash-title{ font-size:34px; letter-spacing:2px; margin:2px 0 16px 0; }
@@ -168,7 +166,6 @@
       <button id="passBtn" onclick="passCard()">Pass</button>
     </div>
 
-    <!-- NEW: Bot Controls -->
     <div id="botControls" style="display:none; margin-top:8px; text-align:right;">
       <label for="botSeats" style="font-size:14px; margin-right:6px;">Target seats:</label>
       <input id="botSeats" type="number" min="2" max="10" value="10"
@@ -176,66 +173,39 @@
       <button class="l-tab" id="btn-fill-bots" style="padding:6px 10px; margin-left:6px;">Fill with Bots</button>
     </div>
   </div>
+
   <div id="turnIndicator"></div>
   <div id="endOverlay">
     <div id="winMessage">Player X Wins!</div>
     <button onclick="restartGame()">Play Again</button>
   </div>
+
   <div id="playerContainer"></div>
+
   <div id="players" style="position:absolute; top:10px; left:10px; z-index:100; font-size:14px; background:#222; padding:10px; border-radius:8px; box-shadow:0 0 10px #0ff;">
     <strong>Players:</strong>
     <ul id="playerList" style="list-style:none; padding-left:0; margin-top:5px;"></ul>
   </div>
 
-  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    /* =======================
-       GLOBAL STATE + HELPERS
-       ======================= */
-    var mySocketId = "";
-    var myUsername = "";
-    var myRoom = "";
-    var currentTab = "all";
-    var players = [];
-    var dealerIndex = null;
-    var currentPlayer = 0;
-    var deck = [];
-    var myTurn = false;
-    var peekPlayerCard = false;
-    var startingPlayerIndex = null;
-    var gameRunning = false;
-    var eliminatedPlayers = [];
-    var gameState = {};
-    var animCard = null;
-    var animStartTime = null;
-    var animationInProgress = false;
-    var showAllCards = false;
-    var cardImages = {};
-    var socket = null;
-    var backgroundImage = new Image();
-    var _roomsCache = [];
-    var myRooms = {};
-    var isSolo = false;
+    var mySocketId = "", myUsername = "", myRoom = "";
+    var currentTab = "all", players = [], dealerIndex = null, currentPlayer = 0, deck = [];
+    var myTurn = false, peekPlayerCard = false, startingPlayerIndex = null, gameRunning = false;
+    var eliminatedPlayers = [], gameState = {}, animCard = null, animStartTime = null, animationInProgress = false;
+    var showAllCards = false, cardImages = {}, socket = null, backgroundImage = new Image();
+    var _roomsCache = [], myRooms = {}, isSolo = false;
 
     function showMessage(message, duration, color) {
       if (!duration) duration = 3000;
       if (!color) color = "#f00";
       var msgBox = document.createElement("div");
-      msgBox.style.position = "fixed";
-      msgBox.style.top = "100px";
-      msgBox.style.left = "50%";
-      msgBox.style.transform = "translateX(-50%)";
-      msgBox.style.padding = "10px 20px";
-      msgBox.style.background = "#222";
-      msgBox.style.border = "2px solid " + color;
-      msgBox.style.color = "#fff";
-      msgBox.style.fontSize = "14px";
-      msgBox.style.zIndex = "1000";
-      msgBox.style.boxShadow = "0 0 10px " + color;
-      msgBox.innerText = message;
-      document.body.appendChild(msgBox);
-      setTimeout(function(){ document.body.removeChild(msgBox); }, duration);
+      msgBox.style.position = "fixed"; msgBox.style.top = "100px"; msgBox.style.left = "50%";
+      msgBox.style.transform = "translateX(-50%)"; msgBox.style.padding = "10px 20px";
+      msgBox.style.background = "#222"; msgBox.style.border = "2px solid " + color;
+      msgBox.style.color = "#fff"; msgBox.style.fontSize = "14px"; msgBox.style.zIndex = "1000";
+      msgBox.style.boxShadow = "0 0 10px " + color; msgBox.innerText = message;
+      document.body.appendChild(msgBox); setTimeout(function(){ document.body.removeChild(msgBox); }, duration);
     }
 
     function updatePlayerInfo(player) {
@@ -246,10 +216,8 @@
       if (nameEl) nameEl.textContent = player.name;
       if (chipsEl) chipsEl.textContent = player.chips;
       if (chipsLegacy) chipsLegacy.textContent = player.chips;
-      var rankEl = document.getElementById("player-rank");
-      if (rankEl) rankEl.textContent = "Bronze I";
-      var xp = document.getElementById("xp-bar");
-      if (xp) xp.value = 150;
+      var rankEl = document.getElementById("player-rank"); if (rankEl) rankEl.textContent = "Bronze I";
+      var xp = document.getElementById("xp-bar"); if (xp) xp.value = 150;
     }
 
     function updateLobby(games) {
@@ -265,20 +233,16 @@
         });
         if (currentTab === "tournaments") lobby.innerHTML = "<div>Coming Soon!</div>";
       }
-
-      _roomsCache = games;
-      renderRoomsFromCache();
+      _roomsCache = games; renderRoomsFromCache();
     }
 
     function switchTab(tab) {
-      currentTab = tab;
-      updateLobby(_roomsCache);
+      currentTab = tab; updateLobby(_roomsCache);
       var tabs = document.querySelectorAll("#tabs .tab");
       if (tabs && tabs.length) {
         for (var i=0;i<tabs.length;i++) tabs[i].classList.remove("active");
         var selector = '#tabs .tab[onclick="switchTab(\'' + tab + '\')"]';
-        var btn = document.querySelector(selector);
-        if (btn) btn.classList.add("active");
+        var btn = document.querySelector(selector); if (btn) btn.classList.add("active");
       }
     }
 
@@ -295,17 +259,14 @@
 
     function joinGame(roomCode) {
       if (!myUsername) { alert("Please enter a name first."); return; }
-      myRoom = roomCode;
-      if (socket) socket.emit("join", { username: myUsername, room: roomCode });
+      myRoom = roomCode; if (socket) socket.emit("join", { username: myUsername, room: roomCode });
     }
 
     function startGame() { if (myRoom && socket) socket.emit("startGame", myRoom); }
 
     function keepCard() {
-      if (!myTurn) return;
-      myTurn = false;
-      var ab = document.getElementById("actionBtns");
-      if (ab) ab.style.display = "none";
+      if (!myTurn) return; myTurn = false;
+      var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
       if (socket) socket.emit("keepCard", { room: myRoom });
     }
 
@@ -314,37 +275,30 @@
       var cp = players.find(function(p){ return p.id === mySocketId; });
       if (cp && cp.card && cp.card.rank === "K") { showMessage("You have a King! You cannot pass.", 3000, "#f00"); return; }
       myTurn = false;
-      var ab = document.getElementById("actionBtns");
-      if (ab) ab.style.display = "none";
+      var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
       if (socket) socket.emit("passCard", { room: myRoom });
     }
 
     function restartGame() {
       document.getElementById("endOverlay").style.display = "none";
       document.getElementById("startBtn").style.display = "block";
-      dealerIndex = null;
-      startGame();
+      dealerIndex = null; startGame();
     }
 
     function updateTurnIndicator() {
       var player = players.find(function(p){ return p.id === gameState.currentPlayerId; });
-      var ti = document.getElementById("turnIndicator");
-      if (ti) ti.innerText = player ? (player.name + "'s Turn") : "";
+      var ti = document.getElementById("turnIndicator"); if (ti) ti.innerText = player ? (player.name + "'s Turn") : "";
     }
 
     function drawTable(showCards, anim) {
       if (typeof showCards === "undefined") showCards = false;
       var ctx = document.querySelector("canvas").getContext("2d");
       ctx.clearRect(0, 0, 1024, 600);
-      if (backgroundImage.complete && backgroundImage.naturalWidth > 0) {
-        ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
-      } else {
-        ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
-      }
+      if (backgroundImage.complete && backgroundImage.naturalWidth > 0) ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
+      else { ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600); }
 
       var angleMap = Array(10).fill(0).map(function(_,i){ return -90 + (i * 360 / 10); });
-      var radiusX = 260;
-      var radiusY = 160;
+      var radiusX = 260, radiusY = 160;
 
       var cardOffsets = [
         { x: 0, y: 40 }, { x: 0, y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
@@ -373,20 +327,17 @@
         if (cardImg && cardImg.complete) {
           var scale = (cardImg === cardImages["back"]) ? 1.0 : 0.95;
           ctx.drawImage(cardImg, p.cardX - 20, p.cardY - 27.5, 40 * scale, 55 * scale);
-        } else {
-          ctx.fillStyle = "red"; ctx.fillRect(p.cardX - 20, p.cardY - 27.5, 40, 55);
-        }
+        } else { ctx.fillStyle = "red"; ctx.fillRect(p.cardX - 20, p.cardY - 27.5, 40, 55); }
       });
 
       if (anim && anim.fromIndex != null && anim.toIndex != null) {
-        var from = players[anim.fromIndex];
-        var to = players[anim.toIndex];
+        var from = players[anim.fromIndex], to = players[anim.toIndex];
         if (from && to && from.cardX != null && to.cardX != null) {
           var x = from.cardX + (to.cardX - from.cardX) * anim.progress;
           var y = from.cardY + (to.cardY - from.cardY) * anim.progress;
           var back = cardImages["back"];
           if (back && back.complete) ctx.drawImage(back, x - 20, y - 27.5, 40, 55);
-          else { var ctx2 = ctx; ctx2.fillStyle = "blue"; ctx2.fillRect(x - 20, y - 27.5, 40, 55); }
+          else { ctx.fillStyle = "blue"; ctx.fillRect(x - 20, y - 27.5, 40, 55); }
         }
       }
 
@@ -403,30 +354,20 @@
         var baseX = 512 + Math.cos(angle) * 390;
         var baseY = 300 + Math.sin(angle) * 240;
         var offset = hudNudges[i];
-        var x = baseX + offset.x;
-        var y = baseY + offset.y;
-
-        // avatar/coin with fallback path for avatar in /assets/avatars/
-        var avatarPath = "/assets/avatar.png";
-        var coinPath = "/assets/coin.png";
+        var x = baseX + offset.x, y = baseY + offset.y;
 
         var div = document.createElement("div");
-        div.className = "player-ui";
-        div.id = "player-ui-" + p.id;
+        div.className = "player-ui"; div.id = "player-ui-" + p.id;
         div.innerHTML =
           '<div class="hud">' +
           '<div class="name" style="' + (p.id.indexOf("bot_") === 0 ? "color:#666;opacity:.7;" : "") + '">' + p.name + '</div>' +
-          '<img class="avatar" src="' + avatarPath + '" onerror="this.onerror=null;this.src=\'/assets/avatars/avatar.png\';" style="' + (p.id.indexOf("bot_") === 0 ? "opacity:.5;" : "") + '" />' +
-          '<div class="chips"><img src="' + coinPath + '" style="height:14px;vertical-align:middle;" /> ' + p.chips + "</div>" +
+          '<img class="avatar" src="/assets/avatars/avatar.png" style="' + (p.id.indexOf("bot_") === 0 ? "opacity:.5;" : "") + '" />' +
+          '<div class="chips"><img src="/assets/coin.png" style="height:14px;vertical-align:middle;" /> ' + p.chips + "</div>" +
           "</div>";
-        div.style.left = x + "px";
-        div.style.top = y + "px";
+        div.style.left = x + "px"; div.style.top = y + "px";
         div.style.transform = "translate(-50%, -50%)" + ((i === currentPlayer && p.chips > 0) ? " scale(1.05)" : "");
         var avatarEl = div.querySelector(".avatar");
-        if (avatarEl) {
-          if (i === currentPlayer && p.chips > 0) avatarEl.classList.add("active-glow");
-          else avatarEl.classList.remove("active-glow");
-        }
+        if (avatarEl) { if (i === currentPlayer && p.chips > 0) avatarEl.classList.add("active-glow"); else avatarEl.classList.remove("active-glow"); }
         container.appendChild(div);
       });
     }
@@ -466,9 +407,7 @@
 
     function renderRoomsFromCache() {
       var body = document.getElementById("rooms-body");
-      if (!body) return;
-      body.innerHTML = "";
-
+      if (!body) return; body.innerHTML = "";
       var list = _roomsCache.slice ? _roomsCache.slice(0) : [];
       if (currentTab === "my") {
         var info = document.getElementById("player-info");
@@ -479,23 +418,18 @@
         body.innerHTML = '<tr class="l-row"><td colspan="6" style="padding:16px">Tournaments – coming soon!</td></tr>';
         return;
       }
-
       var onlineEl = document.getElementById("players-online");
       if (onlineEl) {
-        var total = 0;
-        list.forEach(function(r){ total += (r.playerCount || 0); });
+        var total = 0; list.forEach(function(r){ total += (r.playerCount || 0); });
         onlineEl.textContent = String(total);
       }
-
       list.forEach(function(r){
-        var tr = document.createElement("tr");
-        tr.className = "l-row";
+        var tr = document.createElement("tr"); tr.className = "l-row";
         var mode = r.mode || r.type || "Classic";
         var seats = r.seats || r.maxPlayers || 8;
         var status = (r.status === "Full")
           ? '<span class="l-status full">Full</span>'
           : '<span class="l-status ok">Open</span>';
-
         tr.innerHTML =
           '<td><span class="l-pill">' + String(r.roomCode || "").slice(0,6) + "</span></td>" +
           "<td>" + mode + (r.buyIn ? " — " + r.buyIn : "") + "</td>" +
@@ -504,21 +438,13 @@
           "<td>" + status + "</td>" +
           '<td style="text-align:right"><button class="l-tab" data-join="' + r.roomCode + '" style="padding:6px 10px">Join</button></td>';
         body.appendChild(tr);
-        var joinBtn = tr.querySelector("[data-join]");
-        if (joinBtn) {
-          joinBtn.addEventListener("click", function(){ joinGame(r.roomCode); });
-        }
+        var joinBtn = tr.querySelector("[data-join]"); if (joinBtn) joinBtn.addEventListener("click", function(){ joinGame(r.roomCode); });
       });
     }
 
-    /* =======================
-       BOOT
-       ======================= */
     document.addEventListener("DOMContentLoaded", function(){
-      // socket
       socket = io();
 
-      // splash
       var splash = document.getElementById("splash");
       var splashName = document.getElementById("splash-name");
       var btnSolo = document.getElementById("btn-solo");
@@ -529,15 +455,12 @@
       function useNameOrAlert() {
         var n = splashName && splashName.value ? splashName.value.trim() : "";
         if (!n) { alert("Please enter your name"); return null; }
-        myUsername = n;
-        if (lobbyNameInput) lobbyNameInput.value = n;
-        return n;
+        myUsername = n; if (lobbyNameInput) lobbyNameInput.value = n; return n;
       }
 
       if (btnMulti) btnMulti.addEventListener("click", function(){
         if (!useNameOrAlert()) return;
-        splash.style.display = "none";
-        lobbyEl.style.display = "grid";
+        splash.style.display = "none"; lobbyEl.style.display = "grid";
         if (socket) socket.emit("requestLobbyState");
       });
 
@@ -547,7 +470,6 @@
         if (socket) socket.emit("createGame", { username: myUsername, options: opts, singlePlayer: true });
       });
 
-      // lobby controls
       var clockEl = document.getElementById("clock");
       if (clockEl) setInterval(function(){ clockEl.textContent = new Date().toLocaleTimeString(); }, 1000);
 
@@ -559,8 +481,7 @@
           var name = nameEl && nameEl.value ? nameEl.value.trim() : "";
           var room = roomEl && roomEl.value ? roomEl.value.trim() : "";
           if (!name || !room) { alert("Enter your name and room code."); return; }
-          myUsername = name;
-          joinGame(room);
+          myUsername = name; joinGame(room);
         });
       }
 
@@ -595,7 +516,6 @@
         });
       }
 
-      // socket events
       socket.on("connect", function(){
         mySocketId = socket.id;
         var cs = document.getElementById("conn-status");
@@ -647,8 +567,7 @@
       });
 
       socket.on("gameStarted", function(state){
-        gameState = state;
-        players = state.players;
+        gameState = state; players = state.players;
         var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
         document.getElementById("lobby").style.display = "none";
         document.getElementById("ui").style.display = "block";
@@ -659,13 +578,10 @@
         var currentPlayerId = payload.currentPlayerId;
         var updatedPlayers = payload.players;
         var peekAllowed = payload.peekAllowed;
-        gameState.players = updatedPlayers;
-        gameState.currentPlayerId = currentPlayerId;
-        players = updatedPlayers;
-        myTurn = (mySocketId === currentPlayerId);
+        gameState.players = updatedPlayers; gameState.currentPlayerId = currentPlayerId;
+        players = updatedPlayers; myTurn = (mySocketId === currentPlayerId);
         peekPlayerCard = myTurn && (typeof peekAllowed === "undefined" || peekAllowed);
-        updateTurnIndicator();
-        drawTable();
+        updateTurnIndicator(); drawTable();
         var actionBtns = document.getElementById("actionBtns");
         var passBtn = document.getElementById("passBtn");
         var keepBtn = document.getElementById("keepBtn");
@@ -673,8 +589,7 @@
           actionBtns.style.display = myTurn ? "block" : "none";
           var cp = players.find(function(p){ return p.id === currentPlayerId; });
           var canPass = !(cp && cp.card && cp.card.rank === "K");
-          passBtn.disabled = (!myTurn || !canPass);
-          keepBtn.disabled = (!myTurn);
+          passBtn.disabled = (!myTurn || !canPass); keepBtn.disabled = (!myTurn);
         }
       });
 
@@ -705,7 +620,6 @@
         showAllCards = true; drawTable(false, animCard);
         var frozenPlayers = players.slice(0);
         setTimeout(function(){ showAllCards = false; players = frozenPlayers; drawTable(); }, 6500);
-
         var alertMessage = "💥 Round ended! Lost a chip: " + losers.map(function(loser){
           var snap = updatedPlayers.find(function(p){ return p.name === loser.name; });
           if (!snap || !snap.card) return loser.name + " (?)";
@@ -721,7 +635,6 @@
         document.getElementById("endOverlay").style.display = "flex";
       });
 
-      // canvas + assets
       backgroundImage.src = "/assets/background.png";
       backgroundImage.onerror = function(){
         var ctx = document.querySelector("canvas").getContext("2d");
@@ -729,18 +642,13 @@
       };
 
       var wrapper = document.createElement("div");
-      wrapper.style.position = "absolute";
-      wrapper.style.left = "50%";
-      wrapper.style.top = "50%";
-      wrapper.style.transform = "translate(-50%, -50%)";
-      wrapper.style.width = "1024px";
-      wrapper.style.height = "600px";
-      wrapper.style.overflow = "hidden";
-      wrapper.style.zIndex = "1";
+      wrapper.style.position = "absolute"; wrapper.style.left = "50%"; wrapper.style.top = "50%";
+      wrapper.style.transform = "translate(-50%, -50%)"; wrapper.style.width = "1024px"; wrapper.style.height = "600px";
+      wrapper.style.overflow = "hidden"; wrapper.style.zIndex = "1";
 
       var canvas = document.createElement("canvas");
-      canvas.width = 1024; canvas.height = 600;
-      canvas.style.display = "block"; canvas.style.width = "100%"; canvas.style.height = "100%";
+      canvas.width = 1024; canvas.height = 600; canvas.style.display = "block";
+      canvas.style.width = "100%"; canvas.style.height = "100%";
 
       wrapper.appendChild(canvas);
       var hudContainer = document.getElementById("playerContainer");
@@ -753,19 +661,15 @@
         var scale = Math.min(scaleX, scaleY);
         wrapper.style.transform = "translate(-50%, -50%) scale(" + scale + ")";
       }
-      window.addEventListener("resize", resizeGame);
-      resizeGame();
+      window.addEventListener("resize", resizeGame); resizeGame();
 
-      // ---- Add Bots UI wiring ----
       (function setupBotControls(){
         var btnFill = document.getElementById('btn-fill-bots');
         var inputSeats = document.getElementById('botSeats');
         var controls = document.getElementById('botControls');
-
         function showBotControls() { if (controls) controls.style.display = 'block'; }
         socket.on("joinedRoom", function(){ showBotControls(); });
         socket.on("gameStarted", function(){ showBotControls(); });
-
         if (btnFill) {
           btnFill.addEventListener('click', function(){
             var seats = Number((inputSeats && inputSeats.value) || 10);
