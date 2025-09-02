@@ -414,7 +414,7 @@
 
         const avatar = document.createElement("img");
         avatar.className = "avatar";
-        avatar.src = "/assets/avatars/avatar.png";                // preferred folder
+        avatar.src = "/assets/avatars/avatar.png";
         avatar.onerror = function(){ this.onerror=null; this.src="/assets/avatar.png"; }; // fallback
         if (p.id.indexOf("bot_") === 0) avatar.style.opacity = "0.5";
         if (i === currentPlayer && p.chips > 0) avatar.classList.add("active-glow");
@@ -536,10 +536,20 @@
         if (socket) socket.emit("requestLobbyState");
       });
 
+      // >>> SOLO: hide splash/lobby, hide controls, create 10-seat game (server fills 9 bots & starts)
       if (btnSolo) btnSolo.addEventListener("click", function(){
-        if (!useNameOrAlert()) return;
+        var n = useNameOrAlert(); if (!n) return;
+        isSolo = true;
+
+        splash.style.display = "none";
+        document.getElementById("lobby").style.display = "none";
+        document.getElementById("ui").style.display = "block";
+
+        var startBtn = document.getElementById("startBtn"); if (startBtn) startBtn.style.display = "none";
+        var botControls = document.getElementById("botControls"); if (botControls) botControls.style.display = "none";
+
         var opts = { mode:"Classic", seats:10, pace:"Regular", buyIn:"5 Chips" };
-        if (socket) socket.emit("createGame", { username: myUsername, options: opts, singlePlayer: true });
+        socket.emit("createGame", { username: myUsername, options: opts, singlePlayer: true });
       });
 
       var clockEl = document.getElementById("clock");
@@ -618,9 +628,16 @@
             var li = document.createElement("li"); li.innerText = p.name; listEl.appendChild(li);
           });
         }
-        var humanCount = playersList.filter(function(p){ return p.id.indexOf("bot_") !== 0; }).length;
         var startBtn = document.getElementById("startBtn");
-        if (startBtn) startBtn.disabled = isSolo ? false : (humanCount < 2);
+        if (startBtn) {
+          if (isSolo) {
+            startBtn.style.display = "none";
+          } else {
+            startBtn.style.display = "inline-block";
+            var humanCount = playersList.filter(function(p){ return p.id.indexOf("bot_") !== 0; }).length;
+            startBtn.disabled = (humanCount < 2);
+          }
+        }
       });
 
       socket.on("joinedRoom", function(data){
@@ -632,6 +649,11 @@
         var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
         document.getElementById("lobby").style.display = "none";
         document.getElementById("ui").style.display = "block";
+
+        if (isSolo) {
+          var sb = document.getElementById("startBtn"); if (sb) sb.style.display = "none";
+          var bc = document.getElementById("botControls"); if (bc) bc.style.display = "none";
+        }
 
         var playerListEl = document.getElementById("playerList");
         if (playerListEl) {
