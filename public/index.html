@@ -414,8 +414,8 @@
 
         const avatar = document.createElement("img");
         avatar.className = "avatar";
-        avatar.src = "/assets/avatars/avatar.png";
-        avatar.onerror = function(){ this.onerror=null; this.src="/assets/avatar.png"; }; // fallback
+        avatar.src = "/assets/avatars/avatar1.png"; // Use an existing file
+        avatar.onerror = function() { this.onerror = null; this.src = "/assets/avatars/avatar1.png"; }; // Fallback to same
         if (p.id.indexOf("bot_") === 0) avatar.style.opacity = "0.5";
         if (i === currentPlayer && p.chips > 0) avatar.classList.add("active-glow");
 
