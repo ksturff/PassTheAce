@@ -534,7 +534,7 @@
         splash.style.display = "none"; lobbyEl.style.display = "grid";
       });
 
-      // >>> SOLO: hide splash/lobby, hide controls, create 10-seat game (server fills 9 bots & starts)
+      // >>> SOLO: hide splash/lobby, hide controls, simulate players for static test
       if (btnSolo) btnSolo.addEventListener("click", function(){
         var n = useNameOrAlert(); if (!n) return;
         isSolo = true;
@@ -545,6 +545,14 @@
 
         var startBtn = document.getElementById("startBtn"); if (startBtn) startBtn.style.display = "none";
         var botControls = document.getElementById("botControls"); if (botControls) botControls.style.display = "none";
+
+        // Static initialization of players for testing
+        players = [
+          { id: "player1", name: "You", chips: 5, seatIndex: 0, card: { rank: 5, suit: "H" } },
+          { id: "bot1", name: "Bot 1", chips: 5, seatIndex: 1, card: { rank: "K", suit: "S" } },
+          { id: "bot2", name: "Bot 2", chips: 5, seatIndex: 2, card: { rank: 10, suit: "D" } }
+        ];
+        preloadAssets().then(() => drawTable());
       });
 
       var clockEl = document.getElementById("clock");
