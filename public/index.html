@@ -190,7 +190,8 @@
     <ul id="playerList" style="list-style:none; padding-left:0; margin-top:5px;"></ul>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Temporarily disable Socket.IO for Static Site testing -->
+  <!-- <script src="/socket.io/socket.io.js"></script> -->
   <script>
     // ===== Old-layout geometry constants =====
     const CENTER_X = 512, CENTER_Y = 300;
@@ -515,8 +516,6 @@
 
     // ---------- boot ----------
     document.addEventListener("DOMContentLoaded", function(){
-      socket = io();
-
       var splash = document.getElementById("splash");
       var splashName = document.getElementById("splash-name");
       var btnSolo = document.getElementById("btn-solo");
@@ -533,7 +532,6 @@
       if (btnMulti) btnMulti.addEventListener("click", function(){
         if (!useNameOrAlert()) return;
         splash.style.display = "none"; lobbyEl.style.display = "grid";
-        if (socket) socket.emit("requestLobbyState");
       });
 
       // >>> SOLO: hide splash/lobby, hide controls, create 10-seat game (server fills 9 bots & starts)
@@ -547,9 +545,6 @@
 
         var startBtn = document.getElementById("startBtn"); if (startBtn) startBtn.style.display = "none";
         var botControls = document.getElementById("botControls"); if (botControls) botControls.style.display = "none";
-
-        var opts = { mode:"Classic", seats:10, pace:"Regular", buyIn:"5 Chips" };
-        socket.emit("createGame", { username: myUsername, options: opts, singlePlayer: true });
       });
 
       var clockEl = document.getElementById("clock");
@@ -584,7 +579,6 @@
             pace: paceEl ? paceEl.value : "Regular",
             buyIn: buyEl ? buyEl.value : "5 Chips"
           };
-          if (socket) socket.emit("createGame", { username: myUsername, options: opts });
         });
       }
 
@@ -598,8 +592,8 @@
         });
       }
 
-      // socket events
-      socket.on("connect", function(){
+      // socket events (disabled for static testing)
+      /* socket.on("connect", function(){
         mySocketId = socket.id;
         var cs = document.getElementById("conn-status");
         if (cs) cs.textContent = "Connected";
@@ -726,7 +720,7 @@
       socket.on("gameOver", function(payload){
         document.getElementById("winMessage").innerText = payload.winner.name + " Wins!";
         document.getElementById("endOverlay").style.display = "flex";
-      });
+      }); */
 
       // background (absolute path; fallback case)
       backgroundImage.src = "/assets/background.png";
