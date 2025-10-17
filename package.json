@@ -1,12 +1,17 @@
 {
   "name": "pass-the-ace-multiplayer",
   "version": "1.0.0",
+  "description": "A multiplayer card game with single-player mode",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "dev": "node src/server.js" 
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.5"
-  }
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  },
+  "author": "Your Name",
+  "license": "MIT"
 }
