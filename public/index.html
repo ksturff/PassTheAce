@@ -213,126 +213,232 @@
         gameMode = mode;
         if (mode === "single") {
             document.getElementById("startBtn").style.display = "none";
-            // Placeholder for original game logic - to be filled in next step
+            // Original game logic
+            deck = createDeck();
+            players = Array.from({ length: 10 }, (_, i) => ({
+                id: i + 1,
+                chips: 3,
+                card: null,
+                seatIndex: i,
+                name: i === 0 ? myUsername : `Bot ${i}` // Use username for Player 1, bots for others
+            }));
+            dealCards();
+            gameRunning = true;
         } else if (mode === "multi") {
             document.getElementById("lobby").style.display = "block";
             // Placeholder for multiplayer logic - to be filled later
         }
     }
 
-    // ---------- helpers ----------
-    function showMessage(message, duration, color) {
-        if (!duration) duration = 3000;
-        if (!color) color = "#f00";
-        var msgBox = document.createElement("div");
-        msgBox.style.position = "fixed"; msgBox.style.top = "100px"; msgBox.style.left = "50%";
-        msgBox.style.transform = "translateX(-50%)"; msgBox.style.padding = "10px 20px";
-        msgBox.style.background = "#222"; msgBox.style.border = "2px solid " + color;
-        msgBox.style.color = "#fff"; msgBox.style.fontSize = "14px"; msgBox.style.zIndex = "1000";
-        msgBox.style.boxShadow = "0 0 10px " + color; msgBox.innerText = message;
-        document.body.appendChild(msgBox); setTimeout(function(){ document.body.removeChild(msgBox); }, duration);
-    }
-
-    // Ensure unique seatIndex locally (so avatars don't stack even if server forgets)
-    function normalizeSeatIndexes(arr) {
-        if (!Array.isArray(arr)) return;
-        const used = new Set();
-        let next = 0;
-        arr.forEach(p => {
-            if (typeof p.seatIndex !== "number" || used.has(p.seatIndex)) {
-                while (used.has(next)) next = (next + 1) % 10;
-                p.seatIndex = next;
-                used.add(next);
-            } else {
-                used.add(p.seatIndex);
+    function createDeck() {
+        let d = [];
+        for (let s of ['S','H','D','C']) {
+            for (let r of [2,3,4,5,6,7,8,9,10,'J','Q','K','A']) {
+                d.push({suit: s, rank: r});
             }
-        });
-    }
-
-    function updatePlayerInfo(player) {
-        if (!player) return;
-        var nameEl = document.getElementById("player-name");
-        var chipsEl = document.getElementById("player-chips");
-        var chipsLegacy = document.getElementById("player-chips-legacy");
-        if (nameEl) nameEl.textContent = player.name;
-        if (chipsEl) chipsEl.textContent = player.chips;
-        if (chipsLegacy) chipsLegacy.textContent = player.chips;
-        var rankEl = document.getElementById("player-rank"); if (rankEl) rankEl.textContent = "Bronze I";
-        var xp = document.getElementById("xp-bar"); if (xp) xp.value = 150;
-    }
-
-    function updateLobby(games) {
-        if (!games) games = [];
-        var lobby = document.getElementById("game-lobby");
-        if (lobby) {
-            lobby.innerHTML = "";
-            var currentInfo = document.getElementById("player-info");
-            var currentRoom = currentInfo && currentInfo.dataset ? currentInfo.dataset.room : "";
-            var list = currentTab === "my" && currentRoom ? games.filter(function(g){ return g.roomCode === currentRoom; }) : games;
-            list.forEach(function(game) {
-                lobby.innerHTML += '<div class="game-room"><span>Game ' + game.roomCode + ' (' + (game.playerCount || 0) + '/' + (game.maxPlayers || 0) + ') - ' + (game.status || "Waiting") + '</span><button onclick="joinGame(\'' + game.roomCode + '\')">Join</button></div>';
-            });
-            if (currentTab === "tournaments") lobby.innerHTML = "<div>Coming Soon!</div>";
         }
-        _roomsCache = games; renderRoomsFromCache();
+        return d.sort(() => Math.random() - 0.5);
     }
 
-    function switchTab(tab) {
-        currentTab = tab; updateLobby(_roomsCache);
-        var tabs = document.querySelectorAll("#tabs .tab");
-        if (tabs && tabs.length) {
-            for (var i=0;i<tabs.length;i++) tabs[i].classList.remove("active");
-            var selector = '#tabs .tab[onclick="switchTab(\'' + tab + '\')"]';
-            var btn = document.querySelector(selector); if (btn) btn.classList.add("active");
+    function dealCards() {
+        if (deck.length < players.length + 1) deck = createDeck();
+        players.forEach(p => p.card = null);
+        const sample = players.map(p => ({ ...p, card: deck.pop() }));
+        let maxVal = Math.max(...sample.map(p => getCardValue(p.card)));
+        let topCandidates = sample.filter(p => getCardValue(p.card) === maxVal);
+        dealerIndex = players.findIndex(p => p.id === topCandidates[0].id);
+        startingPlayerIndex = (dealerIndex + 1) % players.length;
+        currentPlayer = startingPlayerIndex;
+        sample.forEach((p, i) => players[i].card = p.card);
+        revealCardsSequentially();
+    }
+
+    function getCardValue(card) {
+        if (!card) return 99;
+        if (typeof card.rank === 'number') return card.rank;
+        return { J: 11, Q: 12, K: 13, A: 1 }[card.rank];
+    }
+
+    function revealCardsSequentially(index = 0) {
+        if (index >= players.length) {
+            processTurn();
+            return;
         }
+        drawTable(false);
+        setTimeout(() => revealCardsSequentially(index + 1), 300);
     }
-
-    function createOrJoinGame() {
-        var nameInput = document.getElementById("usernameInput") || document.getElementById("usernameInput-legacy");
-        var roomInput = document.getElementById("roomInput") || document.getElementById("roomInput-legacy");
-        var name = nameInput && nameInput.value ? nameInput.value.trim() : "";
-        var room = roomInput && roomInput.value ? roomInput.value.trim() : "";
-        if (!name) { alert("Please enter a name."); return; }
-        myUsername = name;
-        if (room) joinGame(room);
-        else if (socket) socket.emit("createGame", { username: myUsername });
-    }
-
-    function joinGame(roomCode) {
-        if (!myUsername) { alert("Please enter a name first."); return; }
-        myRoom = roomCode; if (socket) socket.emit("join", { username: myUsername, room: roomCode });
-    }
-
-    function startGame() { if (myRoom && socket) socket.emit("startGame", myRoom); }
 
     function keepCard() {
-        if (!myTurn) return; myTurn = false;
-        var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
-        if (socket) socket.emit("keepCard", { room: myRoom });
+        if (!myTurn && !isHumanTurn) return;
+        if (isHumanTurn) {
+            document.getElementById("actionBtns").style.display = "none";
+            peekPlayerCard = false;
+            currentPlayer = (currentPlayer + 1) % players.length;
+            if (currentPlayer === dealerIndex) {
+                setTimeout(() => endRound(), 1000);
+            } else {
+                processTurn();
+            }
+        } else if (socket) {
+            socket.emit("keepCard", { room: myRoom });
+        }
+    }
+
+    function animateCardPass(fromPlayerId, toPlayerId, callback) {
+        const fromEl = document.getElementById(`player-ui-${fromPlayerId}`);
+        const toEl = document.getElementById(`player-ui-${toPlayerId}`);
+        if (!fromEl || !toEl) return callback();
+
+        const fromCard = fromEl.querySelector('.player-card');
+        const img = document.createElement('img');
+        img.className = 'floating-card';
+        img.src = fromCard.src;
+        document.body.appendChild(img);
+
+        const fromRect = fromCard.getBoundingClientRect();
+        const toCard = toEl.querySelector('.player-card');
+        const toRect = toCard.getBoundingClientRect();
+
+        img.style.left = `${fromRect.left}px`;
+        img.style.top = `${fromRect.top}px`;
+
+        setTimeout(() => {
+            img.style.left = `${toRect.left}px`;
+            img.style.top = `${toRect.top}px`;
+        }, 50);
+
+        setTimeout(() => {
+            img.remove();
+            callback();
+        }, 600);
     }
 
     function passCard() {
-        if (!myTurn) return;
-        var cp = players.find(function(p){ return p.id === mySocketId; });
-        if (cp && cp.card && cp.card.rank === "K") { showMessage("You have a King! You cannot pass.", 3000, "#f00"); return; }
-        myTurn = false;
-        var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
-        if (socket) socket.emit("passCard", { room: myRoom });
+        if (!myTurn && !isHumanTurn) return;
+        let current = players[currentPlayer];
+        let next = players[(currentPlayer + 1) % players.length];
+        if (!current.card || !next.card) return;
+        if (current.card.rank === "K" || next.card.rank === "K") return;
+
+        if (isHumanTurn) {
+            animateCardPass(current.id, next.id, () => {
+                [current.card, next.card] = [next.card, current.card];
+                document.getElementById("actionBtns").style.display = "none";
+                peekPlayerCard = false;
+                currentPlayer = (currentPlayer + 1) % players.length;
+                if (currentPlayer === dealerIndex) {
+                    setTimeout(() => endRound(), 1000);
+                } else {
+                    processTurn();
+                }
+            });
+        } else if (socket) {
+            socket.emit("passCard", { room: myRoom, fromId: current.id, toId: next.id });
+        }
     }
 
-    function restartGame() {
-        document.getElementById("endOverlay").style.display = "none";
-        document.getElementById("startBtn").style.display = "block";
-        dealerIndex = null; startGame();
+    function aiTurn() {
+        let current = players[currentPlayer];
+        let next = players[(currentPlayer + 1) % players.length];
+
+        if (!current.card || !next.card) {
+            currentPlayer = (currentPlayer + 1) % players.length;
+            processTurn();
+            return;
+        }
+
+        let currentVal = getCardValue(current.card);
+        let nextVal = getCardValue(next.card);
+        let shouldPass = false;
+
+        if (currentVal <= 5 && next.card.rank !== "K") {
+            shouldPass = true;
+        } else if (currentVal >= 10) {
+            shouldPass = false;
+        } else {
+            shouldPass = Math.random() < 0.5 && next.card.rank !== "K";
+        }
+
+        if (shouldPass) {
+            animateCardPass(current.id, next.id, () => {
+                [current.card, next.card] = [next.card, current.card];
+                currentPlayer = (currentPlayer + 1) % players.length;
+                if (currentPlayer === dealerIndex) {
+                    setTimeout(() => endRound(), 1000);
+                } else {
+                    processTurn();
+                }
+            });
+        } else {
+            currentPlayer = (currentPlayer + 1) % players.length;
+            if (currentPlayer === dealerIndex) {
+                setTimeout(() => endRound(), 1000);
+            } else {
+                processTurn();
+            }
+        }
+    }
+
+    function processTurn() {
+        if (currentPlayer >= players.length) currentPlayer = 0;
+        if (players.length === 0) return;
+        const player = players[currentPlayer];
+        isHumanTurn = (player.id === 1); // Player 1 is human in single-player
+        peekPlayerCard = isHumanTurn;
+        updateTurnIndicator();
+        requestAnimationFrame(() => drawTable(false));
+        if (isHumanTurn) {
+            document.getElementById("actionBtns").style.display = "block";
+        } else {
+            document.getElementById("actionBtns").style.display = "none";
+            setTimeout(() => aiTurn(), 1000);
+        }
+    }
+
+    function endRound() {
+        drawTable(true);
+        setTimeout(() => {
+            const minValue = Math.min(...players.map(p => getCardValue(p.card)));
+            players.forEach(p => {
+                if (getCardValue(p.card) === minValue) {
+                    p.chips--;
+                }
+            });
+            const eliminated = players.filter(p => p.chips <= 0);
+            eliminated.forEach(p => {
+                const el = document.getElementById(`player-ui-${p.id}`);
+                if (el) el.remove();
+            });
+            players = players.filter(p => p.chips > 0);
+            if (players.length === 1) {
+                document.getElementById("winMessage").innerText = `🏆 ${players[0].name} Wins!`;
+                document.getElementById("endOverlay").style.display = "flex";
+                document.getElementById("actionBtns").style.display = "none";
+                gameRunning = false;
+                return;
+            }
+            const losers = players.filter(p => getCardValue(p.card) === minValue);
+            if (losers.length > 0) {
+                const firstLoser = losers[0];
+                const loserIndex = players.findIndex(p => p.id === firstLoser.id);
+                startingPlayerIndex = (loserIndex + 1) % players.length;
+            }
+            if (dealerIndex >= players.length) dealerIndex = 0;
+            if (startingPlayerIndex >= players.length) startingPlayerIndex = 0;
+            currentPlayer = startingPlayerIndex;
+            deck = createDeck();
+            players.forEach(p => p.card = null);
+            setTimeout(dealCards, 1000);
+        }, 1500);
     }
 
     function updateTurnIndicator() {
-        var player = players.find(function(p){ return p.id === gameState.currentPlayerId; });
-        var ti = document.getElementById("turnIndicator"); if (ti) ti.innerText = player ? (player.name + "'s Turn") : "";
+        var player = players[currentPlayer];
+        var ti = document.getElementById("turnIndicator");
+        if (ti) ti.innerText = player ? `${player.name}'s Turn` : "";
     }
 
-    // ---------- table rendering (old layout) ----------
-    function drawTable(showCards, anim) {
+    function drawTable(showCards = false, anim) {
         if (typeof showCards === "undefined") showCards = false;
 
         const canvas = document.querySelector("canvas");
@@ -380,7 +486,7 @@
             const suit = suitMap[p.card.suit];
             const key  = `${rank}_of_${suit}`;
 
-            const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === "K";
+            const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || (isHumanTurn && p.id === 1) || p.card.rank === "K";
             const cardImg = cardImages[show ? key : "back"];
             if (cardImg && cardImg.complete) {
                 const scale = (cardImg === cardImages["back"]) ? 1.0 : 0.95;
@@ -426,13 +532,13 @@
             const name = document.createElement("div");
             name.className = "name";
             name.textContent = p.name;
-            if (p.id.indexOf("bot_") === 0) { name.style.color = "#666"; name.style.opacity = "0.7"; }
+            if (p.id !== 1) { name.style.color = "#666"; name.style.opacity = "0.7"; } // Bots have muted names
 
             const avatar = document.createElement("img");
             avatar.className = "avatar";
             avatar.src = "/assets/avatars/avatar1.png"; // Use an existing file
             avatar.onerror = function() { this.onerror = null; this.src = "/assets/avatars/avatar1.png"; }; // Fallback to same
-            if (p.id.indexOf("bot_") === 0) avatar.style.opacity = "0.5";
+            if (p.id !== 1) avatar.style.opacity = "0.5"; // Bots have muted avatars
             if (i === currentPlayer && p.chips > 0) avatar.classList.add("active-glow");
 
             const chips = document.createElement("div");
