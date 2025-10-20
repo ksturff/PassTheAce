@@ -205,313 +205,328 @@
     var showAllCards = false, cardImages = {}, socket = null, backgroundImage = new Image();
     var _roomsCache = [], myRooms = {}, isSolo = false;
 
+    // Modular setup for game modes
+    let gameMode = "single";
+    let isHumanTurn = false; // Added to align with original
+
+    function initializeGame(mode) {
+        gameMode = mode;
+        if (mode === "single") {
+            document.getElementById("startBtn").style.display = "none";
+            // Placeholder for original game logic - to be filled in next step
+        } else if (mode === "multi") {
+            document.getElementById("lobby").style.display = "block";
+            // Placeholder for multiplayer logic - to be filled later
+        }
+    }
+
     // ---------- helpers ----------
     function showMessage(message, duration, color) {
-      if (!duration) duration = 3000;
-      if (!color) color = "#f00";
-      var msgBox = document.createElement("div");
-      msgBox.style.position = "fixed"; msgBox.style.top = "100px"; msgBox.style.left = "50%";
-      msgBox.style.transform = "translateX(-50%)"; msgBox.style.padding = "10px 20px";
-      msgBox.style.background = "#222"; msgBox.style.border = "2px solid " + color;
-      msgBox.style.color = "#fff"; msgBox.style.fontSize = "14px"; msgBox.style.zIndex = "1000";
-      msgBox.style.boxShadow = "0 0 10px " + color; msgBox.innerText = message;
-      document.body.appendChild(msgBox); setTimeout(function(){ document.body.removeChild(msgBox); }, duration);
+        if (!duration) duration = 3000;
+        if (!color) color = "#f00";
+        var msgBox = document.createElement("div");
+        msgBox.style.position = "fixed"; msgBox.style.top = "100px"; msgBox.style.left = "50%";
+        msgBox.style.transform = "translateX(-50%)"; msgBox.style.padding = "10px 20px";
+        msgBox.style.background = "#222"; msgBox.style.border = "2px solid " + color;
+        msgBox.style.color = "#fff"; msgBox.style.fontSize = "14px"; msgBox.style.zIndex = "1000";
+        msgBox.style.boxShadow = "0 0 10px " + color; msgBox.innerText = message;
+        document.body.appendChild(msgBox); setTimeout(function(){ document.body.removeChild(msgBox); }, duration);
     }
 
     // Ensure unique seatIndex locally (so avatars don't stack even if server forgets)
     function normalizeSeatIndexes(arr) {
-      if (!Array.isArray(arr)) return;
-      const used = new Set();
-      let next = 0;
-      arr.forEach(p => {
-        if (typeof p.seatIndex !== "number" || used.has(p.seatIndex)) {
-          while (used.has(next)) next = (next + 1) % 10;
-          p.seatIndex = next;
-          used.add(next);
-        } else {
-          used.add(p.seatIndex);
-        }
-      });
+        if (!Array.isArray(arr)) return;
+        const used = new Set();
+        let next = 0;
+        arr.forEach(p => {
+            if (typeof p.seatIndex !== "number" || used.has(p.seatIndex)) {
+                while (used.has(next)) next = (next + 1) % 10;
+                p.seatIndex = next;
+                used.add(next);
+            } else {
+                used.add(p.seatIndex);
+            }
+        });
     }
 
     function updatePlayerInfo(player) {
-      if (!player) return;
-      var nameEl = document.getElementById("player-name");
-      var chipsEl = document.getElementById("player-chips");
-      var chipsLegacy = document.getElementById("player-chips-legacy");
-      if (nameEl) nameEl.textContent = player.name;
-      if (chipsEl) chipsEl.textContent = player.chips;
-      if (chipsLegacy) chipsLegacy.textContent = player.chips;
-      var rankEl = document.getElementById("player-rank"); if (rankEl) rankEl.textContent = "Bronze I";
-      var xp = document.getElementById("xp-bar"); if (xp) xp.value = 150;
+        if (!player) return;
+        var nameEl = document.getElementById("player-name");
+        var chipsEl = document.getElementById("player-chips");
+        var chipsLegacy = document.getElementById("player-chips-legacy");
+        if (nameEl) nameEl.textContent = player.name;
+        if (chipsEl) chipsEl.textContent = player.chips;
+        if (chipsLegacy) chipsLegacy.textContent = player.chips;
+        var rankEl = document.getElementById("player-rank"); if (rankEl) rankEl.textContent = "Bronze I";
+        var xp = document.getElementById("xp-bar"); if (xp) xp.value = 150;
     }
 
     function updateLobby(games) {
-      if (!games) games = [];
-      var lobby = document.getElementById("game-lobby");
-      if (lobby) {
-        lobby.innerHTML = "";
-        var currentInfo = document.getElementById("player-info");
-        var currentRoom = currentInfo && currentInfo.dataset ? currentInfo.dataset.room : "";
-        var list = currentTab === "my" && currentRoom ? games.filter(function(g){ return g.roomCode === currentRoom; }) : games;
-        list.forEach(function(game) {
-          lobby.innerHTML += '<div class="game-room"><span>Game ' + game.roomCode + ' (' + (game.playerCount || 0) + '/' + (game.maxPlayers || 0) + ') - ' + (game.status || "Waiting") + '</span><button onclick="joinGame(\'' + game.roomCode + '\')">Join</button></div>';
-        });
-        if (currentTab === "tournaments") lobby.innerHTML = "<div>Coming Soon!</div>";
-      }
-      _roomsCache = games; renderRoomsFromCache();
+        if (!games) games = [];
+        var lobby = document.getElementById("game-lobby");
+        if (lobby) {
+            lobby.innerHTML = "";
+            var currentInfo = document.getElementById("player-info");
+            var currentRoom = currentInfo && currentInfo.dataset ? currentInfo.dataset.room : "";
+            var list = currentTab === "my" && currentRoom ? games.filter(function(g){ return g.roomCode === currentRoom; }) : games;
+            list.forEach(function(game) {
+                lobby.innerHTML += '<div class="game-room"><span>Game ' + game.roomCode + ' (' + (game.playerCount || 0) + '/' + (game.maxPlayers || 0) + ') - ' + (game.status || "Waiting") + '</span><button onclick="joinGame(\'' + game.roomCode + '\')">Join</button></div>';
+            });
+            if (currentTab === "tournaments") lobby.innerHTML = "<div>Coming Soon!</div>";
+        }
+        _roomsCache = games; renderRoomsFromCache();
     }
 
     function switchTab(tab) {
-      currentTab = tab; updateLobby(_roomsCache);
-      var tabs = document.querySelectorAll("#tabs .tab");
-      if (tabs && tabs.length) {
-        for (var i=0;i<tabs.length;i++) tabs[i].classList.remove("active");
-        var selector = '#tabs .tab[onclick="switchTab(\'' + tab + '\')"]';
-        var btn = document.querySelector(selector); if (btn) btn.classList.add("active");
-      }
+        currentTab = tab; updateLobby(_roomsCache);
+        var tabs = document.querySelectorAll("#tabs .tab");
+        if (tabs && tabs.length) {
+            for (var i=0;i<tabs.length;i++) tabs[i].classList.remove("active");
+            var selector = '#tabs .tab[onclick="switchTab(\'' + tab + '\')"]';
+            var btn = document.querySelector(selector); if (btn) btn.classList.add("active");
+        }
     }
 
     function createOrJoinGame() {
-      var nameInput = document.getElementById("usernameInput") || document.getElementById("usernameInput-legacy");
-      var roomInput = document.getElementById("roomInput") || document.getElementById("roomInput-legacy");
-      var name = nameInput && nameInput.value ? nameInput.value.trim() : "";
-      var room = roomInput && roomInput.value ? roomInput.value.trim() : "";
-      if (!name) { alert("Please enter a name."); return; }
-      myUsername = name;
-      if (room) joinGame(room);
-      else if (socket) socket.emit("createGame", { username: myUsername });
+        var nameInput = document.getElementById("usernameInput") || document.getElementById("usernameInput-legacy");
+        var roomInput = document.getElementById("roomInput") || document.getElementById("roomInput-legacy");
+        var name = nameInput && nameInput.value ? nameInput.value.trim() : "";
+        var room = roomInput && roomInput.value ? roomInput.value.trim() : "";
+        if (!name) { alert("Please enter a name."); return; }
+        myUsername = name;
+        if (room) joinGame(room);
+        else if (socket) socket.emit("createGame", { username: myUsername });
     }
 
     function joinGame(roomCode) {
-      if (!myUsername) { alert("Please enter a name first."); return; }
-      myRoom = roomCode; if (socket) socket.emit("join", { username: myUsername, room: roomCode });
+        if (!myUsername) { alert("Please enter a name first."); return; }
+        myRoom = roomCode; if (socket) socket.emit("join", { username: myUsername, room: roomCode });
     }
 
     function startGame() { if (myRoom && socket) socket.emit("startGame", myRoom); }
 
     function keepCard() {
-      if (!myTurn) return; myTurn = false;
-      var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
-      if (socket) socket.emit("keepCard", { room: myRoom });
+        if (!myTurn) return; myTurn = false;
+        var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
+        if (socket) socket.emit("keepCard", { room: myRoom });
     }
 
     function passCard() {
-      if (!myTurn) return;
-      var cp = players.find(function(p){ return p.id === mySocketId; });
-      if (cp && cp.card && cp.card.rank === "K") { showMessage("You have a King! You cannot pass.", 3000, "#f00"); return; }
-      myTurn = false;
-      var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
-      if (socket) socket.emit("passCard", { room: myRoom });
+        if (!myTurn) return;
+        var cp = players.find(function(p){ return p.id === mySocketId; });
+        if (cp && cp.card && cp.card.rank === "K") { showMessage("You have a King! You cannot pass.", 3000, "#f00"); return; }
+        myTurn = false;
+        var ab = document.getElementById("actionBtns"); if (ab) ab.style.display = "none";
+        if (socket) socket.emit("passCard", { room: myRoom });
     }
 
     function restartGame() {
-      document.getElementById("endOverlay").style.display = "none";
-      document.getElementById("startBtn").style.display = "block";
-      dealerIndex = null; startGame();
+        document.getElementById("endOverlay").style.display = "none";
+        document.getElementById("startBtn").style.display = "block";
+        dealerIndex = null; startGame();
     }
 
     function updateTurnIndicator() {
-      var player = players.find(function(p){ return p.id === gameState.currentPlayerId; });
-      var ti = document.getElementById("turnIndicator"); if (ti) ti.innerText = player ? (player.name + "'s Turn") : "";
+        var player = players.find(function(p){ return p.id === gameState.currentPlayerId; });
+        var ti = document.getElementById("turnIndicator"); if (ti) ti.innerText = player ? (player.name + "'s Turn") : "";
     }
 
     // ---------- table rendering (old layout) ----------
     function drawTable(showCards, anim) {
-      if (typeof showCards === "undefined") showCards = false;
+        if (typeof showCards === "undefined") showCards = false;
 
-      const canvas = document.querySelector("canvas");
-      const ctx = canvas.getContext("2d");
+        const canvas = document.querySelector("canvas");
+        const ctx = canvas.getContext("2d");
 
-      // background
-      ctx.clearRect(0, 0, 1024, 600);
-      if (backgroundImage.complete && backgroundImage.naturalWidth > 0) {
-        ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
-      } else {
-        ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
-      }
-
-      // same ring/offsets you had before
-      const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
-      const radiusX = X_RADIUS - 100;
-      const radiusY = Y_RADIUS - 50;
-
-      const cardOffsets = [
-        { x: 0,  y: 40 }, { x: 0,  y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
-        { x: 0,  y: -20 },{ x: 0,  y: -50 },{ x: -5, y: -20 },
-        { x: -30,y: 10 }, { x: -30,y: -20 },{ x: -5, y: 10 }
-      ];
-
-      const hudOffsets = [
-        { x:130, y: 40 }, { x: 50, y: 10 }, { x:135, y: -30 }, { x:150, y: 15 },
-        { x: 50, y: 30 }, { x:130, y: -10 }, { x:200, y: 30 },
-        { x:110, y: 15 }, { x:110, y: -30 }, { x:200, y: 10 }
-      ];
-
-      // draw cards
-      players.forEach(function(p){
-        const i = (typeof p.seatIndex === "number") ? p.seatIndex : 0;
-        const angle = angleMap[i] * Math.PI / 180;
-        const offset = cardOffsets[i];
-        p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
-        p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
-
-        if (!p.card) return;
-        if (anim && anim.progress < 1 && (i === anim.fromIndex || i === anim.toIndex)) return;
-
-        const rankMap = { J:"jack", Q:"queen", K:"king", A:"ace" };
-        const suitMap = { S:"spades", H:"hearts", D:"diamonds", C:"clubs" };
-        const rank = (typeof p.card.rank === "number") ? p.card.rank : rankMap[p.card.rank];
-        const suit = suitMap[p.card.suit];
-        const key  = `${rank}_of_${suit}`;
-
-        const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === "K";
-        const cardImg = cardImages[show ? key : "back"];
-        if (cardImg && cardImg.complete) {
-          const scale = (cardImg === cardImages["back"]) ? 1.0 : 0.95;
-          ctx.drawImage(cardImg, p.cardX - CARD_W/2, p.cardY - CARD_H/2, CARD_W*scale, CARD_H*scale);
+        // background
+        ctx.clearRect(0, 0, 1024, 600);
+        if (backgroundImage.complete && backgroundImage.naturalWidth > 0) {
+            ctx.drawImage(backgroundImage, 0, 0, 1024, 600);
         } else {
-          ctx.fillStyle = "red"; ctx.fillRect(p.cardX - CARD_W/2, p.cardY - CARD_H/2, CARD_W, CARD_H);
+            ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
         }
-      });
 
-      // moving card animation
-      if (anim && anim.fromIndex != null && anim.toIndex != null) {
-        const from = players[anim.fromIndex];
-        const to   = players[anim.toIndex];
-        if (from && to && from.cardX != null && to.cardX != null) {
-          const x = from.cardX + (to.cardX - from.cardX) * anim.progress;
-          const y = from.cardY + (to.cardY - from.cardY) * anim.progress;
-          const back = cardImages["back"];
-          if (back && back.complete) ctx.drawImage(back, x - CARD_W/2, y - CARD_H/2, CARD_W, CARD_H);
+        // same ring/offsets you had before
+        const angleMap = Array.from({ length: 10 }, (_, i) => -90 + (i * 360 / 10));
+        const radiusX = X_RADIUS - 100;
+        const radiusY = Y_RADIUS - 50;
+
+        const cardOffsets = [
+            { x: 0,  y: 40 }, { x: 0,  y: 10 }, { x: 30, y: -20 }, { x: 30, y: 10 },
+            { x: 0,  y: -20 },{ x: 0,  y: -50 },{ x: -5, y: -20 },
+            { x: -30,y: 10 }, { x: -30,y: -20 },{ x: -5, y: 10 }
+        ];
+
+        const hudOffsets = [
+            { x:130, y: 40 }, { x: 50, y: 10 }, { x:135, y: -30 }, { x:150, y: 15 },
+            { x: 50, y: 30 }, { x:130, y: -10 }, { x:200, y: 30 },
+            { x:110, y: 15 }, { x:110, y: -30 }, { x:200, y: 10 }
+        ];
+
+        // draw cards
+        players.forEach(function(p){
+            const i = (typeof p.seatIndex === "number") ? p.seatIndex : 0;
+            const angle = angleMap[i] * Math.PI / 180;
+            const offset = cardOffsets[i];
+            p.cardX = CENTER_X + Math.cos(angle) * radiusX + offset.x;
+            p.cardY = CENTER_Y + Math.sin(angle) * radiusY + offset.y;
+
+            if (!p.card) return;
+            if (anim && anim.progress < 1 && (i === anim.fromIndex || i === anim.toIndex)) return;
+
+            const rankMap = { J:"jack", Q:"queen", K:"king", A:"ace" };
+            const suitMap = { S:"spades", H:"hearts", D:"diamonds", C:"clubs" };
+            const rank = (typeof p.card.rank === "number") ? p.card.rank : rankMap[p.card.rank];
+            const suit = suitMap[p.card.suit];
+            const key  = `${rank}_of_${suit}`;
+
+            const show = showCards || showAllCards || (p.id === mySocketId && peekPlayerCard) || p.card.rank === "K";
+            const cardImg = cardImages[show ? key : "back"];
+            if (cardImg && cardImg.complete) {
+                const scale = (cardImg === cardImages["back"]) ? 1.0 : 0.95;
+                ctx.drawImage(cardImg, p.cardX - CARD_W/2, p.cardY - CARD_H/2, CARD_W*scale, CARD_H*scale);
+            } else {
+                ctx.fillStyle = "red"; ctx.fillRect(p.cardX - CARD_W/2, p.cardY - CARD_H/2, CARD_W, CARD_H);
+            }
+        });
+
+        // moving card animation
+        if (anim && anim.fromIndex != null && anim.toIndex != null) {
+            const from = players[anim.fromIndex];
+            const to   = players[anim.toIndex];
+            if (from && to && from.cardX != null && to.cardX != null) {
+                const x = from.cardX + (to.cardX - from.cardX) * anim.progress;
+                const y = from.cardY + (to.cardY - from.cardY) * anim.progress;
+                const back = cardImages["back"];
+                if (back && back.complete) ctx.drawImage(back, x - CARD_W/2, y - CARD_H/2, CARD_W, CARD_H);
+            }
         }
-      }
 
-      // HUD (avatars, names, chips)
-      const container = document.getElementById("playerContainer");
-      container.innerHTML = "";
+        // HUD (avatars, names, chips)
+        const container = document.getElementById("playerContainer");
+        container.innerHTML = "";
 
-      players.forEach(function(p){
-        const i = (typeof p.seatIndex === "number") ? p.seatIndex : 0;
-        const angle  = angleMap[i] * Math.PI / 180;
-        const offset = hudOffsets[i];
-        const outerX = X_RADIUS + 30;
-        const outerY = Y_RADIUS + 30;
-        const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
-        const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
+        players.forEach(function(p){
+            const i = (typeof p.seatIndex === "number") ? p.seatIndex : 0;
+            const angle  = angleMap[i] * Math.PI / 180;
+            const offset = hudOffsets[i];
+            const outerX = X_RADIUS + 30;
+            const outerY = Y_RADIUS + 30;
+            const x = CENTER_X + Math.cos(angle) * outerX + offset.x;
+            const y = CENTER_Y + Math.sin(angle) * outerY + offset.y;
 
-        const div = document.createElement("div");
-        div.className = "player-ui"; div.id = "player-ui-" + p.id;
-        div.style.left = x + "px"; div.style.top = y + "px";
-        div.style.transform = "translate(-50%, -50%)" + ((i === currentPlayer && p.chips > 0) ? " scale(1.05)" : "");
+            const div = document.createElement("div");
+            div.className = "player-ui"; div.id = "player-ui-" + p.id;
+            div.style.left = x + "px"; div.style.top = y + "px";
+            div.style.transform = "translate(-50%, -50%)" + ((i === currentPlayer && p.chips > 0) ? " scale(1.05)" : "");
 
-        const hud = document.createElement("div");
-        hud.className = "hud";
+            const hud = document.createElement("div");
+            hud.className = "hud";
 
-        const name = document.createElement("div");
-        name.className = "name";
-        name.textContent = p.name;
-        if (p.id.indexOf("bot_") === 0) { name.style.color = "#666"; name.style.opacity = "0.7"; }
+            const name = document.createElement("div");
+            name.className = "name";
+            name.textContent = p.name;
+            if (p.id.indexOf("bot_") === 0) { name.style.color = "#666"; name.style.opacity = "0.7"; }
 
-        const avatar = document.createElement("img");
-        avatar.className = "avatar";
-        avatar.src = "/assets/avatars/avatar1.png"; // Use an existing file
-        avatar.onerror = function() { this.onerror = null; this.src = "/assets/avatars/avatar1.png"; }; // Fallback to same
-        if (p.id.indexOf("bot_") === 0) avatar.style.opacity = "0.5";
-        if (i === currentPlayer && p.chips > 0) avatar.classList.add("active-glow");
+            const avatar = document.createElement("img");
+            avatar.className = "avatar";
+            avatar.src = "/assets/avatars/avatar1.png"; // Use an existing file
+            avatar.onerror = function() { this.onerror = null; this.src = "/assets/avatars/avatar1.png"; }; // Fallback to same
+            if (p.id.indexOf("bot_") === 0) avatar.style.opacity = "0.5";
+            if (i === currentPlayer && p.chips > 0) avatar.classList.add("active-glow");
 
-        const chips = document.createElement("div");
-        chips.className = "chips";
-        const coin = document.createElement("img");
-        coin.src = "/assets/coin.png";
-        coin.style.height = "14px";
-        coin.style.verticalAlign = "middle";
-        chips.appendChild(coin);
-        chips.appendChild(document.createTextNode(" " + (p.chips ?? 5)));
+            const chips = document.createElement("div");
+            chips.className = "chips";
+            const coin = document.createElement("img");
+            coin.src = "/assets/coin.png";
+            coin.style.height = "14px";
+            coin.style.verticalAlign = "middle";
+            chips.appendChild(coin);
+            chips.appendChild(document.createTextNode(" " + (p.chips ?? 5)));
 
-        hud.appendChild(name);
-        hud.appendChild(avatar);
-        hud.appendChild(chips);
-        div.appendChild(hud);
-        container.appendChild(div);
-      });
+            hud.appendChild(name);
+            hud.appendChild(avatar);
+            hud.appendChild(chips);
+            div.appendChild(hud);
+            container.appendChild(div);
+        });
     }
 
     function animateCardPass(timestamp) {
-      if (!animCard || !animationInProgress) return;
-      var duration = 500;
-      if (!animStartTime) animStartTime = timestamp;
-      var elapsed = timestamp - animStartTime;
-      var t = Math.min(elapsed / duration, 1);
-      var ease = (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
-      animCard.progress = ease;
-      drawTable(false, animCard);
-      if (animCard.progress < 1) requestAnimationFrame(animateCardPass);
-      else { animCard = null; animationInProgress = false; drawTable(); }
+        if (!animCard || !animationInProgress) return;
+        var duration = 500;
+        if (!animStartTime) animStartTime = timestamp;
+        var elapsed = timestamp - animStartTime;
+        var t = Math.min(elapsed / duration, 1);
+        var ease = (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
+        animCard.progress = ease;
+        drawTable(false, animCard);
+        if (animCard.progress < 1) requestAnimationFrame(animateCardPass);
+        else { animCard = null; animationInProgress = false; drawTable(); }
     }
 
     // ---------- assets ----------
     function preloadAssets() {
-      var suits = ["clubs", "diamonds", "hearts", "spades"];
-      var ranks = [2,3,4,5,6,7,8,9,10,"jack","queen","king","ace"];
-      var ps = [];
-      cardImages = {};
+        var suits = ["clubs", "diamonds", "hearts", "spades"];
+        var ranks = [2,3,4,5,6,7,8,9,10,"jack","queen","king","ace"];
+        var ps = [];
+        cardImages = {};
 
-      suits.forEach(function(suit){
-        ranks.forEach(function(rank){
-          var img = new Image();
-          var key = rank + "_of_" + suit;
-          img.src = "/assets/" + key + ".png"; // absolute path for Render
-          cardImages[key] = img;
-          ps.push(new Promise(function(res){ img.onload = res; img.onerror = res; }));
+        suits.forEach(function(suit){
+            ranks.forEach(function(rank){
+                var img = new Image();
+                var key = rank + "_of_" + suit;
+                img.src = "/assets/" + key + ".png"; // absolute path for Render
+                cardImages[key] = img;
+                ps.push(new Promise(function(res){ img.onload = res; img.onerror = res; }));
+            });
         });
-      });
 
-      // back.png with a case-insensitive fallback
-      var back = new Image();
-      back.src = "/assets/back.png";
-      back.onerror = function(){ this.onerror=null; this.src="/assets/Back.png"; };
-      cardImages["back"] = back;
-      ps.push(new Promise(function(res){ back.onload = res; back.onerror = res; }));
+        // back.png with a case-insensitive fallback
+        var back = new Image();
+        back.src = "/assets/back.png";
+        back.onerror = function(){ this.onerror=null; this.src="/assets/Back.png"; };
+        cardImages["back"] = back;
+        ps.push(new Promise(function(res){ back.onload = res; back.onerror = res; }));
 
-      return Promise.all(ps);
+        return Promise.all(ps);
     }
 
     function renderRoomsFromCache() {
-      var body = document.getElementById("rooms-body");
-      if (!body) return; body.innerHTML = "";
-      var list = _roomsCache.slice ? _roomsCache.slice(0) : [];
-      if (currentTab === "my") {
-        var info = document.getElementById("player-info");
-        var currentRoom = info && info.dataset ? info.dataset.room : "";
-        list = currentRoom ? list.filter(function(r){ return r.roomCode === currentRoom; }) : [];
-      }
-      if (currentTab === "tournaments") {
-        body.innerHTML = '<tr class="l-row"><td colspan="6" style="padding:16px">Tournaments – coming soon!</td></tr>';
-        return;
-      }
-      var onlineEl = document.getElementById("players-online");
-      if (onlineEl) {
-        var total = 0; list.forEach(function(r){ total += (r.playerCount || 0); });
-        onlineEl.textContent = String(total);
-      }
-      list.forEach(function(r){
-        var tr = document.createElement("tr"); tr.className = "l-row";
-        var mode = r.mode || r.type || "Classic";
-        var seats = r.seats || r.maxPlayers || 8;
-        var status = (r.status === "Full")
-          ? '<span class="l-status full">Full</span>'
-          : '<span class="l-status ok">Open</span>';
-        tr.innerHTML =
-          '<td><span class="l-pill">' + String(r.roomCode || "").slice(0,6) + "</span></td>" +
-          "<td>" + mode + (r.buyIn ? " — " + r.buyIn : "") + "</td>" +
-          "<td>" + seats + "</td>" +
-          "<td>" + (r.playerCount || 0) + "/" + seats + "</td>" +
-          "<td>" + status + "</td>" +
-          '<td style="text-align:right"><button class="l-tab" data-join="' + r.roomCode + '" style="padding:6px 10px">Join</button></td>';
-        body.appendChild(tr);
-        var joinBtn = tr.querySelector("[data-join]"); if (joinBtn) joinBtn.addEventListener("click", function(){ joinGame(r.roomCode); });
-      });
+        var body = document.getElementById("rooms-body");
+        if (!body) return; body.innerHTML = "";
+        var list = _roomsCache.slice ? _roomsCache.slice(0) : [];
+        if (currentTab === "my") {
+            var info = document.getElementById("player-info");
+            var currentRoom = info && info.dataset ? info.dataset.room : "";
+            list = currentRoom ? list.filter(function(r){ return r.roomCode === currentRoom; }) : [];
+        }
+        if (currentTab === "tournaments") {
+            body.innerHTML = '<tr class="l-row"><td colspan="6" style="padding:16px">Tournaments – coming soon!</td></tr>';
+            return;
+        }
+        var onlineEl = document.getElementById("players-online");
+        if (onlineEl) {
+            var total = 0; list.forEach(function(r){ total += (r.playerCount || 0); });
+            onlineEl.textContent = String(total);
+        }
+        list.forEach(function(r){
+            var tr = document.createElement("tr"); tr.className = "l-row";
+            var mode = r.mode || r.type || "Classic";
+            var seats = r.seats || r.maxPlayers || 8;
+            var status = (r.status === "Full")
+                ? '<span class="l-status full">Full</span>'
+                : '<span class="l-status ok">Open</span>';
+            tr.innerHTML =
+                '<td><span class="l-pill">' + String(r.roomCode || "").slice(0,6) + "</span></td>" +
+                "<td>" + mode + (r.buyIn ? " — " + r.buyIn : "") + "</td>" +
+                "<td>" + seats + "</td>" +
+                "<td>" + (r.playerCount || 0) + "/" + seats + "</td>" +
+                "<td>" + status + "</td>" +
+                '<td style="text-align:right"><button class="l-tab" data-join="' + r.roomCode + '" style="padding:6px 10px">Join</button></td>';
+            body.appendChild(tr);
+            var joinBtn = tr.querySelector("[data-join]"); if (joinBtn) joinBtn.addEventListener("click", function(){ joinGame(r.roomCode); });
+        });
     }
 
     // ---------- boot ----------
@@ -524,35 +539,25 @@
       var lobbyNameInput = document.getElementById("usernameInput");
 
       function useNameOrAlert() {
-        var n = splashName && splashName.value ? splashName.value.trim() : "";
-        if (!n) { alert("Please enter your name"); return null; }
-        myUsername = n; if (lobbyNameInput) lobbyNameInput.value = n; return n;
+          var n = splashName && splashName.value ? splashName.value.trim() : "";
+          if (!n) { alert("Please enter your name"); return null; }
+          myUsername = n; if (lobbyNameInput) lobbyNameInput.value = n; return n;
       }
 
       if (btnMulti) btnMulti.addEventListener("click", function(){
-        if (!useNameOrAlert()) return;
-        splash.style.display = "none"; lobbyEl.style.display = "grid";
+          if (!useNameOrAlert()) return;
+          splash.style.display = "none"; lobbyEl.style.display = "grid";
       });
 
       // >>> SOLO: hide splash/lobby, hide controls, simulate players for static test
-      if (btnSolo) btnSolo.addEventListener("click", function(){
-        var n = useNameOrAlert(); if (!n) return;
-        isSolo = true;
-
-        splash.style.display = "none";
-        document.getElementById("lobby").style.display = "none";
-        document.getElementById("ui").style.display = "block";
-
-        var startBtn = document.getElementById("startBtn"); if (startBtn) startBtn.style.display = "none";
-        var botControls = document.getElementById("botControls"); if (botControls) botControls.style.display = "none";
-
-        // Static initialization of players for testing
-        players = [
-          { id: "player1", name: "You", chips: 5, seatIndex: 0, card: { rank: 5, suit: "H" } },
-          { id: "bot1", name: "Bot 1", chips: 5, seatIndex: 1, card: { rank: "K", suit: "S" } },
-          { id: "bot2", name: "Bot 2", chips: 5, seatIndex: 2, card: { rank: 10, suit: "D" } }
-        ];
-        preloadAssets().then(() => drawTable());
+      if (btnSolo) btnSolo.addEventListener("click", function() {
+          var n = useNameOrAlert(); if (!n) return;
+          isSolo = true;
+          splash.style.display = "none";
+          document.getElementById("lobby").style.display = "none";
+          document.getElementById("ui").style.display = "block";
+          myUsername = n; // Use the name
+          initializeGame("single");
       });
 
       var clockEl = document.getElementById("clock");
@@ -560,183 +565,183 @@
 
       var btnJoinCode = document.getElementById("btn-join-code");
       if (btnJoinCode) {
-        btnJoinCode.addEventListener("click", function(){
-          var nameEl = document.getElementById("usernameInput");
-          var roomEl = document.getElementById("roomInput");
-          var name = nameEl && nameEl.value ? nameEl.value.trim() : "";
-          var room = roomEl && roomEl.value ? roomEl.value.trim() : "";
-          if (!name || !room) { alert("Enter your name and room code."); return; }
-          myUsername = name; joinGame(room);
-        });
+          btnJoinCode.addEventListener("click", function(){
+              var nameEl = document.getElementById("usernameInput");
+              var roomEl = document.getElementById("roomInput");
+              var name = nameEl && nameEl.value ? nameEl.value.trim() : "";
+              var room = roomEl && roomEl.value ? roomEl.value.trim() : "";
+              if (!name || !room) { alert("Enter your name and room code."); return; }
+              myUsername = name; joinGame(room);
+          });
       }
 
       var btnCreate = document.getElementById("btn-create");
       if (btnCreate) {
-        btnCreate.addEventListener("click", function(){
-          var nameEl = document.getElementById("usernameInput");
-          var name = nameEl && nameEl.value ? nameEl.value.trim() : "";
-          if (!name) { alert("Please enter a name."); return; }
-          myUsername = name;
-          var modeEl = document.getElementById("sel-mode");
-          var seatsEl = document.getElementById("sel-seats");
-          var paceEl = document.getElementById("sel-pace");
-          var buyEl = document.getElementById("sel-buyin");
-          var opts = {
-            mode: modeEl ? modeEl.value : "Classic",
-            seats: seatsEl ? Number(seatsEl.value) : 8,
-            pace: paceEl ? paceEl.value : "Regular",
-            buyIn: buyEl ? buyEl.value : "5 Chips"
-          };
-        });
+          btnCreate.addEventListener("click", function(){
+              var nameEl = document.getElementById("usernameInput");
+              var name = nameEl && nameEl.value ? nameEl.value.trim() : "";
+              if (!name) { alert("Please enter a name."); return; }
+              myUsername = name;
+              var modeEl = document.getElementById("sel-mode");
+              var seatsEl = document.getElementById("sel-seats");
+              var paceEl = document.getElementById("sel-pace");
+              var buyEl = document.getElementById("sel-buyin");
+              var opts = {
+                  mode: modeEl ? modeEl.value : "Classic",
+                  seats: seatsEl ? Number(seatsEl.value) : 8,
+                  pace: paceEl ? paceEl.value : "Regular",
+                  buyIn: buyEl ? buyEl.value : "5 Chips"
+              };
+          });
       }
 
       var tabBtns = document.querySelectorAll(".l-tab");
       for (var i=0;i<tabBtns.length;i++){
-        tabBtns[i].addEventListener("click", function(){
-          for (var j=0;j<tabBtns.length;j++) tabBtns[j].classList.remove("active");
-          this.classList.add("active");
-          currentTab = this.getAttribute("data-tab");
-          renderRoomsFromCache();
-        });
+          tabBtns[i].addEventListener("click", function(){
+              for (var j=0;j<tabBtns.length;j++) tabBtns[j].classList.remove("active");
+              this.classList.add("active");
+              currentTab = this.getAttribute("data-tab");
+              renderRoomsFromCache();
+          });
       }
 
       // socket events (disabled for static testing)
       /* socket.on("connect", function(){
-        mySocketId = socket.id;
-        var cs = document.getElementById("conn-status");
-        if (cs) cs.textContent = "Connected";
-        socket.emit("requestLobbyState");
+          mySocketId = socket.id;
+          var cs = document.getElementById("conn-status");
+          if (cs) cs.textContent = "Connected";
+          socket.emit("requestLobbyState");
       });
 
       socket.on("lobbyUpdate", function(games){ updateLobby(games); });
 
       socket.on("roomCreated", function(roomCode){
-        myRoom = roomCode;
-        var cr = document.getElementById("current-room");
-        if (cr) cr.textContent = "Joined: " + roomCode;
-        updateLobby(_roomsCache);
+          myRoom = roomCode;
+          var cr = document.getElementById("current-room");
+          if (cr) cr.textContent = "Joined: " + roomCode;
+          updateLobby(_roomsCache);
       });
 
       socket.on("playerList", function(playersList){
-        normalizeSeatIndexes(playersList);
-        var pi = document.getElementById("player-info");
-        if (pi) pi.dataset.room = myRoom || "";
-        var me = playersList.find(function(p){ return p.id === mySocketId; });
-        updatePlayerInfo(me);
-        var listEl = document.getElementById("playerList");
-        if (listEl) {
-          listEl.innerHTML = "";
-          playersList.forEach(function(p){
-            var li = document.createElement("li"); li.innerText = p.name; listEl.appendChild(li);
-          });
-        }
-        var startBtn = document.getElementById("startBtn");
-        if (startBtn) {
-          if (isSolo) {
-            startBtn.style.display = "none";
-          } else {
-            startBtn.style.display = "inline-block";
-            var humanCount = playersList.filter(function(p){ return p.id.indexOf("bot_") !== 0; }).length;
-            startBtn.disabled = (humanCount < 2);
+          normalizeSeatIndexes(playersList);
+          var pi = document.getElementById("player-info");
+          if (pi) pi.dataset.room = myRoom || "";
+          var me = playersList.find(function(p){ return p.id === mySocketId; });
+          updatePlayerInfo(me);
+          var listEl = document.getElementById("playerList");
+          if (listEl) {
+              listEl.innerHTML = "";
+              playersList.forEach(function(p){
+                  var li = document.createElement("li"); li.innerText = p.name; listEl.appendChild(li);
+              });
           }
-        }
+          var startBtn = document.getElementById("startBtn");
+          if (startBtn) {
+              if (isSolo) {
+                  startBtn.style.display = "none";
+              } else {
+                  startBtn.style.display = "inline-block";
+                  var humanCount = playersList.filter(function(p){ return p.id.indexOf("bot_") !== 0; }).length;
+                  startBtn.disabled = (humanCount < 2);
+              }
+          }
       });
 
       socket.on("joinedRoom", function(data){
-        myRoom   = data.roomCode;
-        players  = data.players || [];
-        normalizeSeatIndexes(players);
-        isSolo   = !!data.singlePlayer;
+          myRoom   = data.roomCode;
+          players  = data.players || [];
+          normalizeSeatIndexes(players);
+          isSolo   = !!data.singlePlayer;
 
-        var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
-        document.getElementById("lobby").style.display = "none";
-        document.getElementById("ui").style.display = "block";
+          var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
+          document.getElementById("lobby").style.display = "none";
+          document.getElementById("ui").style.display = "block";
 
-        if (isSolo) {
-          var sb = document.getElementById("startBtn"); if (sb) sb.style.display = "none";
-          var bc = document.getElementById("botControls"); if (bc) bc.style.display = "none";
-        }
+          if (isSolo) {
+              var sb = document.getElementById("startBtn"); if (sb) sb.style.display = "none";
+              var bc = document.getElementById("botControls"); if (bc) bc.style.display = "none";
+          }
 
-        var playerListEl = document.getElementById("playerList");
-        if (playerListEl) {
-          playerListEl.innerHTML = players.map(function(p){ return "<li>" + p.name + "</li>"; }).join("");
-        }
+          var playerListEl = document.getElementById("playerList");
+          if (playerListEl) {
+              playerListEl.innerHTML = players.map(function(p){ return "<li>" + p.name + "</li>"; }).join("");
+          }
 
-        preloadAssets().then(function(){ drawTable(); });
+          preloadAssets().then(function(){ drawTable(); });
       });
 
       socket.on("gameStarted", function(state){
-        gameState = state; players = state.players || [];
-        normalizeSeatIndexes(players);
-        var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
-        document.getElementById("lobby").style.display = "none";
-        document.getElementById("ui").style.display = "block";
-        preloadAssets().then(function(){ drawTable(); });
+          gameState = state; players = state.players || [];
+          normalizeSeatIndexes(players);
+          var splashEl = document.getElementById("splash"); if (splashEl) splashEl.style.display = "none";
+          document.getElementById("lobby").style.display = "none";
+          document.getElementById("ui").style.display = "block";
+          preloadAssets().then(function(){ drawTable(); });
       });
 
       socket.on("turnUpdate", function(payload){
-        var currentPlayerId = payload.currentPlayerId;
-        var updatedPlayers = payload.players || [];
-        normalizeSeatIndexes(updatedPlayers);
-        var peekAllowed = payload.peekAllowed;
-        gameState.players = updatedPlayers; gameState.currentPlayerId = currentPlayerId;
-        players = updatedPlayers; myTurn = (mySocketId === currentPlayerId);
-        peekPlayerCard = myTurn && (typeof peekAllowed === "undefined" || peekAllowed);
-        updateTurnIndicator(); drawTable();
-        var actionBtns = document.getElementById("actionBtns");
-        var passBtn = document.getElementById("passBtn");
-        var keepBtn = document.getElementById("keepBtn");
-        if (actionBtns && passBtn && keepBtn) {
-          actionBtns.style.display = myTurn ? "block" : "none";
-          var cp = players.find(function(p){ return p.id === currentPlayerId; });
-          var canPass = !(cp && cp.card && cp.card.rank === "K");
-          passBtn.disabled = (!myTurn || !canPass); keepBtn.disabled = (!myTurn);
-        }
+          var currentPlayerId = payload.currentPlayerId;
+          var updatedPlayers = payload.players || [];
+          normalizeSeatIndexes(updatedPlayers);
+          var peekAllowed = payload.peekAllowed;
+          gameState.players = updatedPlayers; gameState.currentPlayerId = currentPlayerId;
+          players = updatedPlayers; myTurn = (mySocketId === currentPlayerId);
+          peekPlayerCard = myTurn && (typeof peekAllowed === "undefined" || peekAllowed);
+          updateTurnIndicator(); drawTable();
+          var actionBtns = document.getElementById("actionBtns");
+          var passBtn = document.getElementById("passBtn");
+          var keepBtn = document.getElementById("keepBtn");
+          if (actionBtns && passBtn && keepBtn) {
+              actionBtns.style.display = myTurn ? "block" : "none";
+              var cp = players.find(function(p){ return p.id === currentPlayerId; });
+              var canPass = !(cp && cp.card && cp.card.rank === "K");
+              passBtn.disabled = (!myTurn || !canPass); keepBtn.disabled = (!myTurn);
+          }
       });
 
       socket.on("cardPassed", function(evt){
-        var toPlayer = players[evt.toIndex];
-        if (toPlayer && toPlayer.card && toPlayer.card.rank === "K") {
-          showMessage(toPlayer.name + " has a King and cannot be passed to!", 3000, "#f00");
-          return;
-        }
-        drawTable();
-        animCard = { fromIndex: evt.fromIndex, toIndex: evt.toIndex, progress: 0 };
-        animStartTime = null; animationInProgress = true; requestAnimationFrame(animateCardPass);
+          var toPlayer = players[evt.toIndex];
+          if (toPlayer && toPlayer.card && toPlayer.card.rank === "K") {
+              showMessage(toPlayer.name + " has a King and cannot be passed to!", 3000, "#f00");
+              return;
+          }
+          drawTable();
+          animCard = { fromIndex: evt.fromIndex, toIndex: evt.toIndex, progress: 0 };
+          animStartTime = null; animationInProgress = true; requestAnimationFrame(animateCardPass);
       });
 
       socket.on("roundEnded", function(data){
-        var updatedPlayers = data.updatedPlayers || [];
-        normalizeSeatIndexes(updatedPlayers);
-        var losers = data.losers || [];
-        gameState.players = updatedPlayers;
-        players = updatedPlayers.map(p => ({ ...p }));
-        myTurn = false; peekPlayerCard = false; animCard = null;
-        showAllCards = true; drawTable(false, animCard);
-        var frozenPlayers = players.slice(0);
-        setTimeout(function(){ showAllCards = false; players = frozenPlayers; drawTable(); }, 6500);
-        var alertMessage = "💥 Round ended! Lost a chip: " + losers.map(function(loser){
-          var snap = updatedPlayers.find(function(p){ return p.name === loser.name; });
-          if (!snap || !snap.card) return loser.name + " (?)";
-          return loser.name + " (" + snap.card.rank + snap.card.suit + ")";
-        }).join(", ");
-        showMessage(alertMessage, 4500, "#f00");
+          var updatedPlayers = data.updatedPlayers || [];
+          normalizeSeatIndexes(updatedPlayers);
+          var losers = data.losers || [];
+          gameState.players = updatedPlayers;
+          players = updatedPlayers.map(p => ({ ...p }));
+          myTurn = false; peekPlayerCard = false; animCard = null;
+          showAllCards = true; drawTable(false, animCard);
+          var frozenPlayers = players.slice(0);
+          setTimeout(function(){ showAllCards = false; players = frozenPlayers; drawTable(); }, 6500);
+          var alertMessage = "💥 Round ended! Lost a chip: " + losers.map(function(loser){
+              var snap = updatedPlayers.find(function(p){ return p.name === loser.name; });
+              if (!snap || !snap.card) return loser.name + " (?)";
+              return loser.name + " (" + snap.card.rank + snap.card.suit + ")";
+          }).join(", ");
+          showMessage(alertMessage, 4500, "#f00");
       });
 
       socket.on("errorMessage", function(msg){ showMessage(msg, 3000, "#f00"); });
 
       socket.on("gameOver", function(payload){
-        document.getElementById("winMessage").innerText = payload.winner.name + " Wins!";
-        document.getElementById("endOverlay").style.display = "flex";
+          document.getElementById("winMessage").innerText = payload.winner.name + " Wins!";
+          document.getElementById("endOverlay").style.display = "flex";
       }); */
 
       // background (absolute path; fallback case)
       backgroundImage.src = "/assets/background.png";
       backgroundImage.onerror = function(){
-        this.onerror = null;
-        this.src = "/assets/Background.png";
-        var ctx = document.querySelector("canvas").getContext("2d");
-        ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
+          this.onerror = null;
+          this.src = "/assets/Background.png";
+          var ctx = document.querySelector("canvas").getContext("2d");
+          ctx.fillStyle = "#222"; ctx.fillRect(0, 0, 1024, 600);
       };
 
       // canvas wrapper
@@ -755,10 +760,10 @@
       document.body.appendChild(wrapper);
 
       function resizeGame() {
-        var scaleX = window.innerWidth / 1024;
-        var scaleY = window.innerHeight / 600;
-        var scale = Math.min(scaleX, scaleY);
-        wrapper.style.transform = "translate(-50%, -50%) scale(" + scale + ")";
+          var scaleX = window.innerWidth / 1024;
+          var scaleY = window.innerHeight / 600;
+          var scale = Math.min(scaleX, scaleY);
+          wrapper.style.transform = "translate(-50%, -50%) scale(" + scale + ")";
       }
       window.addEventListener("resize", resizeGame); resizeGame();
 
